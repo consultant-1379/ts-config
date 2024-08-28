@@ -1,0 +1,194 @@
+global:
+  timezone: {{ timezone }}
+  domainName: {{ eda["domainName"] }}
+  clusterName: {{ eda["clusterName"] }}
+  ericsson:
+    licensing:
+      licenseDomains:
+        - productType: EDA
+          customerId: {{ license["customerId"] }}
+          swltId: {{ license["swltId"] }}
+  licensing:
+    sites:
+      - hostname: {{ nels.host }}
+  activation:
+    service:
+      prov:
+        annotations:
+          metallb.universe.tf/allow-shared-ip: eda{{ instance }}-oam
+          metallb.universe.tf/address-pool: eda{{ instance }}-oam
+      oam:
+        annotations:
+          metallb.universe.tf/allow-shared-ip: eda{{ instance }}-oam
+          metallb.universe.tf/address-pool: eda{{ instance }}-oam
+      notif:
+        annotations:
+          metallb.universe.tf/allow-shared-ip: eda{{ instance }}-oam
+  {% if caas == 'OpenShift' %}
+  security:
+    policyBinding:
+      create: true
+    policyReferenceMap:
+      default-restricted-security-policy: default-restricted-security-policy
+      plc-59d0cf1dcc793a78b6ce30bfbe6553: plc-59d0cf1dcc793a78b6ce30bfbe6553
+  fsGroup:
+    namespace: true
+  {% endif %}
+  kubeApi:
+    port: 6443
+
+{% if systemProfile == 'small' %}
+profile:
+  small-telco-system: true
+  standard-telco-system: false
+{% endif %}
+
+eric-tm-ingress-controller-cr:
+  service:
+    annotations:
+      sharedVIPLabel: eda{{ instance }}-oam
+  annotations:
+    metallb.universe.tf/address-pool: eda{{ instance }}-oam
+  replicaCount:
+    envoy: {{ replicaCount["eric-tm-ingress-controller-cr-envoy"] }}
+  {% if caas == 'NFVI-CCD' %}
+  resources:
+    envoy:
+      limits:
+        memory: 500M
+  {% endif %}
+  {% if caas == 'OpenShift' %}
+  # According ADP Service User Guide
+  resources:
+    contour:
+      limits:
+        cpu: 4100m
+        memory: 1G
+    envoy:
+      limits:
+        cpu: 4200m
+        memory: 600M
+  {% endif %}
+  {% if systemProfile == 'small' %}
+  # According ADP Service User Guide
+  resources:
+    envoy:
+      limits:
+        cpu: 500m
+        memory: 500M
+  {% endif %}
+
+eric-data-wide-column-database-cd:
+  persistence:
+    dataVolume:
+      persistentVolumeClaim:
+        size: {{ pvcSize["eric-data-wide-column-database-cd"] }}G
+        storageClassName: {{ storageClassName }}
+
+eric-act-activation-engine:
+  statefulset:
+    storageClass: {{ storageClassName }}
+  initContainers:
+    eric-act-hss-validator:
+      imageName: hss-validator-image
+      tag: {{ eda["hssValidatorTag"] }}
+  config:
+    groupId: "eda-groupId"
+
+eric-cloud-native-base:
+  eric-data-document-database-pg:
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName }}
+
+  eric-data-search-engine:
+    persistence:
+      data:
+        persistentVolumeClaim:
+          storageClassName: {{ storageClassName }}
+      master:
+        persistentVolumeClaim:
+          storageClassName: {{ storageClassName }}
+
+  eric-data-message-bus-kf:
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: {{ storageClassName }}
+        size: {{ pvcSize["eric-data-message-bus-kf"] }}G
+
+  eric-data-coordinator-zk:
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: {{ storageClassName }}
+
+  eric-data-distributed-coordinator-ed:
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: {{ storageClassName }}
+
+  eric-ctrl-bro:
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: {{ storageClassName }}
+
+  eric-pm-server:
+    server:
+      persistentVolume:
+        storageClass: {{ storageClassName }}
+      extraSecretMounts:
+        - name: etcd-client-cert
+          mountPath: /var/run/secrets/etcd/client
+          subPath: ""
+          readOnly: true
+          defaultMode: 420
+          secretName: eric-data-distributed-coordinator-ed-etcdctl-client-cert
+        - name: etcd-cacert
+          mountPath: /var/run/secrets/etcd/cacert
+          subPath: ""
+          readOnly: true
+          defaultMode: 420
+          secretName: eric-sec-sip-tls-trusted-root-cert
+
+  eric-fh-snmp-alarm-provider:
+    service:
+      annotations:
+        sharedVIPLabel: eda{{ instance }}-oam
+        addressPoolName: eda{{ instance }}-oam
+    sourceIdentifierType: 1
+    sourceIdentifier: "{{ snmp.sourceIdentifier }}"
+
+  eric-si-application-sys-info-handler:
+    asih:
+      applicationId: {{ nodeName }}
+
+eric-act-aaa:
+  misc:
+    replicaCount: {{ replicaCount["eric-act-aaa"] }}
+
+eric-act-activation-orchestrator:
+  aoe:
+    misc:
+      replicaCount: 2
+
+eric-act-inbound-async:
+  misc:
+    replicaCount: {{ replicaCount["eric-act-inbound-async"] }}
+
+eric-act-inbound-interfaces:
+  misc:
+    replicaCount: {{ replicaCount["eric-act-inbound-interfaces"] }}
+
+eric-act-inbound-mml:
+  misc:
+    replicaCount: {{ replicaCount["eric-act-inbound-mml"] }}
+
+eric-act-proclog-cassandra-stasher:
+  misc:
+    proclog_stasher:
+      replicaCount: 1
+
+eric-act-rest-provisioning:
+  misc:
+    replicaCount: {{ replicaCount["eric-act-rest-provisioning"] }}
+
+eric-act-web-server:
+  replicaCount: {{ replicaCount["eric-act-web-server"] }}

@@ -1,0 +1,637 @@
+# Default values for eric-bss-em-om-server-scalable.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# As default registry path, the global registry path will be used.
+global:
+  registry:
+    # Docker registry URL
+    url: armdocker.rnd.ericsson.se
+    # Secret must be manually created in the namespace, no default value. Only required if Docker Registry requires authentication
+    #pullSecret: eric-em-example-secret
+  # Set timezone in pod.
+  timezone: {{ timezone }}
+  #security:
+    #tls:
+      #enabled: true
+# This parameter is for IPfamily of the kubernetes cluster "ipv4" or "ipv6".
+IpFamily: "ipv4"
+
+productInfo:
+  # R-State of the product. R State should match helm chart version (3.1.0 -> R2A)
+  # To automate it when packaging the helm chart rstate can be generated
+  # and below value replaced with correct R-State
+  rstate: R21M
+
+imageCredentials:
+  # repoPath include the image path relative to the registry url, excluding image name
+  repoPath: proj-em-ci-internal-odr21
+  # Image pull policy. One of Always, Never, IfNotPresent.
+  pullPolicy: IfNotPresent
+  registry: {}
+    # Docker registry where docker image is uploaded e.g. docker-registry:5000. It overrides global registry url.
+    #url: armdocker.companyA.se
+    # Secret must be manually created in the namespace, no default value. Only required if Docker registry requires authentication.
+    #pullSecret: eric-bss-em-om-server-scalable-pullsecret
+
+images:
+  ha-agent:
+    name: eric-bss-em-ha-monitor
+    tag: 22.5.1-39
+  server:
+    name: eric-bss-em-om
+    tag: 22.5.1-48
+  init-db:
+    name: eric-bss-em-postgresql-init
+    tag: 22.5.1-58
+  db:
+    name: eric-bss-em-postgresql
+    tag: 22.5.1-39
+  ftp:
+    name: eric-bss-em-ftp
+    tag: 22.5.1-42
+  sftp:
+    name: eric-bss-em-sftp
+    tag: 22.5.1-42
+  brAgent:
+    name: eric-bss-em-br-agent
+    tag: 22.5.1-42
+
+# To run container startup scripts in debugging mode set debug value to true.
+debug: false
+
+# Deployer identification information.
+#deployerIdentification: 
+
+service:
+  # Type of Online Mediation service. Possible Values are: ClusterIP, NodePort, LoadBalancer. For production, Only LoadBalancer is recommended.
+  type: LoadBalancer
+  # externalTrafficPolicy: To enable preservation of the client IP set externalTrafficPolicy to Local else use Cluster.
+  externalTrafficPolicy: Cluster
+  # In case of ECFE is configured in ECCD cluster, below parameter allows to assign a user defined IP from the pre configured range of free IPs
+  loadBalancerIP:
+  # Below options are only applicable for the services that are deployed in private cloud using ADP ECFE service and not applicable in other deployments.
+  annotations:
+    # sharedVIPLabel value used with the annotation key to indicate the VIP address is being shared among services that are using the same label. The service manifest will use this value for the annotation key provided by ECM FE for sharing VIP. The value will be empty if sharing VIP is not required.
+    sharedVIPLabel: "em{{ instance }}-chf-online"
+    # To get VIP address from a specific address pool configured using ECM FE service.
+    # The pool name must be configured in the ECM FE configuration.
+    # The value will be empty if do not want to specify address pool for VIP.
+    addressPoolName: "em{{ instance }}-chf-online"
+  # additionalAnnotations, additionalLabels: These can be specified as required by user incase any other annotations and labels are required to be associated with the service.
+  additionalAnnotations: {}
+  additionalLabels: {}
+
+# Custom/Additional pod annotations & labels can be added under annotations.
+pod:
+  annotations: {}
+    # onlinelogharvest: "true"
+  labels: {}
+    # label-parameter: label-value
+
+# Pods with an ordinal number that is greater than or equal to the partition will be updated during upgrade.
+# All Pods with an ordinal number that is less than the value of partition will not be updated.
+# Once verification is performed on the updated OLM servers, then the user can update the partition value and then trigger the upgrade again to resume update on the remaining OLM replicas.
+updateStrategy:
+  rollingUpdate:
+    partition: 0
+    
+# Termination Grace Period for Pod
+terminationGracePeriodSeconds: 60
+
+# Number of replicas for Online Server. During first installation, set replicaCount to 1
+onlineserver:
+  replicaCount: 1
+
+# Minimum number of seconds for which a newly created Pod should be running and ready without any of its containers crashing, for it to be considered available.
+minReadySeconds: 0
+
+# Number of seconds to wait for pending transactions to get completed before the Online Server main process in Server container get's terminated
+transactionTimeout: 30
+
+# PVCs to be used for Online Mediation Server. PVC will be created during deployment.
+pvc:
+  # Fill all the parameter values under dynamic for PVC creation during deployment.
+  mediationStorage:
+    # To create new PVC dynamically during deployment.
+    dynamic:
+      # Name of the storageclass to be used. If left blank then "default" storageclass will be used
+      storageClassName: {{ storageClassName }}
+      # For NFS, supported access mode are "ReadWriteOnce" and "ReadWriteMany"
+      # For Block storage, access mode must be "ReadWriteOnce" only (recommended)
+      accessMode: "ReadWriteOnce" 
+      # Volume size in integer format with units as Ki(kibibyte), Mi(mibibyte), Gi(gibibyte)
+      size: '100Gi'
+
+# Only required if additional PVCs to be mounted inside containers (except db container) at respective mount path. This variable allows to define one or many additional PVCs and respective mount paths. Entries should be unique.
+# PVC can be pre-created/pre-existing or can be created during deployment. It is mandatory to use NFS storage class with ReadWriteMany access mode.
+additionalPvc:
+#  - mountPath: 
+#    existingClaimName:
+#    dynamic:
+#      storageClassName: 
+#      accessMode: 
+#      size: 
+#    enableMonitoring: true
+#  - mountPath: 
+#    existingClaimName: 
+#    dynamic:
+#      storageClassName: 
+#      accessMode: 
+#      size: 
+#    enableMonitoring: true
+
+# If database needs to be created.
+db:
+# true if db needs to be created. if left blank then db will not be created.
+  deploy: false
+  pvc:
+    mediationDb:
+      dynamic:
+        storageClassName: 
+        accessMode: "ReadWriteOnce" 
+        size: 
+
+# Blowfish encrypted DB password must be obtained from Ericsson Mediation Encryption Utility.
+  encryptedDbPassword: 
+# Provide port for Online Mediation DB.
+  dbPort: 
+# Configuration parameters for postgresql database.
+  pgConfig: {}
+    #max_wal_size: 2GB
+    #max_connections: 250
+
+# Provide below details to deploy FTP server. Blowfish encrypted ftp.users.encryptedPassword must be obtained from Ericsson Mediation Encryption Utility.
+ftp:
+  deploy: false
+  PASV_ADDRESS: 
+  PASV_MIN_PORT: "50001"
+  PASV_MAX_PORT: "50020"
+  LISTEN_PORT: "21"
+  MAX_PER_IP: "50"
+  MAX_CLIENTS: "2000"
+  IDLE_SESSION_TIMEOUT: "300"
+  verboseLogs: "true"
+  incorrectLoginAttempt: "4"
+  additionalFtpConfigurations: {}
+  certm:
+    enable: false
+    keyName:
+    certificateName:
+    autoreload: true
+  users:
+  - userName: 
+    encryptedPassword: 
+    daysToPasswordExpire: "30"
+    chroot:
+      enabled: false
+      userChrootDir: /var/opt/mediation/MMStorage
+
+# Provide below details to deploy SFTP server. Blowfish encrypted sftp.users.encryptedPassword must be obtained from Ericsson Mediation Encryption Utility.
+sftp:
+  deploy: false
+  port: "22"
+  allowedMACs: "hmac-sha2-256,hmac-sha2-512,hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com"
+  allowedCiphers: "aes256-ctr,aes192-ctr,aes128-ctr,aes128-gcm@openssh.com,aes256-gcm@openssh.com,chacha20-poly1305@openssh.com"
+  allowedKeyExchangeAlgorithms: "curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521"
+  allowedHostKeyAlgorithms: "ecdsa-sha2-nistp256-cert-v01@openssh.com,ecdsa-sha2-nistp384-cert-v01@openssh.com,ecdsa-sha2-nistp521-cert-v01@openssh.com,ssh-ed25519-cert-v01@openssh.com,rsa-sha2-512-cert-v01@openssh.com,rsa-sha2-256-cert-v01@openssh.com,ssh-ed25519,rsa-sha2-512,rsa-sha2-256,ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521"
+  MaxStartups: "1000:30:10000"
+  verboseLogs: "true"
+  incorrectLoginAttempt: "4"
+  additionalSftpConfigurations: {}
+  users:
+  - userName: 
+    encryptedPassword: 
+    daysToPasswordExpire: "30"
+    keySecret:
+    cmdDenied:
+    secondary_groups:
+
+resources:
+  ha-agent:
+    requests:
+      # Guaranteed CPU/Memory for ha-agent container.
+      cpu: "50m"
+      memory: "72Mi"
+    limits:
+      # Maximum CPU that ha-agent container can use.
+      cpu: "100m"
+      # Maximum Memory that ha-agent container can use.
+      memory: "256Mi"
+  server:
+    requests:
+      # Guaranteed CPU/Memory for master and processor containers.
+      cpu: {{ '8' if systemProfile == 'small' else '1' }}
+      memory: {{ '4Gi' if systemProfile == 'small' else '2Gi' }}
+    limits:
+      # Maximum CPU that master and processor containers can use.
+      cpu: {{ '8' if systemProfile == 'small' else '1' }}
+      # Maximum Memory that master and processor containers can use.
+      memory: {{ '8Gi' if systemProfile == 'small' else '2Gi' }}
+  db:
+    requests:
+      # Guaranteed CPU/Memory for db container.
+      cpu: {{ '500m' if systemProfile == 'small' else '1' }}
+      memory: "1Gi"
+    limits:
+      # Maximum CPU that db container can use.
+      cpu: "1"
+      # Maximum Memory that db container can use.
+      memory: "1Gi"
+  initdb:
+    requests:
+      # Guaranteed CPU/Memory for init db container.
+      cpu: {{ '200m' if systemProfile == 'small' else '1' }}
+      memory: "1Gi"
+    limits:
+      # Maximum CPU that init db container can use.
+      cpu: "1"
+      # Maximum Memory that init db container can use.
+      memory: "1Gi"
+  ftp:
+    requests:
+      # Guaranteed CPU/Memory for ftp container.
+      cpu: "1"
+      memory: "1Gi"
+    limits:
+      # Maximum CPU that ftp container can use.
+      cpu: "1"
+      # Maximum Memory that ftp container can use.
+      memory: "1Gi"
+  sftp:
+    requests:
+      # Guaranteed CPU/Memory for sftp container.
+      cpu: "1"
+      memory: "1Gi"
+    limits:
+      # Maximum CPU that sftp container can use.
+      cpu: "1"
+      # Maximum Memory that sftp container can use.
+      memory: "1Gi"
+  brAgent:
+    requests:
+      # Guaranteed CPU/Memory for bragent container.
+      cpu: "100m"
+      memory: "100Mi"
+    limits:
+      # Maximum CPU that bragent container can use.
+      cpu: "500m"
+      # Maximum Memory that bragent container can use.
+      memory: "500Mi"
+  customCron:
+    requests:
+      # Minimum CPU that customCron container needs.
+      cpu: "100m"
+      # Minimum Memory that customCron container needs.
+      memory: "100Mi"
+    limits:
+      # Maximum CPU that customCron container can use.
+      cpu: "500m"
+      # Maximum Memory that customCron container can use.
+      memory: "500Mi"      
+
+# Provide time period in seconds for monitoring and POD eviction during failure condition
+faultTolerance:
+  monitorInterval: 20
+  evictionTime:
+     nodeNotReady: 60
+     storageFailure: 60
+
+# Provide hostAliases as provided in below example to make /etc/hosts entry
+hostAliases:
+#  - ip: "127.0.0.1"
+#    hostnames:
+#    - "foo.local"
+#    - "bar.local"
+#  - ip: "10.1.2.3"
+#    hostnames:
+#    - "foo.remote"
+
+# Pod/Node Affinity or Anti-Affinity can be configured as per user requirement
+# Commented examples are provided for reference purpose only
+affinity:
+  omServer:
+  ## Note: Only one entry for nodeAffinity, podAffinity and podAntiAffinity is allowed. To add 
+  ## multiple conditions append the additional rules/entry under respective matchExpressions
+  #
+  ## Example to run OM server on desired node having <node_label_key>=<label_value> label
+  ## Note : matchField under nodeSelectorTerms is not supported
+  #  nodeAffinity:
+  #    requiredDuringSchedulingIgnoredDuringExecution:
+  #      nodeSelectorTerms:
+  #      - matchExpressions:
+  #        - key: <node_label_key>
+  #          operator: In
+  #          values:
+  #          - <label_value>
+  #
+  ## Sample example to restrict scheduling of multiple OM server on same node using podAntiAffinity
+{% if systemProfile == 'small' %}
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: "app.kubernetes.io/instance"
+            operator: In
+            values:
+            - "eric-em-ol-1"
+        topologyKey: "kubernetes.io/hostname"
+{% else %}
+  #  podAntiAffinity:
+  #    requiredDuringSchedulingIgnoredDuringExecution:
+  #    - labelSelector:
+  #        matchExpressions:
+  #        - key: "app.kubernetes.io/instance"
+  #          operator: In
+  #          values:
+  #          - "<Helm_release_name_of_other_om_server>"
+  #      topologyKey: "kubernetes.io/hostname"
+{% endif %}
+  #
+  ## Sample example to configure podAntiAffinity for Online Solution when proxyRules.sessionAffinity.enable is set to either true or false.
+  ## <service_type> can be commonservice or httpservice if proxyRules.sessionAffinity.enable is set to true.
+  ## <service_type> can be commonservice only if proxyRules.sessionAffinity.enable is set to false.
+  ## For commonservice : <service_name> shall be Name of service mentioned in commonServiceName.
+  ## For httpservice : <service_name> shall be Name of respective service mentioned in omhttpServiceName.
+  #  podAntiAffinity:
+  #    requiredDuringSchedulingIgnoredDuringExecution:
+  #    - labelSelector:
+  #        matchExpressions:
+  #        - key: "app.em.kubernetes.io/<service_type>"
+  #          operator: In
+  #          values:
+  #          - "<service_name>"
+  #      topologyKey: "kubernetes.io/hostname"
+
+  customCron: {}
+  ## Note: Only one entry for nodeAffinity, podAffinity and podAntiAffinity is allowed. To add 
+  ## multiple conditions append the additional rules/entry under respective matchExpressions
+  #
+  ## Example to run cron job on desired node having <node_label_key>=<label_value> label
+  ## Note : matchField under nodeSelectorTerms is not supported
+  #  nodeAffinity:
+  #    requiredDuringSchedulingIgnoredDuringExecution:
+  #      nodeSelectorTerms:
+  #      - matchExpressions:
+  #        - key: <node_label_key>
+  #          operator: In
+  #          values:
+  #          - <label_value>
+  #
+  ## Sample example to restrict scheduling of cron jobs and OM server on same node using podAffinity
+  #  podAffinity:
+  #    requiredDuringSchedulingIgnoredDuringExecution:
+  #    - labelSelector:
+  #        matchExpressions:
+  #        - key: "app.kubernetes.io/instance"
+  #          operator: In
+  #          values:
+  #          - "<Helm_release_name>"
+  #      topologyKey: "kubernetes.io/hostname"
+  #
+  ## Sample example to configure cron jobs running on different nodes using podAntiAffinity
+  #  podAntiAffinity:
+  #    requiredDuringSchedulingIgnoredDuringExecution:
+  #    - labelSelector:
+  #        matchExpressions:
+  #        - key: "app.kubernetes.io/instance"
+  #          operator: In
+  #          values:
+  #          - "<Helm_release_name>-customcron"
+  #      topologyKey: "kubernetes.io/hostname"
+
+### Section to define PodDisruptionBudget. minAvailable and maxUnavailable are mutually exclusive.
+podDisruptionBudget:
+  minAvailable: ""
+  maxUnavailable: ""
+
+# Placeholder to define POD tolerations for taint(s) applied on Node
+tolerations: []
+
+# Placeholder to define POD topologySpreadConstraints for Rack level redundancy
+topologySpreadConstraints: []
+
+# Placeholder to define custom/additional annotations on all resources
+annotations: {}
+
+# Placeholder to define custom/additional labels on all resources
+labels: {}
+
+# Provide the name or external ip of manager service to interact with Ericsson Mediation Manager.
+managerService: eric-bss-em-manager-eric-em-mgr-1
+
+# Server name for Online Mediation Server.
+serverName: 'OMServer1'
+
+# SFTP Client Configuration parameters for Online Mediation Server.
+# Note: Only Mentioned four parameters are allowed.
+# Kex parameter takes input for KexAlgorithms and PublicKeys parameters takes input for HostKeyAlgorithms
+clientSSHConfig:
+  Macs: "hmac-sha2-256,hmac-sha2-512,hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com"
+  Ciphers: "aes256-ctr,aes192-ctr,aes128-ctr,aes128-gcm@openssh.com,aes256-gcm@openssh.com,chacha20-poly1305@openssh.com"
+  Kex: "curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521"
+  Publickeys: "ecdsa-sha2-nistp256-cert-v01@openssh.com,ecdsa-sha2-nistp384-cert-v01@openssh.com,ecdsa-sha2-nistp521-cert-v01@openssh.com,ssh-ed25519-cert-v01@openssh.com,rsa-sha2-512-cert-v01@openssh.com,rsa-sha2-256-cert-v01@openssh.com,ssh-ed25519,rsa-sha2-512,rsa-sha2-256,sk-ssh-ed25519@openssh.com,sk-ssh-ed25519-cert-v01@openssh.com,ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,sk-ecdsa-sha2-nistp256@openssh.com,sk-ecdsa-sha2-nistp256-cert-v01@openssh.com"
+
+# Configuration parameters for Online Mediation Server.
+omConfig:
+  # Provide dynamic host aliases to make /etc/hosts entry
+  # <ORDINAL_INDEX> is the keyword replaced by ordinal index of each replica.
+  # E.g., additionalHostAliases: "test.com it-xy<ORDINAL_INDEX>-abc-chf.mnc.mcc.3gppnetwork.org abc.com foo<ORDINAL_INDEX>.local"
+  # NOTE: Rolling restart of all replicas will be performed if:
+  # - Changes to "additionalhostAliases"
+  # - "additionalHostAliases" is defined with <ORDINAL_INDEX> and performing Scale In/Out
+  additionalHostAliases: {{ nodeName }}
+  javaOPts:
+  - "-XX:+PrintGCTimeStamps"
+  - "-XX:+HeapDumpOnOutOfMemoryError"
+  - "-XX:-TraceClassUnloading"
+  - "-XX:MaxNewSize=224m"
+  - "-XX:NewSize=224m"
+  - "-XX:+UseConcMarkSweepGC"
+  - "-XX:CMSInitiatingOccupancyFraction=60"
+  - "-XX:+UseCMSInitiatingOccupancyOnly"
+  - "-XX:SurvivorRatio=8"
+  - "-XX:MaxTenuringThreshold=6"
+  - "-XX:ThreadStackSize=1024"
+  - "-XX:+UseGCLogFileRotation"
+  - "-XX:NumberOfGCLogFiles=15"
+  - "-XX:GCLogFileSize=10m"
+  - "-Dignorecookies=false"
+  - "-Djdk.tls.acknowledgeCloseNotify=true"
+  - "-Dorg.eclipse.jetty.util.log.class=org.eclipse.jetty.util.log.StdErrLog"
+  - "-Dorg.eclipse.jetty.LEVEL=INFO"
+  appendClasspath:
+  #- ""
+  #- ""
+  prependClasspath:
+  #- ""
+  #- ""
+  appendXboot:
+  #- ""
+  #- ""
+  prependXboot:
+  #- ""
+  #- ""
+  additionalParameters: {}
+    #runlogThreshold: "10485760"
+    #notificationQueueSize: "2000"
+    #intercomFePath: "/var/opt/mediation/MMStorage"
+
+#Provide port(s) required by respective Online Mediation Configuration.
+omPorts:
+  TCP:
+{% if systemProfile == 'small' %}
+  - "1090"
+  - "3868"
+  - "3869"
+  - "3873"
+  - "3874"
+  - "3872"
+{% else %}
+  #- "1090"
+  #- "3868"
+{% endif %}
+  UDP:
+  #- ""
+  SCTP:
+  #- ""
+
+#PM Scrape Settings
+pmScrape:
+  enable: true
+  port: "9250"
+  isActivityDataEnabled: false
+  dynamicCounters:
+    sbibe: false
+    sbife: false
+    container: false
+    rangeContainer: false
+    kvContainer: false
+  tls:
+    certTtl: 31536000
+
+# To fetch SSL certificates from Certificate Manager provide details in below section.
+certm:
+  autoreload: {{ 'false' if systemProfile == 'small' else 'true' }}
+  # To fetch Keystore certificates specify below details
+  omKeyCertificatePair:
+  #- keyName:
+  #  certificateName:
+  #  jksEncryptionPassword:
+  #  jksLocation:
+
+  # To fetch Truststore certificates specify below details
+  omTrustCertificates:
+  #- trustStoreName:
+  #  jksEncryptionPassword:
+  #  jksLocation:
+
+# To run Online solution using ICCR with or without session affinity provide details in below section.
+# ICCR must be pre-installed. Setting proxyRules.enable to true will create HTTP Proxy rules/routes.
+proxyRules:
+  enable: true
+  # Specify FQDN for ICCR Load Balancer IP.
+  fqdn: {{ em.chf.host }}.{{ DOMAIN_3GPP_5GC }}
+  # Specify the ingress class name used during ICCR deployment for load balancing requests through specific ICCR.
+  ingressClassName: emingress
+  # Specify deployment context of the service running on Online Server under "requestPrefixID". This will be part of Request URI.
+  # Specify the listener port of the Online Server under "port" on which Frontend activity from the Configuration receives incoming requests.
+  # NOTE: If multiple "requestPrefixID" are defined then each "requestPrefixID" must be unique.
+  deploymentContext:
+{% if systemProfile == 'small' %}
+  - requestPrefixID: /nchf-convergedcharging/v2/chargingdata
+    port: 1090
+{% else %}
+  #- requestPrefixID: /nchf-spendinglimitcontrol/v1/subscriptions
+  #  port: 1090
+{% endif %}
+  #- requestPrefixID: /nchf-convergedcharging/v3/chargingdata
+  #  port: 1091
+  
+  # Specify total number of initialization request for 5G-4G configurations i.e initialReqCount * parallelReqCount.
+  # "initialReqCount" value should be from 1 to 20 and "parallelReqCount" value should be from 1 to 100.
+  initialization_request:
+    enable: true
+    initialReqCount: '20'
+    parallelReqCount: '100'
+  # Specify protocol to be use to reach the service. Supported protocols are h2c, h2, tls or blank(No value).
+  protocol: 'h2c'
+  # Placeholder to define custom/additional annotations on resources
+  annotations:
+    projectcontour.io/max-pending-requests: "25000"
+    projectcontour.io/max-requests: "25000"
+  # Placeholder to define custom/additional labels on resources
+  labels:
+  # Deploy additional LB Service with Online Mediation Server. This is optional. Example : If user needs to run a diameter configuration on the same server along with HTTP configuration, then this flag should be set to true.
+  additionalLBService: true
+  # Use to configure session affinity or non session affinity based Online Solution. sessionAffinity.enabled can be set to either true or false.
+  # If sessionAffinity.enabled is true, it is mandatory to provide sessionAffinity.prefixID
+  sessionAffinity:
+    enable: false
+    # Specify Prefix for the subsequent requests which will be part of Request URI as path parameter. This ID shall be used during Business Logic Configuration..
+    # NOTE: Don't use any special character(s).Only Letters and Numbers are supported.
+    prefixID: 
+  # To fetch SSL certificates from Certificate Manager provide Key and Certificate Name.
+  certm:
+    enable: false
+    # Key name and Certificate name in CertM for the FQDN certificate.
+    #keyName:
+    #certificateName:
+    # Set this paramater to true to enable external client certificate validation during SSL handshake between client and ICCR envoy. Make sure to provide the clientValidationTrustedCertificateList name when this is enabled.
+    #clientCertValidation: false
+    # Provide the trusted certificate list name in which the external client trusted certs have been uploaded, this will be used for external client Certificate valildation during SSL handshake between external client and ICCR envoy.
+    #clientValidationTrustedCertificateList:
+    # Set to true to enable OLM certificate validation, when enabling OLM certificate validation recommended protocol to use is h2. Make sure to provide olmValidationTrustedCertificateList name when OLM certificate validation is enabled.
+    #olmCertValidation: false
+    # Provide the subject alternate name from upstream OLM servers as input below, this will be for OLM certificate validation used during SSL handshake between ICCR envoy and OLM.
+    #subjectName:
+    # Provide the trusted certificate list name in which the OLM trusted certs have been uploaded, this will be used for OLM server certificate validation during SSL handshake between ICCR Envoy and OLM.
+    #olmValidationTrustedCertificateList:
+
+# To enable secured communication between KVContainer and KVDB provide details in below section.
+KVDBSecuredCommunication:
+  enableTls: true
+  certTtl: 31536000
+
+# Backup and Restore Agent sidecar container
+brAgent:
+  enabled: false
+  brTimeout: 120
+  dynamic:
+    storageClassName: 
+    accessMode: "ReadWriteOnce"
+    size: 
+    retain: true
+  broServiceName: eric-ctrl-bro
+  broGrpcServicePort: 3000
+  restPort: 7001
+  # Enable this feature to group multiple backups together.
+  #backupScope:
+
+# Cronjob object as optional pod
+customCron:
+  enabled: false
+  cronEntries:
+    - scriptConfigMap:
+      # Default image for CustomCronJob is "eric-bss-em-customcron:22.5.1-40".
+      image: "eric-bss-em-customcron:22.5.1-40"
+      frequency:
+      # If user's PV doesn't support ReadWriteMany and/or ReadOnlyMany:
+      # Please ensure to enable rwoVolume. With rwoVolume enabled
+      # User can schedule OM Server Pods & it's respective CronJob on same nodes.
+      ## Note: 
+      # Only one entry for existingClaimName is allowed with rwoVolume enabled.
+      # If multiple existingClaimNames are required, then multiple cronEntries can be created.
+      rwoVolume: false 
+      # User can input additionalCronPvc.existingClaimName fields with,
+      # Add Keywords in existingClaimName, If user wants to mount EM-Application PVC in CronJob pod.
+      #    Following key words are supported,
+      #      "mmstorage-n"  : In case of OM-Scalable release, this keyword where "n" is an ordinal replica index will mount "nth" replica`s mmstorage PVC in CronJob pod.
+      # PVC name : Existing PVC name if user wants to mount additional PVC in CronJob Pod.
+      additionalCronPvc: {}
+      #  - existingClaimName:
+      #    mountPath:
+
+# Logs to retain for how many number of days 
+logRetentionDays: 7
+

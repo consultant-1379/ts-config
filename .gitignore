@@ -1,0 +1,9 @@
+*.pyc
+!.gitignore
+.vscode
+.kube
+.idea
+*.swp
+*.swo
+ts-config_env*
+*.xlsx

@@ -1,0 +1,159 @@
+# Default values for eric-bss-em-hamon-encrypt.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# As default registry path, the global registry path will be used.
+global:
+  registry:
+    # Docker registry URL
+    url: armdocker.rnd.ericsson.se
+    # Secret must be manually created in the namespace, no default value. Only required if Docker registry required authentication
+    #pullSecret: eric-em-example-secret
+  # Set timezone in pod.
+  timezone: {{ timezone }}
+  #security:
+  #  tls:
+  #    enabled: true
+
+eric-bss-em-ha-monitor:
+  enabled: true
+  # To run container startup scripts in debugging mode set debug to true.
+  debug: false
+  
+  resources:
+    limits:
+      # Maximum CPU that container can use.
+      cpu: "500m"
+      # Maximum Memory that container can use.
+      memory: "512Mi"
+    requests:
+      # Guaranteed CPU/Memory for container.
+      cpu: {{ '50m' if systemProfile == 'small' else '100m' }}
+      memory: "128Mi"
+  
+  node:
+    # Monitor interval to check underline node health
+    monitorInterval: 20
+  
+  # Actions to be controlled during Node failure.
+  # Values of onNodeFailure parameter should only be changed when
+  # another High Availability solution is aleady inplace
+  onNodeFailure:
+    deleteTerminatingPOD: true
+    deleteVolumeattachment: true
+  
+  # Kafka details to raise alarm on the event of Node, Network, PVC etc. failure for Ericsson Mediation components.
+  kafka:
+    service: eric-data-message-bus-kf
+    port: 9092
+    tls_port: 9093
+    kafkaTopic: AdpFaultIndication
+  
+  # On Storage connectivity or LoadBalancer (Traffic) endpoint failure for POD eviction a Label will be
+  # applied on underline node and then POD will be deleted. Mediation POD already contains the AntiAddinity
+  # rule for that respective label. Set the value to true to automatically remove the label form underline
+  # Node after POD eviction. timeout value is in seconds
+  removeNodeLabel:
+    enable: true
+    timeout : 300
+  
+  # This toleration is to have the daemonset runnable on master nodes
+  # as well as any nodes where scheduling is disabled (by defining no key in toleration)
+  # Remove it if masters can't run pods
+  tolerations:
+    - key: node-role.kubernetes.io/master
+      effect: NoSchedule
+    - key: node-role.kubernetes.io/control-plane
+      effect: NoSchedule
+    - effect: NoSchedule
+      operator: Exists
+  
+  # Node Affinity can be configured to schedule HA Monitor on specific node for K8s v1.20 or higher
+  # Commented examples are provided for reference purpose only
+  affinity: {}
+  ## Note: Only one entry for nodeAffinity is allowed. To add multiple conditions
+  ## append the additional rules/entry under matchExpressions
+  #
+  ## Example to run HA Monitor PODs on desired node having <node_label_key>=<label_value> label
+  # nodeAffinity:
+  #   requiredDuringSchedulingIgnoredDuringExecution:
+  #     nodeSelectorTerms:
+  #     - matchExpressions:
+  #       - key: <node_label_key>
+  #         operator: In
+  #         values:
+  #         - <label_value>
+  
+  # Placeholder to define custom/additional annotations on all resources
+  annotations: {}
+  
+  # Placeholder to define custom/additional labels on all resources
+  labels: {}
+  
+eric-bss-em-encryption:
+  enabled: true
+  replicaCount: 1
+  
+  # To run container startup script in debugging mode set debug to true.
+  debug: false
+  
+  # Password length values. Minimum possible value is 8 and maximum possible value is 63.
+  passwordLength:
+    minLength: 8
+    maxLength: 63
+  
+  # Custom/Additional pod annotations & labels can be added under annotations.
+  pod:
+    annotations: {}
+      # encryptionlogharvest: "true"
+    labels: {}
+      # label-parameter: label-value
+  
+  resources:
+    requests:
+      # Minimum CPU that encryption container needs.
+      cpu: {{ '.2' if systemProfile == 'small' else '.5' }}
+      # Minimum Memory that encryption container needs.
+      memory: "512Mi"
+    limits:
+      # Maximum CPU that encryption container can use.
+      cpu: ".5"
+      # Maximum Memory that encryption container can use.
+      memory: "512Mi"
+  
+  # To fetch SSL certificates from Certificate Manager provide Key and Certificate name. These are mandatory values.
+  certm:
+    enable: false
+    keyName:
+    certificateName:
+    autoreload: true
+  
+  # Pod/Node Affinity or Anti-Affinity can be configured as per user requirement
+  # Commented examples are provided for reference purpose only
+  affinity: {}
+  ## Note: Only one entry for nodeAffinity, podAffinity and podAntiAffinity is allowed. To add
+  ## multiple conditions append the additional rules/entry under respective matchExpressions
+  #
+  ## Example to run Encryption POD on desired node having <node_label_key>=<label_value> label
+  ## Note : matchField under nodeSelectorTerms is not supported
+  #  nodeAffinity:
+  #    requiredDuringSchedulingIgnoredDuringExecution:
+  #      nodeSelectorTerms:
+  #      - matchExpressions:
+  #        - key: <node_label_key>
+  #          operator: In
+  #          values:
+  #          - <label_value>
+  
+  # Placeholder to define POD tolerations for taint(s) applied on Node
+  tolerations: []
+  
+  # Placeholder to define POD topologySpreadConstraints for Rack level redundancy
+  topologySpreadConstraints: []
+
+  # Placeholder to define custom/additional annotations on all resources
+  annotations: {}
+
+  # Placeholder to define custom/additional labels on all resources
+  labels: {}
+

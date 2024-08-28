@@ -1,0 +1,29 @@
+# Default values for eric-bss-em-mgr-httpproxyrules.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+productInfo:
+  # R-State of the product. R State should match helm chart version (3.1.0 -> R2A)
+  # To automate it when packaging the helm chart rstate can be generated
+  # and below value replaced with correct R-State
+  rstate: R25N
+
+httpRules:
+   # Specify the ingress class name used during ICCR deployment for load balancing requests through specific ICCR.
+   ingressClassName: emingress
+   # Specify the FQDN of ICCR to access Ericsson Mediation Manager.
+   fqdn: {{ em.oamFqdn }}
+   # Manager Service details
+   defaultMgrServiceName: {{ em.defaultMgrServiceName }}
+   #updatedMgrServiceName:
+   #updatedMgrRstate:
+
+   # additionalAnnotations, additionalLabels: These can be specified as required by user incase any other annotations and labels are required to be associated with the object.
+   additionalAnnotations: {}
+   additionalLabels: {}
+
+# Placeholder to define custom/additional annotations on all resources
+annotations: {}
+
+# Placeholder to define custom/additional labels on all resources
+labels: {}

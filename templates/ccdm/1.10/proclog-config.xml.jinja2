@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <capabilities>
+        <capability>urn:ietf:params:netconf:base:1.0</capability>
+    </capabilities>
+</hello>
+]]>]]>
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<rpc xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" message-id="1">
+    <edit-config>
+        <target>
+            <running/>
+        </target>
+        <config xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+            <pf xmlns="urn:rdns:com:ericsson:oammodel:ericsson-pf">
+                <proclog-management>
+                    <sftp-server>
+                        <name>sftpServerForProclog</name>
+                        <endpoints>
+                            <endpoint>
+                                <name>sftpServerForProclog</name>
+                                <remote-address>{{ sftpServer.host }}</remote-address>
+                                <remote-port>22</remote-port>
+                                <remote-path>{{ ccdm.proclog.remotePath }}</remote-path>
+                                <client-identity>
+                                    <username>{{ sftpServer.username }}</username>
+                                    <public-key>
+                                        <local-definition>
+                                            <algorithm>rsa2048</algorithm>
+                                            <public-key-format>ssh-public-key-format</public-key-format>
+                                            <private-key-format>rsa-private-key-format</private-key-format>
+                                            <public-key>{{ sftpServer.publicKey }}</public-key>
+                                            <private-key>{{ sftpServer.privateKey }}</private-key>
+                                        </local-definition>
+                                    </public-key>
+                                </client-identity>
+                                <server-authentication>
+                                    <ssh-host-keys>
+                                        <local-definition>
+                                            <host-key></host-key>
+                                        </local-definition>
+                                    </ssh-host-keys>
+                                </server-authentication>
+                            </endpoint>
+                        </endpoints>
+                    </sftp-server>
+                </proclog-management>
+            </pf>
+        </config>
+    </edit-config>
+</rpc>
+

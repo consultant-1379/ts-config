@@ -1,0 +1,241 @@
+nodeName: n99-eccd1-pcc1
+nodeType: PCC
+instance: 1
+vnflcm:
+  clusterName: n99-eccd1
+  namespace: pcc1
+#  InstantiateVnfRequest:
+#    applicationTimeOut: 1800
+#    skipVerification: "true"
+users:
+  day1:
+  - username: pcc-admin
+    password: Changeme@1st
+    groups: [ system-admin system-security-admin mm-config-admin mm-lawful-intercept-admin mm-gsh-lawful-intercept-admin mm-itc-admin mm-security-admin mm-admin mm-read-only-operator mm-expert-admin sm-admin sm-cdr-admin sm-charging-admin sm-itc-admin sm-lawful-intercept-admin sm-operator sm-tracing-admin sm-uetrace-admin system-troubleshooter system-read-only admin ]
+ 
+license:
+  customerId: '946060'
+  swltId: STA-PCC-9
+snmp:
+  agentEngineId: 800000c1047063633163317332
+  heartbeatInterval: 600
+  sourceIdentifier: 10.155.138.8
+
+ddc:
+  remotePath: ddc/eccd1/n99-pcc1
+# move into pcc.pcmm
+# hss:
+# - ip: 5.8.6.141
+# - ip: 5.8.6.59
+replicaCount:
+  eric-pc-mm-forwarder: 8  # mandatory, as PC-MM networking configurations reply on this number.
+  eric-pc-mm-mobility: 16
+  eric-pc-mm-sctp: 7
+  eric-pc-sm-sgw-session: 5
+  eric-pc-sm-smf-pgw-session: 8
+  eric-pc-sm-nsmf-forwarder: 5
+  eric-pc-sm-http-client: 3
+  eric-pc-sm-udp-forwarder: 3
+  eric-pc-kvdb-rd-server: 11
+  eric-pc-vpn-gateway-forwarder: 4
+
+# remove interfaceType, instead use caas to determine the interface Type
+# interfaceType: macvlan
+
+pcc:
+  ipRule:
+    defaultGws: [1]
+    bfdPeers: [2,3]
+    fwdIpFrom: 21
+    bgpNeighbors: [2,3]
+    creIpFrom: 21
+    vpngwIpFrom: 31
+  pcmm:
+    nodeId: site2-cluster1-pcc1
+    mmeGroupId: 65281
+    mmeCode: 142
+    amfRegionId: 255
+    amfSetId: 2
+    amfPointer: 9
+    amfCapacity: 50
+    amfInstanceId: 3fb31bb6-99ee-4a34-b714-414d46a1c1d2
+    namfLbIp: 172.17.136.1
+    # new hss var in pcmm
+    hss:
+      - ip: 172.17.136.14
+        host: esm
+      - ip: 172.17.128.14
+        host: esm
+    mmec:
+      - ip: 172.16.8.2
+        id: 2        #ID of MME member in the pool
+      - ip: 172.16.0.2
+        id: 1        #ID of MME member in the pool
+    ipNetwork: # Only support IPv4
+    - name: OM_EXTERNAL
+      ipInt:
+        vlan: 2003
+        ipv4: 172.20.168.0/24
+      ipSvc:
+      - name: OAM
+        ipv4: 10.155.138.7
+    - name: PRAN_SCTP_1
+      ipInt:
+        vlan: 2004
+        ipv4: 172.20.72.0/24
+      ipSvc:
+      - name: N2-1
+        ipv4: 172.16.72.3
+      - name: S1-MME-1
+        ipv4: 172.16.72.1
+    - name: PRAN_SCTP_2
+      ipInt:
+        vlan: 2009
+        ipv4: 172.20.136.0/24
+      ipSvc:
+      - name: N2-2
+        ipv4: 172.16.72.4
+      - name: S1-MME-2
+        ipv4: 172.16.72.2
+    - name: SIG_SCTP_1
+      ipInt:
+        vlan: 2002
+        ipv4: 172.20.40.0/24
+      ipSvc:
+      - name: S6a-1
+        ipv4: 172.16.40.1
+      - name: SBI-Server
+        ipv4: 172.17.136.1
+      - name: SBI-Client
+        ipv4: 172.17.136.1
+    - name: SIG_SCTP_2
+      ipInt:
+        vlan: 2010
+        ipv4: 172.20.104.0/24
+      ipSvc:
+      - name: S6a-2
+        ipv4: 172.16.40.2
+    - name: MEDIA
+      ipInt:
+        vlan: 2001
+        ipv4: 172.20.8.0/24
+      ipSvc:
+      - name: Gn-GTP-C
+        ipv4: 172.16.8.1
+      - name: S10-GTP-C
+        ipv4: 172.16.8.2
+      - name: S11-GTP-C
+        ipv4: 172.16.8.3
+  pcsm:
+    smfInstanceId: d67766fc-210f-4ecf-5cc1-534d46a1c1d2
+    nsmfLbIp: 172.17.136.2
+    nsmfNotifLbIp: 172.17.136.3
+    smfSbiNotifyHost: pcc1-smf-notification.site2-cluster1
+    smfSbiNsmfHost: pcc1-smf-nsmf.site2-cluster1
+    # This is needed to get irat configuration with template
+    pgwFqdn: topon.s5.gw.site2-cluster1.dns.nodes.epc.mnc081.mcc240.3gppnetwork.org
+    pcrf:
+    - pcrfDiameterAddress: 172.17.128.8
+      priority: 1
+    - pcrfDiameterAddress: 172.17.136.8
+      priority: 2
+    sgwu:
+    - pfcpAddress: 172.18.32.1
+      priority: 2
+      networkInstances:
+        s1s4s12-u: ran
+        s11-u: media
+        s5s8-u: media
+    - pfcpAddress: 172.18.40.1
+      priority: 1
+      networkInstances:
+        s1s4s12-u: ran
+        s11-u: media
+        s5s8-u: media
+    upfPgwu:
+    - pfcpAddress: 172.18.32.1
+      priority: 2
+      networkInstances:
+        s5s8-u: media
+        n3: ran
+        sx-u: signaling
+    - pfcpAddress: 172.18.40.1
+      priority: 1
+      networkInstances:
+        s5s8-u: media
+        n3: ran
+        sx-u: signaling
+    apn:
+      internet:
+        networkInstance: internet
+        ipPools:
+        - upf: 1
+          ipv4: [21.32.0.0/11]
+          ipv6: [fd21:1:40::/44,fd21:1:50::/44,fd21:1:60::/44,fd21:1:70::/44]
+        - upf: 2
+          ipv4: [22.0.0.0/11]
+          ipv6: [fd22:1::/44,fd22:1:10::/44,fd22:1:20::/44,fd22:1:30::/44]
+      ims:
+        networkInstance: internet
+        ipPools:
+        - upf: 1
+          ipv4: [21.96.0.0/11]
+          ipv6: [fd21:1:240::/44,fd21:1:250::/44,fd21:1:260::/44,fd22:1:270::/44]
+        - upf: 2
+          ipv4: [22.64.0.0/11]
+          ipv6: [fd22:1:200::/44,fd22:1:210::/44,fd22:1:220::/44,fd22:1:230::/44]
+    # Move internetPool and imsPool to apn section
+    # internetPool:
+    #   ipv4: 39.0.0.0/11
+    #   ipv6: 2a01:1::/45
+    # imsPool:
+    #   ipv4: 39.64.0.0/11
+    #   ipv6: 2a01:1:10::/45
+
+    smLogicalInt:
+      pgwS5s8c:
+        ipv4: 172.17.8.3
+        networkInstance: media
+      gomc:
+        ipv4: 172.17.40.3
+        networkInstance: signaling
+      sxb:
+        ipv4: 172.17.40.4
+        networkInstance: signaling
+      s4s11c:
+        ipv4: 172.17.8.1
+        networkInstance: media
+      sgwS5s8c:
+        ipv4: 172.17.8.2
+        networkInstance: media
+      sxa:
+        ipv4: 172.17.40.2
+        networkInstance: signaling
+      gx:
+        ipv4: 172.17.40.6
+        networkInstance: signaling
+  vpngw:
+    maxNum: 8
+    loopback:
+      ipv4: 172.17.40.1
+      networkInstance: signaling
+    intraForward:
+      vlan: 2110
+      ipv4: 172.21.128.0/24
+    networkInstances:
+    - name: signaling
+      localAs: 4201211002
+      remoteAs: 4251200002
+      ipForward:
+        vlan: 2102
+        ipv4: 172.21.40.0/24
+      vnfLoop:
+        ipv4: 172.17.40.254
+    - name: media
+      localAs: 4201211001
+      remoteAs: 4251200001
+      ipForward:
+        vlan: 2101
+        ipv4: 172.21.8.0/24
+      vnfLoop:
+        ipv4: 172.17.8.254

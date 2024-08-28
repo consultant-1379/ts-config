@@ -1,0 +1,109 @@
+nodeName: n99-ccrc1
+nodeType: CCRC
+
+vnflcm:
+  clusterName: n99-eccd1
+  namespace: ccrc
+  InstantiateVnfRequest:
+    applicationTimeOut: 3600
+    skipVerification: "true"
+
+users:
+  day1:
+  - username: ccrcoam
+    password: Changeme@1st
+    groups:
+    - nrf-admin
+    - nssf-admin
+    - nrfagent-admin
+    - system-admin
+  - username: ccrcsec
+    password: Changeme@1st
+    groups:
+    - nrf-security-admin
+    - nssf-security-admin
+    - nrfagent-security-admin
+    - system-security-admin
+
+license:
+  customerId: "946060"
+  swltId: STA-CCRC-4
+
+cnom:
+  fqdn: cnom.ccrc1-oam.node63-cluster1.sero.gic.ericsson.se
+snmp:
+  agentEngineId: 8000137001C0A899ECCD12A63F
+ddc:
+  remotePath: /home/tsuser/ddc/eccd1/n99-ccrc1
+
+minReplica:
+  eric-nrf-discovery: 2
+maxReplica:
+  eric-nrf-discovery: 10
+
+# Old
+# nrf:
+# - instanceId: 0c765084-9cc5-49c6-9876-99eccd12a63f
+# - instanceId: 0c765084-9cc5-49c6-9876-28eccd52a63f
+
+# nssf:
+# - instanceId: 13a1de33-ec45-4cd6-a842-99eccd1ba3d8
+# - instanceId: 13a1de33-ec45-4cd6-a842-28eccd5ba3d8
+
+# amf:
+# - amfInstanceId: 3fb31bb6-99ee-4a34-b714-99eccd16c3cf
+# - amfInstanceId: 3fb31bb6-99ee-4a34-b714-28eccd56c3cf
+
+# kvdb:
+# - siteId: 1
+# - siteId: 2
+
+ccrc:
+  nrf:
+    instanceId: 0c765084-9cc5-49c6-9876-99eccd12a63f
+    host: nrf1.n99
+    port: 443
+    geored:
+      remote:
+        instanceId: 0c765084-9cc5-49c6-9876-28eccd52a63f
+        host: nrf2.n28
+        port: 443
+  nssf:
+    instanceId: 13a1de33-ec45-4cd6-a842-99eccd1ba3d8
+    host: nssf1.n99
+    port: 443
+    geored:
+      remote:
+        instanceId: 13a1de33-ec45-4cd6-a842-28eccd5ba3d8
+        host: nssf2.n28
+        port: 443
+    provisioning:
+      fqdn: nssf-prov.ccrc1-oam.node63-cluster1.sero.gic.ericsson.se
+      amf:
+        regionId: 255
+        setId: 2
+        instanceId:
+        - 3fb31bb6-99ee-4a34-b714-99eccd16c3cf
+        - 3fb31bb6-99ee-4a34-b714-28eccd56c3cf
+
+certs:
+  iccr-external-tls-certificate:
+    p12: ../../../certs/n99/ccrc1/ccrc1-iccr-server.p12
+  eric-ccrc-nrf-sbi-server-certificate:
+    p12: ../../../certs/n99/ccrc1/ccrc1-nrf-sbi-server.p12
+  eric-ccrc-nrf-sbi-client-certificate:
+    p12: ../../../certs/n99/ccrc1/ccrc1-nrf-sbi-client.p12
+  eric-ccrc-nssf-sbi-server-certificate:
+    p12: ../../../certs/n99/ccrc1/ccrc1-nssf-sbi-server.p12
+  eric-ccrc-nssf-sbi-client-certificate:
+    p12: ../../../certs/n99/ccrc1/ccrc1-nssf-sbi-client.p12
+  eric-ccrc-nssf-provisioning-server-certificate:
+    p12: ../../../certs/n99/ccrc1/ccrc1-iccr-server.p12
+  eric-ccrc-nrf-kvdb-server-certificate:
+    p12: ../../../certs/n99/ccrc1/ccrc1-nrf-kvdb-server.p12
+  eric-ccrc-nrf-kvdb-client-certificate:
+    p12: ../../../certs/n99/ccrc1/ccrc1-nrf-kvdb-client.p12
+  eric-ccrc-nssf-kvdb-server-certificate:
+    p12: ../../../certs/n99/ccrc1/ccrc1-nssf-kvdb-server.p12
+  eric-ccrc-nssf-kvdb-client-certificate:
+    p12: ../../../certs/n99/ccrc1/ccrc1-nssf-kvdb-client.p12

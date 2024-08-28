@@ -1,0 +1,163 @@
+#!/bin/sh -f
+#set -x
+{% if 'ipRule' in pcc %}
+{% set fwdIpFrom = pcc.ipRule.fwdIpFrom %}
+{% set bfdPeers = pcc.ipRule.bfdPeers %}
+{% set defaultGws = pcc.ipRule.defaultGws %}
+{% else %}
+{% set fwdIpFrom = 10 %}
+{% set bfdPeers = [2,3] %}
+{% set defaultGws = [1] %}
+{% endif %}
+{% for n in range(1,replicaCount['eric-pc-mm-forwarder']+1) %}
+gsh create_eth_port -eqp 1.{{n}} -ep 1
+{% endfor %}
+
+{% for ipNetwork in pcc.pcmm.ipNetwork %}
+{% set cidr = ipNetwork.ipInt.ipv4 | ip_network %}
+##### IP Network: {{ ipNetwork.name }} configuration Start ####
+gsh create_ip_network -nw {{ ipNetwork.name }}
+
+{% for n in range(1,replicaCount['eric-pc-mm-forwarder']+1) %}
+{% set intName = "ETH_1_" + n|string + "_1_" + ipNetwork.ipInt.vlan|string + "_" + ipNetwork.name %}
+gsh create_eth_vlan -eqp 1.{{n}} -ep 1 -vid {{ ipNetwork.ipInt.vlan }}
+gsh create_inbound_pf_policy -ifp {{ intName }}
+gsh create_inbound_pf_rule -ifp {{ intName }} -fr 1 -r permit
+gsh create_ip_interface -ifn {{ intName }} -ip {{ cidr[n+fwdIpFrom-1] }} -mask {{ cidr.netmask }} -eqp 1.{{n}} -ep 1 -vid {{ ipNetwork.ipInt.vlan }} -ifp {{ intName }} -nw {{ ipNetwork.name }}
+gsh create_router_instance -eqp 1.{{n}} -nw {{ ipNetwork.name }} -ip {{ cidr[n+fwdIpFrom-1] }}
+{% for gw in defaultGws %}
+gsh create_static_route -eqp 1.{{n}} -nw {{ ipNetwork.name }} -dip 0.0.0.0 -mask 0.0.0.0 -gip {{ cidr[gw] }}
+{% endfor %}
+
+{% endfor %}
+{% if DCEdgeType is defined and DCEdgeType == 'Ericsson-R6000' %}
+gsh create_bfd -nw {{ ipNetwork.name }} -dtx 100 -mrx 100 -mult 9
+{% else %}
+gsh create_bfd -nw {{ ipNetwork.name }} -dtx 300 -mrx 300 -mult 3
+{% endif %}
+{% for bfdPeer in bfdPeers %}
+gsh create_bfd_neighbor -nw {{ ipNetwork.name }} -ip {{ cidr[bfdPeer] }}
+{% endfor %}
+
+{% for svc in ipNetwork.ipSvc %}
+gsh create_ip_service -sn {{ svc.name }} -nw {{ ipNetwork.name }}
+gsh create_ip_service_address -sn {{ svc.name }} -ip {{ svc.ipv4 | ip_address }}
+{% endfor %}
+##### IP Network: {{ ipNetwork.name }} configuration End ####
+
+{% endfor %}
+gsh modify_ne -ni {{ pcc.pcmm.nodeId|default(nodeName) }} -mgi {{ pcc.pcmm.mmeGroupId }} -mc {{ pcc.pcmm.mmeCode }} -ari {{ pcc.pcmm.amfRegionId }} -asi {{ pcc.pcmm.amfSetId }} -ap {{ pcc.pcmm.amfPointer }} -daf 1 -uuid {{ pcc.pcmm.amfInstanceId }} -lclt {{ locality }}
+{% if voice.enabled %}
+gsh create_plmn -mcc {{ mcc|mcc }} -mnc {{ mnc|mnc }} -pn {{ mcc|mcc }}{{ mnc|mnc }} -voip voip_without_emergency -sl true -sn true
+{% else %}
+gsh create_plmn -mcc {{ mcc|mcc }} -mnc {{ mnc|mnc }} -pn {{ mcc|mcc }}{{ mnc|mnc }} -sl true -sn true
+{% endif %}
+gsh modify_eea_algorithm -name eea0 -prio 3
+gsh modify_eea_algorithm -name eea1 -prio 2
+gsh modify_eea_algorithm -name eea2 -prio 1
+gsh modify_eea_algorithm -name eea3 -prio 0
+gsh modify_eia_algorithm -name eia1 -prio 2
+gsh modify_eia_algorithm -name eia2 -prio 1
+gsh modify_eia_algorithm -name eia3 -prio 0
+gsh modify_nia_algorithm -name nia1 -prio 2
+gsh modify_nia_algorithm -name nia2 -prio 1
+gsh modify_nia_algorithm -name nia3 -prio 0
+gsh modify_nea_algorithm -name nea0 -prio 1
+gsh modify_nea_algorithm -name nea1 -prio 2
+gsh modify_nea_algorithm -name nea2 -prio 3
+gsh modify_nea_algorithm -name nea3 -prio 0
+
+gsh modify_nrf_option -cache on -nftl SMF,UDM,AMF,AUSF,5G-EIR -nsi 50 -anpap fqdn
+gsh modify_sbi -uhf fqdn
+
+
+gsh modify_sbi_client_profile -scpl default_sbi_client_profile_list -prid 1 -rto 2000 -mrn 1
+gsh modify_sbi_client_profile -scpl default_sbi_client_profile_list -prid 2 -sn nnrf_nfdiscovery -rto 2000 -mrn 1
+gsh modify_sbi_client_profile -scpl default_sbi_client_profile_list -prid 3 -sn nnrf_nfmanagement -rto 2000 -mrn 1
+gsh modify_sbi_client_profile -scpl default_sbi_client_profile_list -prid 4 -sn nnrf_accesstoken -rto 2000 -mrn 1
+gsh modify_sbi_client_profile -scpl default_sbi_client_profile_list -prid 5 -sn nnssf_nssaiavailability -rto 2000 -mrn 1
+gsh modify_sbi_client_profile -scpl default_sbi_client_profile_list -prid 6 -sn nnssf_nsselection -rto 2000 -mrn 1
+gsh modify_sbi_client_profile -scpl default_sbi_client_profile_list -prid 7 -sn nsmf_pdusession -rto 4000 -mrn {{ 2 if smfGwcGeo else 1 }}
+gsh modify_sbi_client_profile -scpl default_sbi_client_profile_list -prid 8 -sn nsmsf_smservice -rto 2000 -mrn 1
+gsh modify_sbi_client_profile -scpl default_sbi_client_profile_list -prid 9 -sn n5g-eir_equipmentidentitycheck -rto 2000 -mrn 1
+gsh create_sbi_client_profile -scpl default_sbi_client_profile_list -prid 100 -sn namf_communication -rto 2000 -mrn 1
+gsh create_sbi_client_profile -scpl default_sbi_client_profile_list -prid 101 -sn nausf_authentication -rto 2000 -mrn 1
+gsh create_sbi_client_profile -scpl default_sbi_client_profile_list -prid 102 -sn nudm_subscriberdatamanagement -rto 2000 -mrn 1
+gsh create_sbi_client_profile -scpl default_sbi_client_profile_list -prid 103 -sn nudm_uecontextmanagement -rto 2000 -mrn 1
+
+gsh create_nf_discovery_profile -ndpl default_nf_disc_profile_list -id 2 -snl namf_communication -dp preferred-locality
+gsh create_nf_discovery_profile -ndpl default_nf_disc_profile_list -id 3 -snl nausf_authentication -dp preferred-locality
+gsh create_nf_discovery_profile -ndpl default_nf_disc_profile_list -id 4 -snl nudm_subscriberdatamanagement -dp preferred-locality
+gsh create_nf_discovery_profile -ndpl default_nf_disc_profile_list -id 5 -snl nudm_uecontextmanagement -dp preferred-locality
+gsh create_nf_discovery_profile -ndpl default_nf_disc_profile_list -id 6 -snl n5g-eir_equipmentidentitycheck -dp preferred-locality
+gsh create_nf_discovery_profile -ndpl default_nf_disc_profile_list -id 7 -snl nsmf_pdusession -dp preferred-locality
+
+gsh create_local_diameter_host -dh {{ nodeName }}-mme -rn ericsson.se -no 2
+gsh create_diameter_realm -da s6a -rn ericsson.se -dpl 1
+gsh create_diameter_application -da s6a -dh {{ nodeName }}-mme -rn ericsson.se
+{% if hssGeo %}
+gsh create_diameter_peer -ip {{ hss.0.ip }} -sip {{ hss.1.ip }} -igr true -dh {{ nodeName }}-mme -rn ericsson.se -spn default
+{% else %}
+gsh create_diameter_peer -ip {{ hss.0.ip }} -dh {{ nodeName }}-mme -rn ericsson.se -spn default
+{% endif %}
+gsh create_dns -dn epc.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org. -qt recursive
+gsh create_supported_slice -sn 2 -sst 1 -sd 2
+
+gsh modify_feature_state -fsi amf_multiple_network_slices_support -fs ACTIVATED
+gsh modify_feature_state -fsi imei_check -fs ACTIVATED
+{% if voice.enabled %}
+gsh modify_feature_state -fsi 5gc_voice_support -fs ACTIVATED
+gsh modify_feature_state -fsi advanced_4g_5g_interworking -fs ACTIVATED
+gsh modify_feature_state -fsi mmtel -fs ACTIVATED
+gsh modify_feature_state -fsi dedicated_bearers -fs ACTIVATED
+{% endif %}
+gsh create_pei_check -pcn Pei_Check -aup false
+gsh create_ga -gan MSTZ
+gsh create_ga_ta_range -gan MSTZ -tan TaLteZone1 -mcc {{ mcc|mcc }} -mnc {{ mnc|mnc }} -first 1 -last 2304
+gsh create_ga_time_zone -gan MSTZ -tz {{ timezone }}
+gsh modify_date_and_time -tz {{ timezone }}
+
+gsh create_supi_range -imsi {{ mcc|mcc }}{{ mnc|mnc }} -vops 3gpp -rs home -doie false -ddoi mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.gprs
+gsh create_imsins -imsi {{ mcc|mcc }}{{ mnc|mnc }} -rs home -dn mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.gprs -np e214 -na international -rd 5 -ad 86582 -rn ericsson.se -hn esm -earplr 0
+
+gsh create_n2 -n2 n2 -pt 3 -no 3
+gsh create_s11 -s11 S11 -s11sg off
+gsh create_s1_mme -s1 S1 -no 1  -sar false
+
+gsh create_nels_configuration -nci 1 -h {{ nels.host }} -p {{ nels.port }}
+gsh create_node_credential -nci CLIENT
+gsh create_node_credential -nci SERVER
+
+gsh create_nrf_service_instance -nsin nnrf_nfm_1 -nsn nnrf_nfmanagement -nr primary -fqdn {{ nrf.0.host }}.5gc.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org -fpn {{ nrf.0.port }}
+gsh create_nrf_service_instance -nsin nnrf_nfd_1 -nsn nnrf_nfdiscovery -nr primary -fqdn {{ nrf.0.host }}.5gc.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org -fpn {{ nrf.0.port }}
+gsh create_nssf_service_instance -nsin nnssf_sel_1 -nsn nnssf_nsselection -fqdn {{ nssf.0.host }}.5gc.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org -fpn {{ nssf.0.port }} -prio 1
+gsh create_nssf_service_instance -nsin nnssf_ava_1 -nsn nnssf_nssaiavailability -fqdn {{ nssf.0.host }}.5gc.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org -fpn {{ nssf.0.port }} -prio 1
+{% if nrfGeo %}
+gsh create_nrf_service_instance -nsin nnrf_nfm_2 -nsn nnrf_nfmanagement -nr standby -fqdn {{ nrf.1.host }}.5gc.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org -fpn {{ nrf.1.port }}
+gsh create_nrf_service_instance -nsin nnrf_nfd_2 -nsn nnrf_nfdiscovery -nr standby -fqdn {{ nrf.1.host }}.5gc.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org -fpn {{ nrf.1.port }}
+{% endif %}
+{% if nssfGeo %}
+gsh create_nssf_service_instance -nsin nnssf_sel_2 -nsn nnssf_nsselection -fqdn {{ nssf.1.host }}.5gc.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org -fpn {{ nssf.1.port }} -prio 2
+gsh create_nssf_service_instance -nsin nnssf_ava_2 -nsn nnssf_nssaiavailability -fqdn {{ nssf.1.host }}.5gc.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org -fpn {{ nssf.1.port }} -prio 2
+{% endif %}
+
+gsh create_sctp_end_point -no 1 -primsn S1-MME-1 -secsn S1-MME-2 -portno 36412 -pn 4gsctpS1
+gsh create_sctp_end_point -no 2 -primsn S6a-1 -portno 3868 -pn sctp_s6a
+gsh create_sctp_end_point -no 3 -portno 38412 -pn 5gsctpN2 -primsn N2-1 -secsn N2-2
+gsh create_sctp_profile -pn 4gsctpS1 -assrtx 20 -initrt 16 -irto 200 -minrto 100 -maxrto 400 -pathrtx 10 -bunt 0 -pmtu 1500
+gsh create_sctp_profile -pn 5gsctpN2 -assrtx 20 -initrt 16 -irto 200 -minrto 100 -maxrto 400 -pathrtx 10 -bunt 0 -pmtu 1500
+gsh create_sctp_profile -pn sctp_s6a -pmtu 1300
+gsh create_sctp_profile -pn default -pmtu 1500
+gsh modify_ue_trace_log -rp 5
+
+{% if amfGeo %}
+#If AmfGeo deployed, AmfGeo configuration start#
+gsh modify_ne -rac {{ pcc.pcmm.amfCapacity }}
+gsh modify_feature_state -fsi 5gc_amf_geo_redundancy -fs ACTIVATED
+gsh modify_node_function -name amf_set_status_awareness -state on
+gsh modify_amf_set_status_awareness -assci 1 -asdi 60
+gsh modify_nudm -ufdt 60
+gsh modify_amf_ue_reg_rate_based_throttle -aute true
+gsh modify_amf_ue_reg_rate_based_throttle -autrl 600
+#If AmfGeo deployed, AmfGeo configuration end#
+{% endif %}

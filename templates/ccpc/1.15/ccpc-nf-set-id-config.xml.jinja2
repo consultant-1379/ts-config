@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <capabilities>
+        <capability>
+            urn:ietf:params:netconf:base:1.0
+        </capability>
+    </capabilities>
+</hello>
+]]>]]>
+<?xml version="1.0" encoding="UTF-8"?>
+<rpc message-id="101" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <edit-config>
+        <target>
+            <running/>
+        </target>
+        <config>
+            <!--xmlns="urn:rdns:com:ericsson:oammodel:ericsson-pcf" refers to PCF namespace.-->
+            <pcf xmlns="urn:rdns:com:ericsson:oammodel:ericsson-pcf">
+                <!--nf-profile: Local configuration of PCF profile-->
+                <nf-profile>
+                    <!--nf-set-id: Globally unique identifier of a set of equivalent and interchangeable PCFs.-->
+                    <nf-set-id>{{ ccpc.pcf.nfSetId }}</nf-set-id>
+                </nf-profile>
+            </pcf>
+        </config>
+    </edit-config>
+</rpc>

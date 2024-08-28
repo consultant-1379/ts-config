@@ -1,0 +1,217 @@
+global:
+  # Set this parameter to true in case of upgrade procedure is In-Service-Instance. Otherwise set to false
+  issu:
+    enabled: true
+  security:
+    policyReferenceMap:
+    {% if caas == 'OpenShift' %}
+      default-restricted-security-policy: default-restricted-security-policy
+      plc-privileged-for-istio: plc-privileged-for-istio
+      plc-privileged-for-udr: plc-privileged-for-udr
+      plc-privileged-for-adp: plc-privileged-for-adp
+      plc-dd66cc53d8554f93ad34971900932e: plc-dd66cc53d8554f93ad34971900932e-wa
+      plc-38dc0a0ee2b2564ef10039d2c6c0e0: plc-38dc0a0ee2b2564ef10039d2c6c0e0
+      plc-59d0cf1dcc793a78b6ce30bfbe6553: plc-59d0cf1dcc793a78b6ce30bfbe6553
+      plc-29c4b823c87a16cad810082eb11106: plc-29c4b823c87a16cad810082eb11106
+      plc-1ef969b263a76b0a45e26d62f88e9b: plc-1ef969b263a76b0a45e26d62f88e9b
+      plc-0c899a7ddf4aaf682c9c8c95791ea9: plc-0c899a7ddf4aaf682c9c8c95791ea9
+    {% else %}
+      default-restricted-security-policy: default-restricted-security-policy
+      plc-privileged-for-istio: plc-privileged-for-istio
+      plc-privileged-for-udr: plc-privileged-for-udr
+      plc-privileged-for-adp: plc-privileged-for-adp
+      plc-privileged-for-swprobe: plc-privileged-for-swprobe
+      plc-dd66cc53d8554f93ad34971900932e: plc-dd66cc53d8554f93ad34971900932e
+      plc-e393f1841dfc4cbcca713b5a97eb83: plc-e393f1841dfc4cbcca713b5a97eb83
+      plc-9c20871f9bf62c7b09fd0c684ac651: plc-9c20871f9bf62c7b09fd0c684ac651
+      plc-38dc0a0ee2b2564ef10039d2c6c0e0: plc-38dc0a0ee2b2564ef10039d2c6c0e0
+      plc-59d0cf1dcc793a78b6ce30bfbe6553: plc-59d0cf1dcc793a78b6ce30bfbe6553
+      plc-03ad10577718e69c935814b4f30054: plc-03ad10577718e69c935814b4f30054
+      plc-29c4b823c87a16cad810082eb11106: plc-29c4b823c87a16cad810082eb11106
+      plc-1ef969b263a76b0a45e26d62f88e9b: plc-1ef969b263a76b0a45e26d62f88e9b
+      plc-0c899a7ddf4aaf682c9c8c95791ea9: plc-0c899a7ddf4aaf682c9c8c95791ea9
+    {% endif %}
+#TBD
+# Storage Encryption Provider (SEP) - PV encryption support service configuration
+# SEP deployment: eric-cs-storage-encryption-provider
+eric-cs-storage-encryption-provider:
+  enabled: false #Enable/Disable SEP deployment, when disabled the storageClasses parameters are not applicable.
+{%- raw %}
+# Remove and configure the SEP following storageClasses definition only when eric-cs-storage-encryption-provider.enabled=true
+#  storageClasses:
+#    - name: {{pvc_storage_encrypted}} #Name of the storageClass to be created by SEP for encrypting volumes. This name must be unique in the K8 cluster, as naming convention example ccdm-instanceId-encrypted-sc.
+#      backingStorageClass: {{pvc_storage}} #StorageClass defined in the cluster used for non-encrypted volumes.
+#      allowVolumeExpansion: {{true|false}} # Depends on the backingStorageClass support, if it is not supported the value must be false.
+#      backingVolumeMode: Block #Backing-volume mode must be Block. Filesystem is not supported.
+# Remove the comment and configure the SEP podPriority only when eric-cs-storage-encryption-provider.enabled=true
+#  podPriority:
+#    node:
+#      priorityClassName: {{eric-ccdm-critical}}
+#    controller:
+#      priorityClassName: {{eric-ccdm-critical}}
+#    mountTarget:
+#      priorityClassName: {{eric-ccdm-critical}}
+{% endraw %}
+
+# Application helm hooks activation when SEP is deployed
+sepLcmHelmHooks:
+  enabled: false #true when SEP is enabled: eric-cs-storage-encryption-provider.enabled=true
+# Storage Encryption Provider (SEP) - End
+#END TBD
+
+eric-adp:
+  eric-si-application-sys-info-handler:
+    applicationInfoService:
+      port: 9099 #Default Value
+{%- raw %}
+#   FOR EGRESS DSCP MARKING, REMOVE COMMENT AND ADD DESIRED DSCP VALUE
+#    egress:
+#      applicationInfoSvr:
+#        dscp: {{dscp_value}} #Optional Parameter
+
+  #eric-data-search-engine:
+  # Number of replicas for Search Engine.
+  #  replicaCount:
+  # Number of replicas for eric-data-search-engine-data container. This parameter is applicable to CCDM Standard and CCDM Large system configurations ONLY. Please, do not include this parameter for CCDM Small system configurations.
+  # Value of this parameter is result of a dimensioning exercise.
+  #    data: {{search_engine_data_replicas}}
+  # Number of replicas for eric-data-search-engine-ingest/eric-data-search-engine-ingest-tls containers. This parameter is applicable to CCDM Large system configurations ONLY. Please, do not include this parameter for CCDM Small or Standard system configurations.
+  # Value of this parameter is result of a dimensioning exercise.
+  #    ingest: {{search_engine_ingest_replicas}}
+
+    # Index Management configuration for Search Engine in CCDM Standard and CCDM Large system configurations only (do not include this parameter for CCDM Small system configurations).
+    # Value of this parameter is result of a dimensioning exercise.
+
+  #  index_management:
+  #    delete_indices_by_diskspace:
+  #    - index: adp-app-logs-*
+  #      size: {{size_adp_app_logs}}gb
+  #    - index: adp-app-debug-logs-*
+  #      size: {{size_adp_app_debug_logs}}gb
+
+#  eric-pm-bulk-reporter:
+#    service:
+#     FOR EGRESS DSCP MARKING, REMOVE COMMENT AND ADD DESIRED DSCP VALUE
+#      pmBulksftpPort:
+#        dscp: {{dscp_value}}
+{% endraw %}
+
+  eric-cm-yang-provider:
+    externalTls:
+      netconf:
+        enabled: false # default value is false
+{%- raw %}
+#    service:
+#     FOR EGRESS DSCP MARKING, REMOVE COMMENT AND ADD DESIRED DSCP VALUE
+#      cmNbiPorts:
+#        dscp: {{dscp_value}}
+
+#  eric-fh-snmp-alarm-provider:
+#    service:
+#   FOR EGRESS DSCP MARKING, REMOVE COMMENT AND ADD DESIRED DSCP VALUE
+#      snmpPort:
+#        dscp: {{dscp_value}}
+
+#  eric-ctrl-bro:
+#   FOR EGRESS DSCP MARKING, REMOVE COMMENT AND ADD DESIRED DSCP VALUE
+#    egress:
+#      backupStorageSvr:
+#        dscp: {{dscp_value}}
+
+#  eric-lm-combined-server:
+#   FOR EGRESS DSCP MARKING, REMOVE COMMENT AND ADD DESIRED DSCP VALUE
+#    egress:
+#      licenseServer:
+#        dscp: {{dscp_value}}
+{% endraw %}
+
+  eric-pm-server:
+    #config:
+    #  certm_tls:
+    #    - name: remotewrite1
+    #      trustedCertName: remotewrite1-ca
+    #      clientKeyName: remotewrite1-client-key
+    #      clientCertName: remotewrite1-client-certificate
+    externalRemoteWrite: [] #When configuring externalRemoteWrite endpoints the brackets [] must be removed otherwise configuration will not be taken into effect
+{%- raw %}
+      # - url: {{enpoint_url}}
+      #   tls_config:
+      #     ca_file: /run/secrets/remwrtca/remotewrite1/cert1.pem
+      #     cert_file: /run/secrets/remwrtcert/remotewrite1/tls.crt
+      #     key_file: /run/secrets/remwrtcert/remotewrite1/tls.key
+      #   queue_config:
+      #     capacity: 2500
+      #     max_shards: 200
+      #     min_shards: 1
+      #     max_samples_per_send: 500
+      #     batch_send_deadline: 5s
+      #     min_backoff: 30ms
+      #     max_backoff: 100ms
+      #   write_relabel_configs:
+      # Depending on the metrics wanted to be streamed outside uncomment ONE of filtering options below:
+          # To stream all metrics from UDR, PF, NRF Agent and PM Resource monitor services uncomment following block. Note: Recommended configuration.
+          # - source_labels: [__name__]
+      #       regex: 'eric_udr_.*| eric_act_.*| eric_nrfagent_.*| pmrm_container_.*'
+      #       action: keep
+          # To stream all metrics from UDR, PF, NRF Agent and ADP services ucomment following blocks. ATTENTION: ADP services generate lot of metrics and streaming them all can have impact on PM Server performance.
+      #     - source_labels: [job]
+      #       regex: 'kubernetes-.*'
+      #       action: drop
+      #     - source_labels: [ddc_job]
+      #       regex: 'kubernetes-.*'
+      #       action: drop
+      #     - source_labels: [scrape_job]
+      #       regex: 'kubernetes-.*'
+      #       action: drop
+{% endraw %}
+
+  eric-log-transformer:
+    egress:
+      lumberjack:
+        enabled: false #Default is false
+{%- raw %}
+        #Array to specify the mandatory parameters (id, host, port and codec) and optional parameters (inclusions, exclusions and filter), for every remote host.
+        remoteHosts: [] #When configuring remoteHosts the brackets [] must be removed otherwise configuration will not be taken into effect
+        #  - id: ext-lj-1
+        #    host: {{hostname}}
+        #    port: {{port_number}}
+        #    codec: json
+        #    inclusions:
+        #      - field: "[facility]"
+        #        value: "log audit"
+        #      - field: "[metadata][category]"
+        #        pattern: 'privacy*'
+        #    exclusions:
+        #      - logplane:
+        #        rules:
+        #          - field: "[facility]"
+        #            value: "security"
+        #          - field: "[severity]"
+        #            value: "error"
+        #  - id: ext-lj-2
+        #    host: {{hostname}}
+        #    port: {{port_number}}
+        #    codec: json
+        #    filter: #|
+        # Only it is needed to be modified in case of the Certificates have been modified by customer. Remove comment and assign new certificate names
+        #certificates:
+        #  trustedCertificateListName: {{eric-log-lumberjack-client}}
+{% endraw %}
+
+  eric-log-shipper:
+    podPriority:
+      logshipper:
+        # Priority class name for the logshipper Pod. Priority classes are used to determine the priority of Pods when scheduling them on nodes.
+        priorityClassName: eric-ccdm-critical
+
+eric-data-kvdb-ag:
+  podPriority:
+    locator:
+      priorityClassName: eric-ccdm-critical
+    server:
+      priorityClassName: eric-ccdm-critical
+
+eric-act-ccdm:
+  eric-act-proclog-cassandra-stasher:
+    replicaCount:
+      proclogStasher: 1

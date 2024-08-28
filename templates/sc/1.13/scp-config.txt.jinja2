@@ -1,0 +1,126 @@
+{% if sc.scp.enabled %}
+autowizard false
+config
+scp-function nf-instance scp1
+ nf-instance-id {{ sc.scp.instanceId }}
+ ingress-connection-profile-ref default_profile
+ egress-connection-profile-ref  default_profile
+ nrf-service nf-management nrf-group-ref [ nrfGroup1 ]
+ nrf-service nf-discovery nrf-group-ref nrfGroup1
+ ingress-connection-profile default_profile
+ exit
+ egress-connection-profile default_profile
+ exit
+ service-address SA
+  fqdn         {{ sc.scp.host }}.{{ DOMAIN_3GPP_5GC }}
+  port         80
+  tls-port     443
+  ipv4-address {{ sc.scp.ip }}
+ exit
+ own-network internalNetwork
+  service-address-ref SA
+  routing-case-ref    default_routing
+ exit
+ 
+ message-data ServiceRequestType
+  path
+  extractor-regex "/(?P<intf>[^/]+)/"
+ exit
+ routing-case default_routing
+  message-data-ref [ ServiceRequestType ]
+  routing-rule npcfSmpolicycontrol_CreateUpdateDelete
+   condition "(var.intf == 'npcf-smpolicycontrol') and req.header['3gpp-sbi-target-apiroot'] exists"
+   routing-action route-to-pcf
+    action-route-preferred from-target-api-root-header
+    action-route-preferred failover-profile-ref fob1
+    action-route-preferred target-nf-pool nf-pool-ref pcf1-pool-static
+   exit
+  exit
+  routing-rule npcfSmpolicycontrol_Notify
+   condition "(req.header['3gpp-sbi-callback'] == 'Npcf_SMPolicyControl_SmPolicyUpdateNotification' or req.header['3gpp-sbi-callback'] == 'Npcf_SMPolicyControl_SmPolicyControlTerminationRequestNotification') and req.header['3gpp-sbi-target-apiroot'] exists"
+   routing-action notify-to-smf
+    action-route-preferred from-target-api-root-header
+    action-route-preferred failover-profile-ref fob1
+    action-route-preferred target-nf-pool nf-pool-ref smf1
+   exit
+  exit
+ exit
+ static-nf-instance-data static_smf1
+  static-nf-instance smf1
+   static-nf-service npcf-smpolicycontrol
+    address scheme https
+    address fqdn {{ sc.scp.smfSbiNotifyHost }}.{{ DOMAIN_3GPP_5GC }}
+    address multiple-ip-endpoint smf1EP
+     transport    tcp
+     port         6060
+    exit
+   exit
+  exit
+ exit
+ static-nf-instance-data static_pcf1
+  static-nf-instance pcf1
+   static-nf-service npcf-smpolicycontrol
+    address scheme https
+    address fqdn {{ sc.scp.pcfSbiHost }}.{{ DOMAIN_3GPP_5GC }}
+    address multiple-ip-endpoint pcf1EP
+     transport    tcp
+     port         {{ sc.scp.pcfSbiPort }}
+    exit
+   exit
+  exit
+ exit
+ nf-pool pcf1-pool-static
+  nf-pool-discovery pcf1-pool
+   static-nf-instance-data-ref [ static_pcf1 ]
+   exit
+  exit
+ nf-pool pcf1
+  nf-pool-discovery pcf_pool
+   update-interval 5s
+   nrf-query NfTyeQuery_PCF
+    requester-nf-type SCP
+    nf-type           PCF
+   exit
+  exit
+ exit
+ nf-pool smf1
+  nf-pool-discovery smf_pool
+   static-nf-instance-data-ref [ static_smf1 ]
+  exit
+ exit
+ failover-profile fob1
+ exit
+ nf-profile scp_profile1
+  service-address-ref SA
+  nf-type             scp
+  locality            {{ locality }}
+ exit
+ nrf-group nrfGroup1
+  nf-profile-ref scp_profile1
+  nrf nrf1
+   priority       1
+   fqdn           {{ nrf.0.host }}.{{ DOMAIN_3GPP_5GC }}
+   scheme         https
+   nf-profile-ref scp_profile1
+   ip-endpoint nrf1_ep
+    port         {{ nrf.0.port }}
+    ipv4-address {{ nrf.0.ipv4 }}
+   exit
+  exit
+{% if geored.nrf.enabled %}
+  nrf nrf2
+   priority       2
+   fqdn           {{ nrf.1.host }}.{{ DOMAIN_3GPP_5GC }}
+   scheme         https
+   nf-profile-ref scp_profile1
+   ip-endpoint nrf2_ep
+    port         {{ nrf.1.port }}
+    ipv4-address {{ nrf.1.ipv4 }}
+   exit
+  exit
+{% endif %}
+ exit
+exit
+commit
+end
+{% endif %}

@@ -1,0 +1,41 @@
+autowizard false
+config
+diagnostic-data-collection data-collector profile defaultProfileForPeriodicalLogExport
+diagnostic-data-collection data-collector collection-interval 10
+diagnostic-data-collection data-collector administrative-state unlocked
+diagnostic-data-collection collector-profile defaultProfileForCollectionActionWhenTrOrCsr
+ profile-type      action-profile
+ data-to-collect   [ logs metrics ]
+ export-ddb-to     [ sftp ]
+ log-plane         [ adp-app-asi-logs* adp-app-audit-logs* adp-app-debug-logs* adp-app-logs* ]
+ sftp              sftpServerForDDC
+ collection-window 4320
+exit
+diagnostic-data-collection collector-profile defaultProfileForPeriodicTriggerDDC
+ profile-type      action-profile
+ data-to-collect   [ logs metrics ]
+ export-ddb-to     [ sftp ]
+ log-plane         [ adp-app-asi-logs* adp-app-audit-logs* adp-app-debug-logs* adp-app-logs* ]
+ sftp              sftpServerForDDC
+ collection-window 15
+exit
+diagnostic-data-collection collector-profile defaultProfileForPeriodicalLogExport
+ profile-type      action-profile
+ data-to-collect   [ logs ]
+ export-ddb-to     [ sftp ]
+ log-plane         [ adp-app-logs* ]
+ sftp              sftpServerForDDC
+ collection-window 15
+exit
+diagnostic-data-collection sftp-server sftpServerForDDC
+ endpoints endpoint sftpServerForDDC
+  remote-address {{ sftpServer.host }}
+  remote-port    22
+  remote-path    {{ ddc.remotePath }}
+  client-identity username {{ sftpServer.username }}
+  client-identity password {{ sftpServer.password }}
+  server-authentication ssh-host-keys local-definition host-key [ "{{ sftpServer.hostKey }}" ]
+ exit
+exit
+commit
+

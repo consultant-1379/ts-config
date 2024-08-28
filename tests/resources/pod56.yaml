@@ -1,0 +1,35 @@
+# This file is maintenanced by team Eagles for CNAT test.
+repoProjectName: 5gc_config/5gc_sa_pkg
+
+pcc:
+- version: '1.25'
+  branch: release-1.10
+  cfggen: lab/pod56/eccd1/pcc/cfggen.yaml
+pcg:
+- version: '1.17'
+  branch: release-1.10
+  cfggen: lab/pod56/eccd1/pcg/cfggen.yaml
+ccdm:
+- version: '1.9'
+  branch: release-1.10
+  cfggen: lab/pod56/eccd1/ccdm/cfggen.yaml
+cces:
+- version: '1.9'
+  branch: release-1.10
+  cfggen: lab/pod56/eccd1/cces/cfggen.yaml
+ccrc:
+- version: '1.10'
+  branch: release-1.10
+  cfggen: lab/pod56/eccd1/ccrc/cfggen.yaml
+ccsm:
+- version: '1.10'
+  branch: release-1.10
+  cfggen: lab/pod56/eccd1/ccsm/cfggen.yaml
+eda:
+- version: '2.12'
+  branch: release-1.10
+  cfggen: lab/pod56/eccd1/eda/cfggen.yaml
+sc:
+- version: '1.10'
+  branch: release-1.10
+  cfggen: lab/pod56/eccd1/sc/cfggen.yaml

@@ -1,0 +1,212 @@
+description: Json schema for ts-config UT resource file
+title: ts-config unit test resource file Schema
+type: object
+additionalProperties: false
+required:
+- repoProjectName
+properties:
+  cnatBinaryPath:
+    description: Absolute path of CNAT executable binary file. Optional.
+    type: file
+    default: /lab/pccc_utils/scripts/cnat
+  repoProjectName:
+    description: gerrit.ericsson.se:29418/<repoProjectName> is used for getting repo. Mandatory.
+    type: string
+  ccdm:
+    description: CCDM test case information.
+    type: array
+    items:
+      type: object
+      required:
+      - version
+      - cfggen
+      properties:
+        version:
+          description: The cnf version corresponding to the test case. Mandatory.
+          type: string
+        branch:
+          description: The repo branch for the test case. Optional.
+          type: string
+          default: master
+        commitId:
+          description: The repo commit id for the test case. Default is the latest commit. Optional.
+          type: string
+        cfggen:
+          description: Test case CFGGEN info yaml file path for configuration generation. Mandatory.
+          type: string
+  cces:
+    description: CCES test case information.
+    type: array
+    items:
+      type: object
+      required:
+      - version
+      - cfggen
+      properties:
+        version:
+          description: The cnf version corresponding to the test case. Mandatory.
+          type: string
+        branch:
+          description: The repo branch for the test case. Optional.
+          type: string
+          default: master
+        commitId:
+          description: The repo commit id for the test case. Default is the latest commit. Optional.
+          type: string
+        cfggen:
+          description: Test case CFGGEN info yaml file path for configuration generation. Mandatory.
+          type: string
+  ccpc:
+    description: CCPC test case information.
+    type: array
+    items:
+      type: object
+      required:
+      - version
+      - cfggen
+      properties:
+        version:
+          description: The cnf version corresponding to the test case. Mandatory.
+          type: string
+        branch:
+          description: The repo branch for the test case. Optional.
+          type: string
+          default: master
+        commitId:
+          description: The repo commit id for the test case. Default is the latest commit. Optional.
+          type: string
+        cfggen:
+          description: Test case CFGGEN info yaml file path for configuration generation. Mandatory.
+          type: string
+  ccrc:
+    description: CCRC test case information.
+    type: array
+    items:
+      type: object
+      required:
+      - version
+      - cfggen
+      properties:
+        version:
+          description: The cnf version corresponding to the test case. Mandatory.
+          type: string
+        branch:
+          description: The repo branch for the test case. Optional.
+          type: string
+          default: master
+        commitId:
+          description: The repo commit id for the test case. Default is the latest commit. Optional.
+          type: string
+        cfggen:
+          description: Test case CFGGEN info yaml file path for configuration generation. Mandatory.
+          type: string
+  ccsm:
+    description: CCSM test case information.
+    type: array
+    items:
+      type: object
+      required:
+      - version
+      - cfggen
+      properties:
+        version:
+          description: The cnf version corresponding to the test case. Mandatory.
+          type: string
+        branch:
+          description: The repo branch for the test case. Optional.
+          type: string
+          default: master
+        commitId:
+          description: The repo commit id for the test case. Default is the latest commit. Optional.
+          type: string
+        cfggen:
+          description: Test case CFGGEN info yaml file path for configuration generation. Mandatory.
+          type: string
+  eda:
+    description: EDA test case information.
+    type: array
+    items:
+      type: object
+      required:
+      - version
+      - cfggen
+      properties:
+        version:
+          description: The cnf version corresponding to the test case. Mandatory.
+          type: string
+        branch:
+          description: The repo branch for the test case. Optional.
+          type: string
+          default: master
+        commitId:
+          description: The repo commit id for the test case. Default is the latest commit. Optional.
+          type: string
+        cfggen:
+          description: Test case CFGGEN info yaml file path for configuration generation. Mandatory.
+          type: string
+  pcc:
+    description: EDA test case information.
+    type: array
+    items:
+      type: object
+      required:
+      - version
+      - cfggen
+      properties:
+        version:
+          description: The cnf version corresponding to the test case. Mandatory.
+          type: string
+        branch:
+          description: The repo branch for the test case. Optional.
+          type: string
+          default: master
+        commitId:
+          description: The repo commit id for the test case. Default is the latest commit. Optional.
+          type: string
+        cfggen:
+          description: Test case CFGGEN info yaml file path for configuration generation. Mandatory.
+          type: string
+  pcg:
+    description: EDA test case information.
+    type: array
+    items:
+      type: object
+      required:
+      - version
+      - cfggen
+      properties:
+        version:
+          description: The cnf version corresponding to the test case. Mandatory.
+          type: string
+        branch:
+          description: The repo branch for the test case. Optional.
+          type: string
+          default: master
+        commitId:
+          description: The repo commit id for the test case. Default is the latest commit. Optional.
+          type: string
+        cfggen:
+          description: Test case CFGGEN info yaml file path for configuration generation. Mandatory.
+          type: string
+  sc:
+    description: EDA test case information.
+    type: array
+    items:
+      type: object
+      required:
+      - version
+      - cfggen
+      properties:
+        version:
+          description: The cnf version corresponding to the test case. Mandatory.
+          type: string
+        branch:
+          description: The repo branch for the test case. Optional.
+          type: string
+          default: master
+        commitId:
+          description: The repo commit id for the test case. Default is the latest commit. Optional.
+          type: string
+        cfggen:
+          description: Test case CFGGEN info yaml file path for configuration generation. Mandatory.
+          type: string

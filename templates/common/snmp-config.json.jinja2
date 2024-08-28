@@ -1,0 +1,23 @@
+{
+{% if 'agentEngineId' in snmp %}
+  "agentEngineId": "{{ snmp.agentEngineId }}",
+{% endif %}
+{% if 'heartbeatInterval' in snmp %}
+  "heartbeatInterval": {{ snmp.heartbeatInterval }},
+{% endif %}
+{% if nodeType == 'ERIC-CCDM' %}
+  "kafkaAddress": "eric-udr-message-bus-kf",
+{% endif %}
+  "trapTargets": [
+    {
+      "address": "{{ snmpServer.host }}",
+      "user": "snmpuser",
+      "securityLevel": "authPriv",
+      "authPassphrase": "myAuthPassword",
+      "authProtocol": "SHA1",
+      "privPassphrase": "myPrivPassword",
+      "privProtocol": "AES128"
+    }
+  ]
+}
+

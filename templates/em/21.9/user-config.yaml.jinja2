@@ -1,0 +1,6 @@
+users:
+{% for user in users.day1 %}
+ - user: {{ user.username }}
+   encryptedPass: {{ user.password }}
+   groups: [{% for group in user.groups %} {{ group }} {% endfor %}]
+{% endfor %}

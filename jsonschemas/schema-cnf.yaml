@@ -1,0 +1,1796 @@
+description: Dual-mode 5G Core JSON Schema for CNF user input
+title: Dual-mode 5G Core JSON Schema for CNF
+type: object
+additionalProperties: false
+properties:
+###############################################################################
+### CNF general information START
+### ----------------------------------------------------------------------- ###
+  nodeName:
+    description: Node name. Mandatory.
+    type: string
+  nodeType:
+    description: Node type. Mandatory.
+    type: string
+    enum:
+    - PCC
+    - PCG
+    - CCRC
+    - CCDM
+    - ERIC-CCDM
+    - CCSM
+    - EDA
+    - SC
+    - CCPC
+    - CCES
+    - EM
+  instance:
+    description: Instance number in the cluster. Optional.
+    type: [integer, string]
+    default: ''
+  candidateConfig:
+    description: Parameter that will change xml-config from "running" to "candiate". Optional.
+    type: boolean
+    default: false
+  vnflcm:
+    description: LCM configurations. Mandatory.
+    type: object
+    additionalProperties: false
+    required:
+    - namespace
+    properties:
+      clusterName:
+        description: K8s cluster name used in instantiate.json. Optional.
+        type: string
+        default: default
+      namespace:
+        description: Namespace in K8s cluster. Mandatory.
+        type: string
+      InstantiateVnfRequest:
+        description: InstantiateVnfRequest in instantiate.json. Optional.
+        type: object
+        additionalProperties: false
+        properties:
+          applicationTimeOut:
+            description: applicationTimeOut. Optional.
+            type: integer
+            default: 900
+          skipVerification:
+            description: skipVerification. Optional.
+            type: string
+            default: "false"
+          skipJobVerification:
+            description: skipJobVerification. Optional.
+            type: string
+            default: "false"
+  nodeSelector:
+    description: Assign CNF to specific groups of node. Optional.
+    type: object
+    default: {}
+    additionalProperties:
+      description: Node label value. Optional.
+      type: string
+  users:
+    description: Users information. Optional.
+    type: object
+    additionalProperties: false
+    properties:
+      day0:
+        description: List of users of Day 0. Optional.
+        additionalProperties: false
+        type: object
+        items:
+          type: object
+          additionalProperties: false
+          properties:
+            username:
+              description: Username. Optional.
+              type: string
+            password:
+              description: Password. Optional.
+              type: string
+            groups:
+              description: List of the groups for the user. Optional.
+              type: array
+              items:
+                type: string
+      day1:
+        description: List of users of Day 1. Mandatory.
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          properties:
+            username:
+              description: Username. Mandatory.
+              type: string
+            password:
+              description: Password. Mandatory.
+              type: string
+            groups:
+              description: List of the groups for the user. Mandatory.
+              type: array
+              items:
+                type: string
+      oauth2-client:
+        description: List of oauth2-client. Optional. Only valid for CCDM.
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          properties:
+            id:
+              description: client-id. Mandatory.
+              type: string
+            secret:
+              description: client-secret. Mandatory.
+              type: string
+            groups:
+              description: List of the groups for the client. Mandatory.
+              type: array
+              items:
+                type: string
+  license:
+    description: License information. Mandatory.
+    type: object
+    additionalProperties: false
+    properties:
+      customerId:
+        description: customerId. Mandatory
+        type: string
+      swltId:
+        description: swltId. Mandatory.
+        type: string
+  cnom:
+    description: CNOM configurations. Optional.
+    type: object
+    additionalProperties: false
+    properties:
+      fqdn:
+        description: CNOM FQDN. Mandatory.
+        type: string
+  snmp:
+    description: SNMP configuration. Optional.
+    type: object
+    additionalProperties: false
+    properties:
+      agentEngineId:
+        description: agentEngineId. Optional.
+        type: string
+      heartbeatInterval:
+        description: heartbeatInterval. Optional.
+        type: integer
+      sourceIdentifier:
+        description: Use OAM IP as sourceIdentifier.  Optional.
+        type: string
+  ddc:
+    description: DDC configuration. Mandatory.
+    type: object
+    properties:
+      remotePath:
+        description: remote path on SFTP server. Mandatory.
+        type: string
+  oamDomain:
+    description: used for generate the ICCR FQDN. Mandatory. # should be removed in the future
+    type: string
+  vtap:
+    description: SW probe configuration. Optional.
+    type: object
+    additionalProperties: false
+    properties:
+      remotePath:
+        description: remote path on SFTP server for vtap. Mandatory.
+        type: string
+        default: "vtap"
+      tapagent:
+        description: tapagent sidecar. Optional
+        type: boolean
+  certs:
+    description: Certificate information. Optional.
+    type: object
+    additionalProperties:
+      description: Certificate name. Optional.
+      type: object
+      additionalProperties: false
+      properties:
+        p12:
+          description: PKCS#12 file (.p12) path. Optional.
+          type: file
+        password:
+          description: Password of the PKCS#12 file. Optional.
+          type: string
+          default: ericsson
+
+  registry:
+    description: The registry information. Optional.
+    type: object
+    default: {}
+    additionalProperties: false
+    properties:
+      url:
+        description: The registry url. Optional.
+        type: string
+        default: 'null'
+      pullSecret:
+        description: The registry pull secret. Optional.
+        type: string
+        default: regcred
+### ----------------------------------------------------------------------- ###
+### CNF general information END
+###############################################################################
+
+###############################################################################
+### Dimensioning specific START
+### ----------------------------------------------------------------------- ###
+# should this section start with "dimensioning"? to implement the new dimensioning idea
+  replicaCount:
+    description: replica count of the microservices. Optional.
+    type: object
+    additionalProperties:
+      description: the number of replicas. Optional.
+      type: integer
+  minReplica:
+    description: min replica count of the microservices. Optional.
+    type: object
+    additionalProperties:
+      description: the min number of replicas. Optional.
+      type: integer
+  maxReplica:
+    description: max replica count of the microservices. Optional.
+    type: object
+    additionalProperties:
+      description: the max number of replicas. Optional.
+      type: integer
+  pvcSize:
+    description: PVC size. Optional.
+    type: object
+    additionalProperties:
+      description: the size of PVC. Optional.
+      type: number
+  pvcSizeStr:
+    description: PVC size. Optional.
+    type: object
+    additionalProperties:
+      description: the size of PVC. Optional.
+      type: string
+  hpaReplica:
+    description: Set min and max replicas for HPA microservies. Optional.
+    type: object
+    additionalProperties:
+      type: object
+      properties:
+        min:
+          description: minReplicas. Mandatory.
+          type: integer
+        max:
+          description: maxReplicas. Mandatory.
+          type: integer
+  systemProfile:
+    description: System Profile for CCDM. Optional.
+    type: string
+    additionalProperties:
+      description: standard or small. Optional.
+      default: standard
+### ----------------------------------------------------------------------- ###
+### Dimensioning specific END
+###############################################################################
+
+###############################################################################
+### CCRC specific START
+### ----------------------------------------------------------------------- ###
+  ccrc:
+    description: CCRC specifc configurations. Optional.
+    type: object
+    additionalProperties: false
+    properties:
+      oamIp:
+        description: oamIp. Optional.
+        type: string
+      nrf:
+        description: NRF configurations. Mandatory.
+        type: object
+        additionalProperties: false
+        properties:
+          ip:
+            description: ip. Optional.
+            type: string
+          instanceId:
+            description: NF instance ID. Mandatory.
+            type: string
+          host:
+            description: Host part of the FQDN (without domain). Mandatory.
+            type: string
+          port:
+            description: Port of the service. Optional.
+            type: integer
+            default: 443
+          nfSetId:
+            description: The NRF nf-set-id. Optional.
+            type: string
+          provisioning:
+            description: NSSF provisioning. Optional.
+            type: object
+            additionalProperties: false
+            properties:
+              fqdn:
+                description: Ingress FQDN for provisioning service. Optional.
+                type: string
+          geored:
+            description: Geored configurations. Optional.
+            type: object
+            additionalProperties: false
+            properties:
+              remote:
+                description: Remote site informations. Mandatory.
+                type: object
+                additionalProperties: false
+                properties:
+                  instanceId:
+                    description: NF instance ID. Mandatory.
+                    type: string
+                  host:
+                    description: Host part of the FQDN (without domain). Mandatory.
+                    type: string
+                  port:
+                    description: Port of the service. Optional.
+                    type: integer
+                    default: 443
+      nssf:
+        description: NSSF configurations. Mandatory.
+        type: object
+        additionalProperties: false
+        properties:
+          ip:
+            description: ip. Optional.
+            type: string
+          instanceId:
+            description: NF instance ID. Mandatory.
+            type: string
+          host:
+            description: Host part of the FQDN (without domain). Mandatory.
+            type: string
+          port:
+            description: Port of the service. Optional.
+            type: integer
+            default: 443
+          geored:
+            description: Geored configurations. Optional.
+            type: object
+            additionalProperties: false
+            properties:
+              remote:
+                description: Remote site informations. Mandatory.
+                type: object
+                additionalProperties: false
+                properties:
+                  instanceId:
+                    description: NF instance ID. Mandatory.
+                    type: string
+                  host:
+                    description: Host part of the FQDN (without domain). Mandatory.
+                    type: string
+                  port:
+                    description: Port of the service. Optional.
+                    type: integer
+                    default: 443
+          provisioning:
+            description: NSSF provisioning. Mandatory.
+            type: object
+            additionalProperties: false
+            properties:
+              fqdn:
+                description: Ingress FQDN for provisioning service. Mandatory.
+                type: string
+              amf:
+                description: AMF information. Mandatory.
+                type: object
+                additionalProperties: false
+                properties:
+                  regionId:
+                    description: AMF regionId. Mandatory.
+                    type: integer
+                  setId:
+                    description: AMF setId. Mandatory.
+                    type: integer
+                  instanceId:
+                    description: List of AMF instance ID. Mandatory.
+                    type: array
+                    items:
+                      type: string
+      nbi:
+        description: NBI traffic configurations. Optional.
+        type: object
+        additionalProperties: false
+        properties:
+          host:
+            description: Host part of the FQDN (without domain). Optional.
+            type: string
+      nrfdns:
+        description: NRF DNS configurations. Optional.
+        type: object
+        additionalProperties: false
+        properties:
+          host:
+            description: Host part of the FQDN (without domain). Optional.
+            type: string
+### ----------------------------------------------------------------------- ###
+### CCRC specific END
+###############################################################################
+
+###############################################################################
+### CCSM specific START
+### ----------------------------------------------------------------------- ###
+  ccsm:
+    description: CCSM specific configurations. Optional.
+    type: object
+    additionalProperties: false
+    properties:
+      udm:
+        description: CCSM UDM NF service. Mandatory.
+        type: object
+        additionalProperties: false
+        properties:
+          instanceId:
+            description: NF instance ID. Mandatory.
+            type: string
+          host:
+            description: Host part of the FQDN (without domain). Mandatory.
+            type: string
+          port:
+            description: Port of the service. Optional.
+            type: integer
+            default: 443
+      ausf:
+        description: CCSM AUSF NF service. Mandatory.
+        type: object
+        additionalProperties: false
+        properties:
+          instanceId:
+            description: NF instance ID. Mandatory.
+            type: string
+          host:
+            description: Host part of the FQDN (without domain). Mandatory.
+            type: string
+          port:
+            description: Port of the service. Optional.
+            type: integer
+            default: 443
+      eir:
+        description: CCSM EIR NF service. Mandatory.
+        type: object
+        additionalProperties: false
+        properties:
+          instanceId:
+            description: NF instance ID. Mandatory.
+            type: string
+          host:
+            description: Host part of the FQDN (without domain). Mandatory.
+            type: string
+          port:
+            description: Port of the service. Optional.
+            type: integer
+            default: 443
+      hss:
+        description: CCSM HSS NF service. Mandatory.
+        type: object
+        additionalProperties: false
+        properties:
+          instanceId:
+            description: NF instance ID. Mandatory.
+            type: string
+          host:
+            description: Host part of the FQDN (without domain). Mandatory.
+            type: string
+          port:
+            description: Port of the service. Optional.
+            type: integer
+            default: 443
+          diameter:
+            description: Diameter configurations. Mandatory.
+            type: object
+            additionalProperties: false
+            properties:
+              host:
+                description: Diameter host. Mandatory.
+                type: string
+      ims:
+        description: CCSM IMS NF service. Mandatory.
+        type: object
+        additionalProperties: false
+        properties:
+          as:
+            description: CCSM IMS AS service. Mandatory.
+            type: array
+            items:
+              type: object
+              additionalProperties: false
+              properties:
+                id:
+                  description: IMS as ID. Mandatory.
+                  type: string
+                name:
+                  description: IMS as name. Mandatory.
+                  type: string
+                realm:
+                  description: IMS as realm. Mandatory.
+                  type: string
+          sh:
+            description: CCSM IMS SH service. Mandatory.
+            type: array
+            items:
+              type: object
+              additionalProperties: false
+              properties:
+                host:
+                  description: IMS sh name. Mandatory.
+                  type: string
+                realm:
+                  description: IMS sh realm. Mandatory.
+                  type: string
+          cx:
+            description: CCSM IMS CX service. Mandatory.
+            type: array
+            items:
+              type: object
+              additionalProperties: false
+              properties:
+                host:
+                  description: IMS cx name. Mandatory.
+                  type: string
+                realm:
+                  description: IMS cx realm. Mandatory.
+                  type: string
+          serviceType:
+            description: CCSM IMS serviceType. Mandatory.
+            type: array
+            items:
+              type: object
+              additionalProperties: false
+              properties:
+                id:
+                  description: IMS serviceType ID. Mandatory.
+                  type: string
+                defaultApplicationServer:
+                  description: IMS defaultApplicationServer name. Mandatory.
+                  type: string
+                defaultAsHandling:
+                  description: IMS session defaultAsHandling option. Mandatory.
+                  type: string
+### ----------------------------------------------------------------------- ###
+### CCSM specific END
+###############################################################################
+
+###############################################################################
+### CCDM specific START
+### ----------------------------------------------------------------------- ###
+  ccdm:
+    description: CCDM specific configurations. Optional.
+    type: object
+    additionalProperties: false
+    properties:
+      iamFqdn:
+        description: IAM FQDN. Mandatory.
+        type: string
+      oamVip:
+        description: OamVip. Optional.
+        type: string
+      udr:
+        description: UDR configurations. Mandatory.
+        type: object
+        additionalProperties: false
+        properties:
+          instanceId:
+            description: NF instance ID. Mandatory.
+            type: string
+          host:
+            description: Host part of the FQDN (without domain). Mandatory.
+            type: string
+          port:
+            description: Port of the service. Optional.
+            type: integer
+            default: 443
+          geored:
+            description: Geored configurations. Optional.
+            type: object
+            additionalProperties: false
+            properties:
+              local:
+                description: Local site configurations. Mandatory.
+                type: object
+                additionalProperties: false
+                properties:
+                  host:
+                    description: Intersite host. Mandatory.
+                    type: string
+                  provisioning-priority:
+                    description: provisioning-priority. Mandatory.
+                    type: integer
+              remote:
+                description: Remote site configurations. Mandatory.
+                type: object
+                additionalProperties: false
+                properties:
+                  host:
+                    description: Intersite host. Mandatory.
+                    type: string
+                  provisioning-priority:
+                    description: provisioning-priority. Mandatory.
+                    type: integer
+      consistency:
+        description: CCDM replica consistency check log configuration. Optional.
+        type: object
+        additionalProperties: false
+        properties:
+          remotePath:
+            description: remote path on SFTP server for consistency check. Mandatory.
+            type: string
+            default: "consistency"
+      proclog:
+        description: CCDM processing log configuration. Optional.
+        type: object
+        additionalProperties: false
+        properties:
+          remotePath:
+            description: remote path on SFTP server for processing log. Mandatory.
+            type: string
+            default: "proclog"
+      externalLdapServer:
+        description: CCDM external Ldap server configuration. Mandatory.
+        type: object
+        additionalProperties: false
+        properties:
+          host:
+            description: External Ldap server ip address. Mandatory.
+            type: string
+            default: "external.ldap.server.com"
+      indexManagement:
+        description: Index Management configuration for Search Engine in CCDM Standard and CCDM Large system configurations only. Mandatory.
+        type: object
+        additionalProperties: false
+        properties:
+          eric-data-search-engine-adp-app-logs:
+            description: Threshold to cleanup logs. Mandatory.
+            type: integer
+            default: "91"
+          eric-data-search-engine-adp-app-debug-logs:
+            description: Threshold to cleanup debug logs. Mandatory.
+            type: integer
+            default: "516"
+
+### ----------------------------------------------------------------------- ###
+### CCDM specific END
+###############################################################################
+
+###############################################################################
+### CCES specific START
+### ----------------------------------------------------------------------- ###
+  cces:
+    description: CCES specific configurations. Optional.
+    type: object
+    additionalProperties: false
+    properties:
+      iamFqdn:
+        description: IAM FQDN. Mandatory.
+        type: string
+      iamDomain:
+        description: IAM Domain. Mandatory.
+        type: string
+        default: ""
+      nef:
+        description: NEF configurations. Mandatory.
+        type: object
+        additionalProperties: false
+        properties:
+          instanceId:
+            description: NF instance ID. Mandatory.
+            type: string
+          host:
+            description: Host part of the FQDN (without domain). Mandatory.
+            type: string
+          port:
+            description: Port of the service. Optional.
+            type: integer
+            default: 443
+          nbi:
+            description: NBI service configurations. Mandatory.
+            type: object
+            additionalProperties: false
+            properties:
+              trust:
+                description: Trust service. Mandatory.
+                type: object
+                additionalProperties: false
+                properties:
+                  host:
+                    description: Host part of the FQDN (without domain). Mandatory.
+                    type: string
+          diameter:
+            description: Diameter configurations. Mandatory.
+            type: object
+            additionalProperties: false
+            properties:
+              host:
+                description: Diameter host. Mandatory.
+                type: string
+              peer:
+                description: Diameter peer configurations. Mandatory.
+                type: object
+                additionalProperties: false
+                properties:
+                  host:
+                    description: Diameter host. Mandatory.
+                    type: string
+                  ip:
+                    description: IP. Mandatory.
+                    type: string
+                  port:
+                    description: Port. Mandatory.
+                    type: integer
+                    default: 3868
+      traff5gnbiIp:
+        description: 5G Traffic NBI IP. Optional.
+        type: string
+      traff5gsbiIp:
+        description: 5G Traffic SBI IP. Optional.
+        type: string
+      prov5gLbIp:
+        description: 5G Provisioning loadbalancer IP. Optional.
+        type: string
+      oamIp:
+        description: OAM IP address. Optional.
+        type: string
+
+### ----------------------------------------------------------------------- ###
+### CCES specific END
+###############################################################################
+
+###############################################################################
+### SC specific START
+### ----------------------------------------------------------------------- ###
+  sc:
+    description: SC specific configurations. Optional.
+    type: object
+    additionalProperties: false
+    properties:
+      bsf:
+        description: BSF configurations. Mandatory.
+        type: object
+        additionalProperties: false
+        properties:
+          enabled:
+            description: Enable BSF deployment. Optinal.
+            type: boolean
+            default: false
+          instanceId:
+            description: NF instance ID. Mandatory.
+            type: string
+          host:
+            description: Host part of the FQDN (without domain). Mandatory.
+            type: string
+          ip:
+            description: loadbalancer IP. Mandatory.
+            type: string
+          diameter:
+            description: Diameter configurations. Optional.
+            type: object
+            additionalProperties: false
+            properties:
+              ip:
+                description: IP address. Mandatory.
+                type: string
+          geored:
+            description: Geored configurations. Optional.
+            type: object
+            additionalProperties: false
+            properties:
+              enabled:
+                description: Enable BSF deployment. Mandatory.
+                type: boolean
+                default: false
+              remoteSeedNodes:
+                description: WCDB IPs of remote SC. Mandatory.
+                type: array
+                items:
+                  type: string
+      scp:
+        description: SCP configurations. Optional.
+        type: object
+        additionalProperties: false
+        properties:
+          enabled:
+            description: Enable SCP deployment. Optinal.
+            type: boolean
+            default: false
+          instanceId:
+            description: NF instance ID. Mandatory.
+            type: string
+          host:
+            description: Host part of the FQDN (without domain). Mandatory.
+            type: string
+          ip:
+            description: loadbalancer IP. Mandatory.
+            type: string
+          smfSbiNotifyHost:
+            description: SMF notification host
+            type: string
+          pcfSbiHost:
+            description: PCF SBI host
+            type: string
+          pcfSbiPort:
+            description: PCF SBI port.
+            type: integer
+            default: 443
+      sepp:
+        description: SEPP configurations. Mandatory.
+        type: object
+        additionalProperties: false
+        properties:
+          enabled:
+            description: Enable SEPP deployment. Optinal.
+            type: boolean
+            default: false
+          instanceId:
+            description: NF instance ID. Mandatory.
+            type: string
+          internalNetwork:
+            description: The SEPP internal network configuration. Mandatory.
+            type: object
+            additionalProperties: false
+            properties:
+              host:
+                description: Host part of the FQDN (without domain). Mandatory.
+                type: string
+              ip:
+                description: loadbalancer IP. Mandatory.
+                type: string
+          externalNetwork:
+            description: The SEPP external network configuration. Mandatory.
+            type: object
+            additionalProperties: false
+            properties:
+              host:
+                description: Host part of the FQDN (without domain). Mandatory.
+                type: string
+              ip:
+                description: loadbalancer IP. Mandatory.
+                type: string
+      sysctls:
+        description: enabled sysctls. Recommended from SC 1.13 and became safe sysctls since k8s 1.29. Mandatory.
+        type: boolean
+        default: false
+
+
+### ----------------------------------------------------------------------- ###
+### SC specific END
+###############################################################################
+
+###############################################################################
+### EDA specific START
+### ----------------------------------------------------------------------- ###
+  eda:
+    description: EDA specific configurations. Optional.
+    type: object
+    additionalProperties: false
+    properties:
+      domainName:
+        description: domainName. Mandatory.
+        type: string
+      clusterName:
+        description: clusterName. Mandatory.
+        type: string
+      hssValidatorTag:
+        description: HSS plugin version. Mandatory.
+        type: string
+      networkElements:
+        description: Network Elements. Optional.
+        type: object
+        additionalProperties: false
+        properties:
+          mapi:
+            description: Protocol Type. Optional.
+            type: array
+            items:
+              type: object
+              additionalProperties: false
+              properties:
+                host:
+                  description: CCDM MAPI host name. Optional.
+                  type: string
+                truststorePassword:
+                  description: Truststore password. Optional.
+                  type: string
+                  default: "ericsson"
+                truststoreFile:
+                  description: Truststore file. Optional.
+                  type: string
+          ldap:
+            description: Protocol Type. Optional.
+            type: array
+            items:
+              type: object
+              additionalProperties: false
+              properties:
+                host:
+                  description: CCDM LDAP host name. Optional.
+                  type: string
+                tlsPem:
+                  description: TLS PEM file. Optional.
+                  type: string
+### ----------------------------------------------------------------------- ###
+### EDA specific END
+###############################################################################
+
+###############################################################################
+### PCC specific START
+### ----------------------------------------------------------------------- ###
+  pcc:
+    description: PCC specific configurations. Mandatory.
+    type: object
+    additionalProperties: false
+    properties:
+      oamIp:
+        description: OAM IP address. Optional.
+        type: string
+      ipRule:
+        description: IP address allocation rules in subnet. Mandatory.
+        type: object
+        additionalProperties: false
+        properties:
+          defaultGws:
+            description: List of default gateway IP positions. Mandatory.
+            type: array
+            items:
+              type: integer
+            default: [2,3]
+          bfdPeers:
+            description: List of BFD peer IP positions. Mandatory.
+            type: array
+            items:
+              type: integer
+            default: [2,3]
+          fwdIpFrom:
+            description: Start IP position for eric-pc-mm-forwarders. Mandatory.
+            type: integer
+            default: 21
+          bgpNeighbors:
+            description: List of BGP neighbor IP positions. Mandatory.
+            type: array
+            items:
+              type: integer
+            default: [2,3]
+          creIpFrom:
+            description: Start IP position for CRE. Mandatory.
+            type: integer
+            default: 21
+          vpngwIpFrom:
+            description: Start IP position for VPNGW. Mandatory.
+            type: integer
+            default: 31
+      pcmm:
+        description: PCC MM configuration. Mandatory.
+        type: object
+        additionalProperties: false
+        properties:
+          nodeId:
+            description: MME/AMF nodeId. if not defined, use nodeName as nodeId. Optional.
+            type: string
+          mmeGroupId:
+            description: mmeGroupId. Mandatory.
+            type: integer
+          mmeCode:
+            description: mmeCode. Mandatory.
+            type: integer
+          amfRegionId:
+            description: amfRegionId. Mandatory.
+            type: integer
+          amfSetId:
+            description: amfSetId. Mandatory.
+            type: integer
+          amfPointer:
+            description: amfCapacity. Mandatory.
+            type: integer
+          amfCapacity:
+            description: amfCapacity. Mandatory.
+            type: integer
+          amfInstanceId:
+            description: AMF instance ID. Mandatory.
+            type: string
+          namfLbIp:
+            description: AMF SBI loadbalancer IP. Mandatory.
+            type: string
+          hss:
+            description: Peer HSS information. Mandatory.
+            type: array
+            items:
+              type: object
+              additionalProperties: false
+              properties:
+                ip:
+                  description: IP address of the peer HSS. Mandatory.
+                  type: string
+                host:
+                  description: Diameter host of the peer HSS. Mandatory.
+                  type: string
+          mmec:
+            description: MME pool information. Optional.
+            type: array
+            items:
+              type: object
+              additionalProperties: false
+              properties:
+                ip:
+                  description: IP address of the peer MME pool. Mandatory.
+                  type: string
+                id:
+                  description: Id of Peer MME pool. Mandatory.
+                  type: integer
+          ipNetwork:
+            description: List of PCC MM IP network configuration. Mandatory.
+            type: array
+            items:
+              type: object
+              additionalProperties: false
+              properties:
+                name:
+                  description: IP network name. Mandatory.
+                  type: string
+                ipInt:
+                  description: IP interface. Mandatory.
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    vlan:
+                      description: VLAN ID. Mandatory
+                      type: integer
+                    ipv4:
+                      description: IPv4 CIDR. Mandatory
+                      type: string
+                ipSvc:
+                  description: List of IP service. Mandatory.
+                  type: array
+                  items:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      name:
+                        description: IP service name. Mandatory
+                        type: string
+                        enum:
+                        - Gn-GTP-C
+                        - N2-1
+                        - N2-2
+                        - OAM
+                        - S1-MME-1
+                        - S1-MME-2
+                        - S10-GTP-C
+                        - S11-GTP-C
+                        - S6a-1
+                        - S6a-2
+                        - SBI-Client
+                        - SBI-Server
+                      ipv4:
+                        description: IPv4 address. Mandatory
+                        type: string
+      pcsm:
+        description: PCC MM configuration. Mandatory.
+        type: object
+        additionalProperties: false
+        properties:
+          pgwfqdn:
+            description: . Optional.
+            type: string
+          smfInstanceId:
+            description: SMF instance ID. Mandatory.
+            type: string
+          smfSbiNsmfHost:
+            description: SMF SBI host. Mandatory.
+            type: string
+          nsmfLbIp:
+            description: SMF nsmf loadbalancer IP. Mandatory.
+            type: string
+          smfSbiNotifyHost:
+            description: SMF SBI notification host. Mandatory.
+            type: string
+          nsmfNotifLbIp:
+            description: SMF notification loadbalancer IP. Mandatory.
+            type: string
+          pcrf:
+            description: List of PCRFs. Mandatory.
+            type: array
+            minItems: 1
+            maxItems: 2
+            items:
+              type: object
+              additionalProperties: false
+              properties:
+                pcrfDiameterAddress:
+                  description: Diameter Address. Mandatory.
+                  type: string
+                priority:
+                  description: Priority for the PCRF node
+                  type: integer
+          pcrfDiameterAddress:
+            description: PCRF diameter address. Mandatory.
+            type: string
+          pcrfDiameterHost:
+            description: PCRF diameter host. Optional.
+            type: string
+          pcscfAddress:
+            description: P-CSCF server address. Optional.
+            type: string
+          pgwFqdn:
+            description: PGW FQDN used for IRAT. Optional.
+            type: string
+          sgwuPfcpAddress:
+            description: server address. Optional.
+            type: string
+          upfPfcpAddress:
+            description: server address. Optional.
+            type: string
+          internetPool:
+            description: APN IP pools. Optional.
+            additionalProperties: false
+            type: object
+          imsPool:
+            description: APN IP pools. Optional.
+            additionalProperties: false
+            type: object
+          mqfPool:
+            description: APN IP pools. Optional.
+            additionalProperties: false
+            type: object
+          smIpAllocX1Lb:
+            description: X1 Allocator notification loadbalancer IP. Optional.
+            type: string
+          smIpAllocLiX1Lb:
+            description: LiX1 Allocator notification loadbalancer IP. Optional.
+            type: string
+          udpgaLbIp:
+            description: UDP ga notification loadbalancer IP. Optional.
+            type: string
+          udpgns5s8LbIp:
+            description: UDP gns5s notification loadbalancer IP. Optional.
+            type: string
+          udps4s11LbIp:
+            description: UDP s4s11 notification loadbalancer IP. Optional.
+            type: string
+          udps5s8LbIp:
+            description: UDP s5s8 notification loadbalancer IP. Optional.
+            type: string
+          udpsxaLbIp:
+            description: UDP sxa notification loadbalancer IP. Optional.
+            type: string
+          udpsxbLbIp:
+            description: UDP sxb notification loadbalancer IP. Optional.
+            type: string
+          apn:
+            description: APN(data network). Mandatory.
+            type: object
+            additionalProperties: false
+            properties:
+              internet:
+                description: Internet APN configuration. Mandatory.
+                type: object
+                additionalProperties: false
+                properties:
+                  networkInstance:
+                    description: Network instance for the APN. Mandatory.
+                    type: string
+###############################################################################
+### PCC < 1.33 Version START
+### ----------------------------------------------------------------------- ###
+                  ipPool:
+                    description: APN IP pools. Mandatory.
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      ipv4:
+                        description: IPv4 address pool. Mandatory.
+                        type: array
+                        items:
+                          type: string
+                        minItems: 1
+                        maxItems: 5
+                      ipv6:
+                        description: IPv6 address pool. Mandatory.
+                        type: array
+                        items:
+                          type: string
+                        minItems: 1
+                        maxItems: 5
+### ----------------------------------------------------------------------- ###
+### PCC < 1.33 Version END
+###############################################################################
+                  ipPools:
+                    description: APN IP pools. Mandatory.
+                    type: array
+                    minItems: 1
+                    maxItems: 2
+                    items:
+                      type: object
+                      additionalProperties: false
+                      properties:
+                        upf:
+                          description: UPF number. Mandatory.
+                          type: integer
+                        ipv4:
+                          description: IPv4 address pool. Mandatory.
+                          type: array
+                          items:
+                            type: string
+                          minItems: 1
+                          maxItems: 5
+                        ipv6:
+                          description: IPv6 address pool. Mandatory.
+                          type: array
+                          items:
+                            type: string
+                          minItems: 1
+                          maxItems: 5
+              ims:
+                description: IMS APN configuration. Mandatory.
+                type: object
+                additionalProperties: false
+                properties:
+                  networkInstance:
+                    description: Network instance for the APN. Mandatory.
+                    type: string
+###############################################################################
+### PCC < 1.33 Version START
+### ----------------------------------------------------------------------- ###
+                  ipPool:
+                    description: APN IP pools. Mandatory.
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      ipv4:
+                        description: IPv4 address pool. Mandatory.
+                        type: array
+                        items:
+                          type: string
+                        minItems: 1
+                        maxItems: 5
+                      ipv6:
+                        description: IPv6 address pool. Mandatory.
+                        type: array
+                        items:
+                          type: string
+                        minItems: 1
+                        maxItems: 5
+### ----------------------------------------------------------------------- ###
+### PCC < 1.33 Version END
+###############################################################################
+                  ipPools:
+                    description: APN IP pools. Mandatory.
+                    type: array
+                    minItems: 1
+                    maxItems: 2
+                    items:
+                      type: object
+                      additionalProperties: false
+                      properties:
+                        upf:
+                          description: UPF number. Mandatory
+                          type: integer
+                        ipv4:
+                          description: IPv4 address pool. Mandatory.
+                          type: array
+                          items:
+                            type: string
+                          minItems: 1
+                          maxItems: 5
+                        ipv6:
+                          description: IPv6 address pool. Mandatory.
+                          type: array
+                          items:
+                            type: string
+                          minItems: 1
+                          maxItems: 5
+          sgwu:
+            description: List of SGWU nodes. Mandatory.
+            type: array
+            minItems: 1
+            maxItems: 2
+            items:
+              type: object
+              additionalProperties: false
+              properties:
+                pfcpAddress:
+                  description: PFCP address. Mandatory.
+                  type: string
+                priority:
+                  description: Priority for the SGWU node
+                  type: integer
+                networkInstances:
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    s1s4s12-u:
+                      description: network instance for s1s4s12-u interface. Mandatory.
+                      type: string
+                    s11-u:
+                      description: network instance for s11-u interface. Mandatory.
+                      type: string
+                    s5s8-u:
+                      description: network instance for s5s8-u interface. Mandatory.
+                      type: string
+          upfPgwu:
+            description: List of UPF/PGWU nodes. Mandatory.
+            type: array
+            minItems: 1
+            maxItems: 2
+            items:
+              type: object
+              additionalProperties: false
+              properties:
+                pfcpAddress:
+                  description: PFCP address. Mandatory.
+                  type: string
+                priority:
+                  description: Priority for the UPFPGWU node
+                  type: integer
+                networkInstances:
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    s5s8-u:
+                      description: network instance for s5s8-u interface. Mandatory.
+                      type: string
+                    n3:
+                      description: network instance for n3 interface. Mandatory.
+                      type: string
+                    sx-u:
+                      description: network instance for sx-u interface. Mandatory.
+                      type: string
+          smLogicalInt:
+            description: PCC SM logical interface using VPNGW
+            type: object
+            additionalProperties: false
+            properties:
+              pgwS5s8c:
+                description: PGWC S5S8-C interface. Mandatory.
+                type: object
+                additionalProperties: false
+                properties:
+                  ipv4:
+                    description: IPv4 address. Mandatory.
+                    type: string
+                  networkInstance:
+                    description: Network instance name. Mandatory.
+                    type: string
+              gomc:
+                description: Gomc interface. Mandatory.
+                type: object
+                additionalProperties: false
+                properties:
+                  ipv4:
+                    description: IPv4 address. Mandatory.
+                    type: string
+                  networkInstance:
+                    description: Network instance name. Mandatory.
+                    type: string
+              sxb:
+                description: PGWC Sxb interface. Mandatory.
+                type: object
+                additionalProperties: false
+                properties:
+                  ipv4:
+                    description: IPv4 address. Mandatory.
+                    type: string
+                  networkInstance:
+                    description: Network instance name. Mandatory.
+                    type: string
+              s4s11c:
+                description: SGWC S4S11-c interface. Mandatory.
+                type: object
+                additionalProperties: false
+                properties:
+                  ipv4:
+                    description: IPv4 address. Mandatory.
+                    type: string
+                  networkInstance:
+                    description: Network instance name. Mandatory.
+                    type: string
+              sgwS5s8c:
+                description: SGWC S5S8-c interface. Mandatory.
+                type: object
+                additionalProperties: false
+                properties:
+                  ipv4:
+                    description: IPv4 address. Mandatory.
+                    type: string
+                  networkInstance:
+                    description: Network instance name. Mandatory.
+                    type: string
+              sxa:
+                description: SGWC Sxa interface. Mandatory.
+                type: object
+                additionalProperties: false
+                properties:
+                  ipv4:
+                    description: IPv4 address. Mandatory.
+                    type: string
+                  networkInstance:
+                    description: Network instance name. Mandatory.
+                    type: string
+              gx:
+                description: Gx interface. Mandatory.
+                type: object
+                additionalProperties: false
+                properties:
+                  ipv4:
+                    description: IPv4 address. Mandatory.
+                    type: string
+                  networkInstance:
+                    description: Network instance name. Mandatory.
+                    type: string
+
+      vpngw:
+        description: VPN-Gateway specific configurations. Mandatory
+        type: object
+        additionalProperties: false
+        properties:
+          maxNum:
+            description: Max number of VPNGW forwarders. Mandatory.
+            type: integer
+            default: 6
+          loopback:
+            description: VPN-Gateway loopback. Mandatory.
+            type: object
+            additionalProperties: false
+            properties:
+              ipv4:
+                description: IPv4 address of the VPN-Gateway loopback. Mandatory.
+                type: string
+              networkInstance:
+                description: Network instance name of the loopback. Mandatory.
+                type: string
+          intraForward:
+            description: intraForward network. Mandatory.
+            type: object
+            additionalProperties: false
+            properties:
+              vlan:
+                description: VLAN ID. Mandatory.
+                type: integer
+              ipv4:
+                description: IPv4 subnet (CIDR). Mandatory.
+                type: string
+          networkInstances:
+            description: List of the network instances configurations. Mandatory.
+            type: array
+            items:
+              type: object
+              additionalProperties: false
+              properties:
+                name:
+                  description: Name of network instance. Mandatory
+                  type: string
+                localAs:
+                  description: Local AS number. Mandatory.
+                  type: integer
+                remoteAs:
+                  description: Remote AS number. Mandatory.
+                  type: integer
+                ipForward:
+                  description: ipForward interface configuration. Mandatory.
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    vlan:
+                      description: VLAN ID
+                      type: integer
+                    ipv4:
+                      description: IPv4 subnet (CIDR) of the ipForward interface network. Mandatory.
+                      type: string
+                vnfLoop:
+                  description: VNF/CNF loopback. Mandatory.
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    ipv4:
+                      description: IPv4 address of the VNF/CNF loopback interface. Mandatory.
+                      type: string
+### ----------------------------------------------------------------------- ###
+### PCC specific END
+###############################################################################
+
+###############################################################################
+### PCG specific START
+### ----------------------------------------------------------------------- ###
+  pcg:
+    description: PCG specific configurations. Mandatory.
+    type: object
+    additionalProperties: false
+    properties:
+      ipRule:
+        description: IP allocation rule in the CIDR. Optional.
+        type: object
+        properties:
+          ipv4:
+            description: IPv4 rules. Optional.
+            type: object
+            additionalProperties: false
+            properties:
+              defaultGw:
+                description: List of address positions in CIDR for default gateways. Optional.
+                type: array
+                items:
+                  type: integer
+                default: [1]
+              bgpNeighbors:
+                description: List of address positions in CIDR for BGP neighbors. Optional.
+                type: array
+                items:
+                  type: integer
+                default: [2,3]
+              creIpFrom:
+                description: Address position where CRE(Routing Engine) IP starts from. Optional.
+                type: integer
+                default: 21
+              dpIpFrom:
+                description: Address position where DP IP starts from. Optional.
+                type: integer
+                default: 31
+          ipv6:
+            description: IPv6 rules. Optional.
+            type: object
+            additionalProperties: false
+            properties:
+              defaultGw:
+                description: List of address positions in CIDR for default gateways. Optional.
+                type: array
+                items:
+                  type: integer
+                default: [1]
+              bgpNeighbors:
+                description: List of address positions in CIDR for BGP neighbors. Optional.
+                type: array
+                items:
+                  type: integer
+                default: [2,3]
+              creIpFrom:
+                description: Address position where CRE(Routing Engine) IP starts from. Optional.
+                type: integer
+                default: 21
+              dpIpFrom:
+                description: Address position where DP IP starts from. Optional.
+                type: integer
+                default: 31
+      nicVendor:
+        description: SRIOV NIC type. Optional.
+        type: string
+        default: mellanox
+      dpMaxNum:
+        description: The maximum number of DP Pods. Mandatory.
+        type: integer
+      dpCpu:
+        description: The number of CPUs for DP Pod. Mandatory.
+        type: integer
+      nicResrName:
+        description: List of SRIOV device resource names. Mandatory.
+        type: array
+        items:
+          type: string
+      intraForward:
+        description: intraForward network. Mandatory.
+        type: object
+        additionalProperties: false
+        properties:
+          vlan:
+            description: VLAN ID. Mandatory.
+            type: integer
+          ipv4:
+            description: IPv4 subnet (CIDR). Mandatory.
+            type: string
+      networkInstances:
+        description: List of the network instances configurations. Mandatory.
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          properties:
+            name:
+              description: Name of network instance. Mandatory
+              type: string
+            localAs:
+              description: Local AS number. Mandatory.
+              type: integer
+            remoteAs:
+              description: Remote AS number. Mandatory.
+              type: integer
+            addPath:
+              description: Number of additional paths. Optional.
+              type: integer
+            sliceSize:
+              description: Slice size. Optional
+              type: integer
+            ipForward:
+              description: ipForward interface configuration. Mandatory.
+              type: object
+              additionalProperties: false
+              properties:
+                vlan:
+                  description: VLAN ID
+                  type: integer
+                ipv4:
+                  description: IPv4 subnet (CIDR) of the ipForward interface network. Mandatory.
+                  type: string
+                ipv6:
+                  description: IPv6 subnet (CIDR) of the ipForward interface network. Mandatory.
+                  type: string
+            vnfLoop:
+              description: VNF/CNF loopback. Mandatory.
+              type: object
+              additionalProperties: false
+              properties:
+                ipv4:
+                  description: IPv4 address of the VNF/CNF loopback interface. Mandatory.
+                  type: string
+                ipv6:
+                  description: IPv6 address of the VNF/CNF loopback interface. Mandatory.
+                  type: string
+            dpLoop:
+              description: DP loopback. Mandatory.
+              type: object
+              additionalProperties: false
+              properties:
+                ipv4:
+                  description: IPv4 subnet (CIDR) of the DP loopback interface. Mandatory.
+                  type: string
+                ipv6:
+                  description: IPv6 subnet (CIDR) of the DP loopback interface. Mandatory.
+                  type: string
+            upLoop:
+              description: List of PCG application interfaces. Mandatory.
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                properties:
+                  name:
+                    description: Name of the parent software loopback interface.
+                    type: string
+                  ipv4:
+                    description: IPv4 subnet (CIDR) of the parent software loopback interface. Mandatory.
+                    type: string
+                  ipv6:
+                    description: IPv6 subnet (CIDR) of the parent software loopback interface. Mandatory.
+                    type: string
+                  interfaces:
+                    description: List of the application interfaces. Mandatory.
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: false
+                      properties:
+                        type:
+                          description: Type of the application interface. Mandatory.
+                          type: string
+                        name:
+                          description: Name of the application interface. Mandatory.
+                          type: string
+                        default:
+                          description: Whether the default interface in the network instance. Optional.
+                          type: boolean
+                          default: true
+            ipPools:
+              description: List of IPv4 and IPv6 CIDR of the IP pools. Optional.
+              type: array
+              items:
+                type: string
+### ----------------------------------------------------------------------- ###
+### PCG specific END
+###############################################################################
+
+###############################################################################
+### CCPC specific START
+### ----------------------------------------------------------------------- ###
+  ccpc:
+    description: CCPC specific configurations. Optional.
+    type: object
+    additionalProperties: false
+    properties:
+      provFqdn:
+        description: Provisioning FQDN. Mandatory.
+        type: string
+      smfSbiNotifyHost:
+        description: Dedicated SMF SBI notification host. Optional.
+        type: string
+      pcf:
+        description: PCF configurations. Mandatory.
+        type: object
+        additionalProperties: false
+        properties:
+          instanceId:
+            description: NF instance ID. Mandatory.
+            type: string
+          host:
+            description: Host part of the FQDN (without domain). Mandatory.
+            type: string
+          port:
+            description: Port of the service. Optional.
+            type: integer
+            default: 443
+          nfSetId:
+            description: The PCF nf-set-id. Optional.
+            type: string
+          geored:
+            description: Geored configurations. Optional.
+            type: object
+            additionalProperties: false
+            properties:
+              local:
+                description: Local site configurations. Optional.
+                type: object
+                additionalProperties: false
+                properties:
+                  ip:
+                    description: IP address. Optional.
+                    type: string
+              remote:
+                description: Remote site configurations. Optional.
+                type: object
+                additionalProperties: false
+                properties:
+                  ip:
+                    description: IP address. Optional.
+                    type: string
+      pcrf:
+        description: PCRF configurations. Mandatory.
+        type: object
+        additionalProperties: false
+        properties:
+          diameter:
+            description: Diameter configurations. Mandatory.
+            type: object
+            additionalProperties: false
+            properties:
+              host:
+                description: Diameter host. Mandatory.
+                type: string
+      registry:
+            description: The registry url. Optional.
+            type: string
+            default: 'null'
+      traff5gLbIp:
+        description: 5G Traffic loadbalancer IP. Optional.
+        type: string
+      traff4gLbIp:
+        description: 4G Traffic loadbalancer IP. Optional.
+        type: string
+      prov5gLbIp:
+        description: 5G Provisioning loadbalancer IP. Optional.
+        type: string
+      oamIp:
+        description: OAM IP address. Optional.
+        type: string
+### ----------------------------------------------------------------------- ###
+### CCPC specific END
+###############################################################################
+
+###############################################################################
+### EM specific START
+### ----------------------------------------------------------------------- ###
+  em:
+    description: EM specifc configurations. Optional.
+    type: object
+    additionalProperties: false
+    properties:
+      oamFqdn:
+        description: OAM FQDN. Mandatory.
+        type: string
+      defaultMgrServiceName:
+        description: Manager Service details. Mandatory.
+        type: string
+      chf:
+        description: chf configurations. Mandatory.
+        type: object
+        additionalProperties: false
+        properties:
+          host:
+            description: Host part of the FQDN (without domain). Mandatory.
+            type: string
+### ----------------------------------------------------------------------- ###
+### EM specific END
+###############################################################################

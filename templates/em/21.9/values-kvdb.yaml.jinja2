@@ -1,0 +1,178 @@
+affinity:
+  podAntiAffinity: soft
+appArmorProfile:
+  localhostProfile: ""
+  metricsExporter:
+    localhostProfile: ""
+    type: ""
+  node:
+    localhostProfile: ""
+    type: ""
+  type: ""
+bandwidth:
+  node:
+    maxEgressRate: null
+hooklauncher:
+  backoffLimit: 6
+  cleanup: true
+  terminateEarlyOnFailure: true
+imageCredentials:
+  hooklauncher:
+    registry: {}
+    repoPath: null
+  metricsExporter:
+    registry:
+      imagePullPolicy: null
+      url: null
+    repoPath: null
+  node:
+    registry:
+      imagePullPolicy: null
+      url: null
+    repoPath: null
+  pullSecret: null
+  repoPath: null
+kvdbOperatorName: eric-data-key-value-database-rd
+labels: {}
+log:
+  metricsExporter:
+    bufferedLines: 2000
+  node:
+    bufferedLines: 2000
+    level: info
+  outputs:
+  - stdout
+  server:
+    level: notice
+  streamingMethod: ""
+logTransformerService:
+  host: eric-log-transformer
+metrics:
+  enabled: true
+nameOverride: ""
+networkPolicy:
+  enabled: true
+nodeSelector: {}
+numberOfMaster: 3
+pmServerServiceName: eric-pm-server
+podPriority:
+  hooklauncher:
+    priorityClassName: ""
+  node:
+    priorityClassName: ""
+podSecurityContext:
+  supplementalGroups: null
+probes:
+  metricsExporter:
+    livenessProbe:
+      failureThreshold: 30
+      initialDelaySeconds: 0
+      periodSeconds: 10
+      successThreshold: 1
+      timeoutSeconds: 20
+    startupProbe:
+      failureThreshold: 60
+      initialDelaySeconds: 0
+      periodSeconds: 10
+      timeoutSeconds: 20
+  node:
+    livenessProbe:
+      failureThreshold: 30
+      initialDelaySeconds: 0
+      periodSeconds: 10
+      successThreshold: 1
+      timeoutSeconds: 20
+    readinessProbe:
+      failureThreshold: 30
+      initialDelaySeconds: 0
+      periodSeconds: 10
+      successThreshold: 1
+      timeoutSeconds: 20
+    startupProbe:
+      failureThreshold: 60
+      initialDelaySeconds: 0
+      periodSeconds: 10
+      timeoutSeconds: 5
+productInfo:
+  rstate: R25N
+replicationFactor: 1
+resources:
+  hooklauncher:
+    limits:
+      cpu: 200m
+      ephemeral-storage: 100Mi
+      memory: 100Mi
+    requests:
+      cpu: 50m
+      ephemeral-storage: 100Mi
+      memory: 50Mi
+  metricsExporter:
+    limits:
+      cpu: 20m
+      ephemeral-storage: 2Gi
+      memory: 50Mi
+    requests:
+      cpu: 10m
+      ephemeral-storage: 2Gi
+      memory: 25Mi
+  node:
+    limits:
+      cpu: 200m
+      ephemeral-storage: 2Gi
+      memory: 500Mi
+    requests:
+      cpu: 100m
+      ephemeral-storage: 2Gi
+      memory: 200Mi
+seccompProfile:
+  localhostProfile: ""
+  metricsExporter:
+    localhostProfile: ""
+    type: ""
+  node:
+    localhostProfile: ""
+    type: ""
+  type: ""
+security:
+  acl:
+    enabled: true
+    users: null
+  tls:
+    certificateTTL: null
+    ciphers: DEFAULT:-ALL:DHE-PSK-AES256-GCM-SHA384:DHE-PSK-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-PSK-CHACHA20-POLY1305:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-CHACHA20-POLY1305
+securityPolicy:
+  rolename: eric-data-key-value-database-rd-operand
+server:
+  clusterNodeTimeoutMs: 2000
+  clusterRequireFullCoverage: "no"
+  dialTimeoutMs: 2000
+  maxClients: 8192
+  maxMemory: 30mb
+  maxMemoryPolicy: noeviction
+  modules:
+    tairHash:
+      enabled: false
+  notifyKeySpaceEvents: ""
+service:
+  endpoints:
+    kvdbClients:
+      tls:
+        enforced: required
+        verifyClientCertificate: required
+    metrics:
+      tls:
+        verifyClientCertificate: required
+terminationGracePeriodSeconds: 30
+tolerations:
+  hooklauncher: []
+  node:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 0
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 0
+topologySpreadConstraints: []
+

@@ -1,0 +1,307 @@
+{% if 'ipRule' in pcg %}
+{% set creIpv4 = pcg.ipRule.ipv4.creIpFrom %}
+{% set dpIpv4 = pcg.ipRule.ipv4.dpIpFrom %}
+{% set bgpNbV4 = pcg.ipRule.ipv4.bgpNeighbors %}
+{% set gwV4 = pcg.ipRule.ipv4.defaultGw %}
+{% set creIpv6 = pcg.ipRule.ipv6.creIpFrom %}
+{% set dpIpv6 = pcg.ipRule.ipv6.dpIpFrom %}
+{% set bgpNbV6 = pcg.ipRule.ipv6.bgpNeighbors %}
+{% set gwV6 = pcg.ipRule.ipv6.defaultGw %}
+{% else %}
+{% set creIpv4 = 6 %}
+{% set dpIpv4 = 10 %}
+{% set bgpNbV4 = [2,3] %}
+{% set gwV4 = [1] %}
+{% set creIpv6 = 6 %}
+{% set dpIpv6 = 10 %}
+{% set bgpNbV6 = [2,3] %}
+{% set gwV6 = [1] %}
+{% endif %}
+autowizard false
+config
+interfaces interface cre:net0
+ description cre:net0
+ type        ethernetCsmacd
+ enabled     true
+ l2-mtu      1968
+ exit
+interfaces interface up:eth0
+ description up:eth0
+ type        ethernetCsmacd
+ enabled     true
+ exit
+interfaces interface up:eth1
+ description up:eth1
+ type        ethernetCsmacd
+ enabled     true
+ exit
+interfaces interface up:group1
+ type      activeBackupBonding
+ enabled   true
+ member-if [ up:eth0 up:eth1 ]
+ exit
+
+network-instances network-instance intraForward
+ enabled true
+ exit
+interfaces interface up:intra_forward
+ description      intraForward
+ type             ipForward
+ enabled          true
+ encapsulation dot1q-vlan outer-tag tag-type c-vlan
+ encapsulation dot1q-vlan outer-tag vlan-id {{ pcg.intraForward.vlan}}
+ parent-interface up:group1
+ bind-ni-name     intraForward
+ ipv4 enabled true
+{% set intraCidr = pcg.intraForward.ipv4 | ip_network %}
+ ipv4 address {{ intraCidr.1 }}
+  prefix-length {{ intraCidr.prefixlen }}
+  exit
+ address-type ip-range {{ pcg.dpMaxNum }}
+ exit
+intra-forwarding interface intraforwarding
+ parent-interface up:intra_forward
+ exit
+
+{% for ni in pcg.networkInstances %}
+  {% if 'ipv4' in ni.ipForward %}
+  {% set ipFwdV4 = ni.ipForward.ipv4 | ip_network %}
+  {% endif %}
+  {% if 'ipv6' in ni.ipForward %}
+  {% set ipFwdV6 = ni.ipForward.ipv6 | ip_network %}
+  {% endif %}
+  {% if 'dpLoop' in ni %}
+    {% if 'ipv4' in ni.dpLoop %}
+    {% set dpLpV4 = ni.dpLoop.ipv4 | ip_network %}
+    {% endif %}
+    {% if 'ipv6' in ni.dpLoop %}
+    {% set dpLpV6 = ni.dpLoop.ipv6 | ip_network %}
+    {% endif %}
+  {% endif %}
+  {% if 'ipv4' in ni.vnfLoop %}
+  {% set vnfLpV4 = ni.vnfLoop.ipv4 | ip_address %}
+  {% endif %}
+  {% if 'ipv6' in ni.vnfLoop %}
+  {% set vnfLpV6 = ni.vnfLoop.ipv6 | ip_address %}
+  {% endif %}
+network-instances network-instance {{ ni.name }}
+ enabled                  true
+ description              {{ ni.name }}
+ routing bgp {{ ni.localAs }}
+{% if ipFwdV4 is defined %}
+{% for num in bgpNbV4 %}
+  neighbor {{ ipFwdV4[num] }}
+   peer-type                 external
+   advertisement-interval 20
+   bfd-enabled            false
+   remote-as              {{ ni.remoteAs }}
+   address-family ipv4 unicast
+   exit
+{% endfor %}
+{% endif %}
+{% if ipFwdV6 is defined %}
+{% for num in bgpNbV6 %}
+  neighbor {{ ipFwdV6[num] }}
+   peer-type                 external
+   advertisement-interval 20
+   bfd-enabled            false
+   remote-as              {{ ni.remoteAs }}
+   address-family ipv6 unicast
+   exit
+{% endfor %}
+{% endif %}
+ routing ingress-next-hop-announcements ingress-next-hop-announcement {{ ni.name }}_ingress
+{% if 'dpLoop' in ni %}
+  instance-route-next-hop    interface       up:{{ ni.name }}_dploop
+{% endif %}
+  fallback-route-next-hop    interface       up:{{ ni.name }}_vnfloop
+  service                     user-plane
+  exit
+{% if ipFwdV4 is defined %}
+{% for num in gwV4 %}
+ ip static-route up 0.0.0.0/0 {{ ipFwdV4[num] }}
+ bfd-enabled true
+ exit
+{% endfor %}
+{% endif %}
+{% if ipFwdV6 is defined %}
+{% for num in gwV6 %}
+ ipv6 static-route up ::/0 {{ ipFwdV6[num] }}
+ bfd-enabled true
+ exit
+{% endfor %}
+{% endif %}
+exit
+interfaces interface cre:{{ ni.name }}_link
+ description      cre:{{ ni.name }}_link
+ type             ipForward
+ enabled          true
+ encapsulation dot1q-vlan outer-tag tag-type c-vlan
+ encapsulation dot1q-vlan outer-tag vlan-id {{ ni.ipForward.vlan }}
+ parent-interface cre:net0
+ bind-ni-name     {{ ni.name }}
+{% if ipFwdV4 is defined %}
+ ipv4 enabled true
+ ipv4 address {{ ipFwdV4[creIpv4] }}
+  prefix-length {{ ipFwdV4.prefixlen }}
+  exit
+{% endif %}
+{% if ipFwdV6 is defined %}
+ ipv6 enabled true
+ ipv6 address {{ ipFwdV6[creIpv6] }}
+  prefix-length {{ ipFwdV6.prefixlen }}
+  exit
+{% endif %}
+ address-type ip-range 2
+ exit
+interfaces interface up:{{ ni.name }}_link
+ description      up:{{ ni.name }}_link
+ type             ipForward
+ enabled          true
+ encapsulation dot1q-vlan outer-tag tag-type c-vlan
+ encapsulation dot1q-vlan outer-tag vlan-id {{ ni.ipForward.vlan }}
+ parent-interface up:group1
+ bind-ni-name     {{ ni.name }}
+{% if ipFwdV4 is defined %}
+ ipv4 enabled true
+ ipv4 address {{ ipFwdV4[dpIpv4] }}
+  prefix-length {{ ipFwdV4.prefixlen }}
+  exit
+{% endif %}
+{% if ipFwdV6 is defined %}
+ ipv6 enabled true
+ ipv6 address {{ ipFwdV6[dpIpv6] }}
+  prefix-length {{ ipFwdV6.prefixlen }}
+  exit
+{% endif %}
+ address-type ip-range {{ pcg.dpMaxNum }}
+ exit
+{% if 'dpLoop' in ni %}
+interfaces interface up:{{ ni.name }}_dploop
+ description  up:{{ ni.name }}_dploop
+ type         softwareLoopback
+ enabled      true
+ bind-ni-name {{ ni.name }}
+{% if dpLpV4 is defined %}
+ ipv4 enabled true
+ ipv4 address {{ dpLpV4.1 }}
+  prefix-length {{ dpLpV4.prefixlen }}
+  exit
+{% endif %}
+{% if dpLpV6 is defined %}
+ ipv6 enabled true
+ ipv6 address {{ dpLpV6.1 }}
+  prefix-length {{ dpLpV6.prefixlen }}
+  exit
+{% endif %}
+ address-type ip-range {{ pcg.dpMaxNum }}
+ exit
+{% endif %}
+interfaces interface up:{{ ni.name }}_vnfloop
+ description  up:{{ ni.name }}_vnfloop
+ type         softwareLoopback
+ enabled      true
+ bind-ni-name {{ ni.name }}
+{% if vnfLpV4 is defined %}
+ ipv4 enabled true
+ ipv4 address {{ vnfLpV4 }}
+  prefix-length 32
+  exit
+{% endif %}
+{% if vnfLpV6 is defined %}
+ ipv6 enabled true
+ ipv6 address {{ vnfLpV6 }}
+  prefix-length 128
+  exit
+{% endif %}
+ address-type single
+ exit
+
+{% if 'upLoop' in ni %}
+{% for upLp in ni.upLoop %}
+  {% if 'ipv4' in upLp %}
+  {% set upLpV4 = upLp.ipv4 | ip_network %}
+  {% endif %}
+  {% if 'ipv6' in upLp %}
+  {% set upLpV6 = upLp.ipv6 | ip_network %}
+  {% endif %}
+interfaces interface up:{{ ni.name }}_{{ upLp.name }}
+ type           softwareLoopback
+ enabled        true
+ bind-ni-name   {{ ni.name }}
+ ipv4 enabled true
+{% if upLpV4 is defined %}
+{% if upLpV4.prefixlen == 32 %}
+ ipv4 address {{ upLpV4.0 }}
+  prefix-length 32
+  exit
+{% else %}
+ ipv4 address {{ upLpV4.1 }}
+  prefix-length {{ upLpV4.prefixlen }}
+  exit
+{% endif %}
+{% endif %}
+{% if upLpV6 is defined %}
+{% if upLpV6.prefixlen == 128 %}
+ ipv6 address {{ upLpV6.0 }}
+  prefix-length 128
+  exit
+{% else %}}
+ ipv6 address {{ upLpV6.1 }}
+  prefix-length {{ upLpV6.prefixlen }}
+  exit
+{% endif %}
+{% endif %}
+{% if (upLpV4 is defined and upLpV4.prefixlen == 32) or (upLpV6 is defined and upLpV6.prefixlen == 128) %}
+ address-type single
+{% else %}
+ address-type ip-range {{ pcg.dpMaxNum }}
+{% endif %}
+ exit
+
+{% for intf in upLp.interfaces %}
+{% if intf.type in ['cp-function', 'access', 'core'] %}
+user-plane service gtp interfaces interface {{ ni.name }}_{{ upLp.name }}_{{ intf.name }}
+ parent-interface up:{{ ni.name }}_{{ upLp.name }}
+ exit
+user-plane service gtp {{ intf.type }} {{ ni.name }}_gtp_{{ intf.type }}_{{ intf.name }}
+ gtp-interface {{ ni.name }}_{{ upLp.name }}_{{ intf.name }}
+  {% if 'default' in intf and intf.default == false %}
+ network-instance {{ ni.name }}
+  {% endif %}
+ exit
+{% elif intf.type == 'pfcp' %}
+user-plane service pfcp interfaces interface {{ ni.name }}_pfcp_{{ intf.name }}
+ parent-interface up:{{ ni.name }}_{{ upLp.name }}
+ profile          profile1
+ exit
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% endif %}
+{% if 'ipPools' in ni %}
+user-plane service data-network ip ip-pools ip-pool {{ ni.name}}_ip_pool
+ address-range [ {% for ipPool in ni.ipPools %}{{ ipPool | ip_network }} {% endfor %}]
+ exit
+user-plane service data-network ip ip-services ip-service {{ ni.name}}_ip-service
+ network-instance {{ ni.name}}
+ ip-pool          [ {{ ni.name}}_ip_pool ]
+ exit
+user-plane service data-network ip selectors selector {{ ni.name}}_selector
+ network-instance {{ ni.name}}
+ ip-service       {{ ni.name}}_ip-service
+ exit
+{% endif %}
+{% endfor %}
+
+user-plane packet-detection applications application app100
+ enabled true
+ default
+ exit
+
+user-plane service pfcp profiles profile profile1
+ exit
+
+commit
+end
+

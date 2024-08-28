@@ -1,0 +1,27 @@
+{
+   "nrfInstanceName":"nrf-slice-common-region-001",
+   "nrfInstanceInfoList":[
+      {% if geored.nrf.enabled == true and siteId == 1 %}
+      {
+         "adminState":"UNLOCKED",
+         "nrfInstanceId":"{{ ccrc.nrf.instanceId }}",
+         "nrfId":"https://{{ ccrc.nrf.host }}.{{ DOMAIN_3GPP_5GC }}/nnrf-disc/v1/",
+         "nrfNfMgtUri":"https://{{ ccrc.nrf.host }}.{{ DOMAIN_3GPP_5GC }}/nnrf-nfm/v1/"
+      }
+      {% elif geored.nrf.enabled == true and siteId == 2 %}
+      {
+         "adminState":"UNLOCKED",
+         "nrfInstanceId":"{{ ccrc.nrf.geored.remote.instanceId }}",
+         "nrfId":"https://{{ ccrc.nrf.geored.remote.host }}.{{ DOMAIN_3GPP_5GC }}/nnrf-disc/v1/",
+         "nrfNfMgtUri":"https://{{ ccrc.nrf.geored.remote.host }}.{{ DOMAIN_3GPP_5GC }}/nnrf-nfm/v1/"
+      }
+      {% else %}
+      {
+         "adminState":"UNLOCKED",
+         "nrfInstanceId":"{{ ccrc.nrf.instanceId }}",
+         "nrfId":"https://{{ ccrc.nrf.host }}.{{ DOMAIN_3GPP_5GC }}/nnrf-disc/v1/",
+         "nrfNfMgtUri":"https://{{ ccrc.nrf.host }}.{{ DOMAIN_3GPP_5GC }}/nnrf-nfm/v1/"
+      }
+      {% endif %}
+   ]
+}

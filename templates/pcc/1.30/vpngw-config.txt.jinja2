@@ -1,0 +1,182 @@
+{% if 'ipRule' in pcc %}
+{% set creIp = pcc.ipRule.creIpFrom %}
+{% set vpngwIp = pcc.ipRule.vpngwIpFrom %}
+{% set bgpNb = pcc.ipRule.bgpNeighbors %}
+{% set gw = pcc.ipRule.defaultGws %}
+{% else %}
+{% set creIp = 6 %}
+{% set vpngwIp = 10 %}
+{% set bgpNb = [2,3] %}
+{% set gw = [1] %}
+{% endif %}
+autowizard false
+config
+
+interfaces interface cre:net0
+ type    ethernetCsmacd
+ enabled true
+ l2-mtu  1968
+exit
+interfaces interface vpngw:net0
+ type    ethernetCsmacd
+ enabled true
+exit
+
+network-instances network-instance intraforward
+ enabled true
+exit
+interfaces interface vpngw:ipforward-intraforward
+ type            ipForward
+ enabled         true
+ encapsulation dot1q-vlan outer-tag tag-type c-vlan
+ encapsulation dot1q-vlan outer-tag vlan-id {{ pcc.vpngw.intraForward.vlan}}
+ parent-interface vpngw:net0
+ bind-ni-name    intraForward
+ ipv4 enabled true
+{% set intraCidr = pcc.vpngw.intraForward.ipv4 | ip_network %}
+ ipv4 address {{ intraCidr.1 }}
+  prefix-length {{ intraCidr.prefixlen }}
+  exit
+ address-type ip-range {{ pcc.vpngw.maxNum }}
+ exit
+
+{% for ni in pcc.vpngw.networkInstances %}
+  {% if 'ipv4' in ni.ipForward %}
+  {% set ipFwdV4 = ni.ipForward.ipv4 | ip_network %}
+  {% endif %}
+  {% if 'ipv6' in ni.ipForward %}
+  {% set ipFwdV6 = ni.ipForward.ipv6 | ip_network %}
+  {% endif %}
+network-instances network-instance {{ ni.name }}
+ enabled                  true
+ description              {{ ni.name }}
+ routing bgp {{ ni.localAs }}
+{% if ipFwdV4 is defined %}
+{% for num in bgpNb %}
+  neighbor {{ ipFwdV4[num] }}
+   peer-type                 external
+   advertisement-interval 20
+   bfd-enabled            false
+   remote-asn             {{ ni.remoteAs }}
+   address-family ipv4 unicast
+   exit
+{% endfor %}
+{% endif %}
+{% if ipFwdV6 is defined %}
+{% for num in bgpNb %}
+  neighbor {{ ipFwdV6[num] }}
+   peer-type                 external
+   advertisement-interval 20
+   bfd-enabled            false
+   remote-asn             {{ ni.remoteAs }}
+   address-family ipv6 unicast
+   exit
+{% endfor %}
+{% endif %}
+ routing ingress-next-hop-announcements ingress-next-hop-announcement {{ ni.name }}_ingress
+  fallback-route-next-hop interface vpngw:cnf_loopback-{{ ni.name }}
+  service           vpngw-forwarder
+{% if ipFwdV4 is defined %}
+{% for num in gw %}
+ ip static-route up 0.0.0.0/0 {{ ipFwdV4[num] }}
+  bfd-enabled true
+{% endfor %}
+{% endif %}
+{% if ipFwdV6 is defined %}
+{% for num in gw %}
+ ipv6 static-route cre ::/0 {{ ipFwdV6[num] }}
+ ipv6 static-route up ::/0 {{ ipFwdV6[num] }}
+   bfd-enabled true
+{% endfor %}
+{% endif %}
+ exit
+exit
+
+interfaces interface cre:ipforward-{{ ni.name }}
+ description      cre:ipforward-{{ ni.name }}
+ type             ipForward
+ enabled          true
+ encapsulation dot1q-vlan outer-tag tag-type c-vlan
+ encapsulation dot1q-vlan outer-tag vlan-id {{ ni.ipForward.vlan }}
+ parent-interface cre:net0
+ bind-ni-name     {{ ni.name }}
+{% if ipFwdV4 is defined %}
+ ipv4 enabled true
+ ipv4 address {{ ipFwdV4[creIp] }}
+  prefix-length {{ ipFwdV4.prefixlen }}
+  exit
+{% endif %}
+{% if ipFwdV6 is defined %}
+ ipv6 enabled true
+ ipv6 address {{ ipFwdV6[creIp] }}
+  prefix-length {{ ipFwdV6.prefixlen }}
+  exit
+{% endif %}
+ address-type ip-range 2
+ exit
+
+interfaces interface vpngw:ipforward-{{ ni.name }}
+ description      vpngw:ipforward-{{ ni.name }}
+ type             ipForward
+ enabled          true
+ encapsulation dot1q-vlan outer-tag tag-type c-vlan
+ encapsulation dot1q-vlan outer-tag vlan-id {{ ni.ipForward.vlan }}
+ parent-interface vpngw:net0
+ bind-ni-name     {{ ni.name }}
+{% if ipFwdV4 is defined %}
+ ipv4 enabled true
+ ipv4 address {{ ipFwdV4[vpngwIp] }}
+  prefix-length {{ ipFwdV4.prefixlen }}
+  exit
+{% endif %}
+{% if ipFwdV6 is defined %}
+ ipv6 enabled true
+ ipv6 address {{ ipFwdV6[vpngwIp] }}
+  prefix-length {{ ipFwdV6.prefixlen }}
+  exit
+{% endif %}
+ address-type ip-range {{ pcc.vpngw.maxNum }}
+ exit
+
+interfaces interface vpngw:cnf_loopback-{{ ni.name }}
+ description  vpngw:cnf_loopback-{{ ni.name }}
+ type         softwareLoopback
+ enabled      true
+ bind-ni-name {{ ni.name }}
+{% if 'ipv4' in ni.vnfLoop %}
+ ipv4 enabled true
+ ipv4 address {{ ni.vnfLoop.ipv4 | ip_address }}
+  prefix-length 32
+  exit
+{% endif %}
+{% if 'ipv6' in ni.vnfLoop %}
+ ipv6 enabled true
+ ipv6 address {{ ni.vnfLoop.ipv6 | ip_address }}
+  prefix-length 128
+  exit
+{% endif %}
+ address-type single
+ exit
+
+{% endfor %}
+interfaces interface vpngw:loopback
+ type         softwareLoopback
+ enabled      true
+ bind-ni-name {{ pcc.vpngw.loopback.networkInstance }}
+ ipv4 enabled true
+ ipv4 address {{ pcc.vpngw.loopback.ipv4 | ip_address }}
+  prefix-length 32
+ exit
+ address-type single
+ exit
+
+vpn-gateway networks network vpngw-service
+ parent-interface vpngw:loopback
+ exit
+
+intra-forwarding interface intraforwarding
+ parent-interface vpngw:intra
+
+commit
+end
+

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <capabilities>
+        <capability>
+            urn:ietf:params:netconf:base:1.0
+        </capability>
+    </capabilities>
+</hello>
+]]>]]>
+<?xml version="1.0" encoding="UTF-8"?>
+<rpc message-id="101" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <edit-config>
+        <target>
+            <running/>
+        </target>
+        <config>
+            <diameter xmlns="urn:rdns:com:ericsson:oammodel:ericsson-diameter-adp">
+                <transport>
+                  <node>
+					{% if caas == "Tanzu" %}
+                    <id>GxHostServer</id>
+                    <origin-realm>{{labdomain}}.{{ DOMAIN_3GPP_5GC }}</origin-realm>
+                    <origin-host>{{ ccpc.pcrf.diameter.host }}.{{ DOMAIN_3GPP_5GC }}</origin-host>
+                    {% else %}
+					<id>HostServer</id>
+                    <origin-realm>ericsson.se</origin-realm>
+                    <origin-host>{{ ccpc.pcrf.diameter.host }}.ericsson.se</origin-host>
+					{% endif %}
+                    <product-name>CCPC</product-name>
+                  </node>
+                </transport>
+            </diameter>
+        </config>
+    </edit-config>
+</rpc>

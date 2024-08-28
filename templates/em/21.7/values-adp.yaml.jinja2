@@ -1,0 +1,3764 @@
+global:
+  registry:
+    # Global image registry
+    #url:
+    imagePullPolicy: IfNotPresent
+ # The Secret resource name to use for authenticating towards docker registry when pulling the image
+ #pullSecret: armdocker_secret_name
+  timezone: {{ timezone }}
+  security:
+    #policyBinding:
+      #create: false
+    tls:
+      enabled: true
+  #fsGroup:
+    #namespace: false
+  adpBR:
+    broServiceName: eric-ctrl-bro
+    broGrpcServicePort: 3000
+    broGrpcRestPort: 7001
+  ericsson:
+    licensing:
+      licenseDomains:
+      - customerId: {{ license.customerId }}
+        productType: ERICSSON_MEDIATION
+        swltId: {{ license.swltId }}
+      nelsConfiguration:
+        primary:
+          hostname:
+          ip:
+
+eric-cm-database-pg:
+  enabled: true
+  # If upgrading from EM21 GA/ICP21-01, it is mandatory to change the value of "nameOverride" to "eric-data-document-database-pg".
+  nameOverride: ""
+  imageCredentials:
+    repoPath:
+  persistentVolumeClaim:
+    size: 5Gi
+    storageClassName: {{ storageClassName }}
+  # If upgrading from EM21 GA/ICP21-01, then value of "postgresDatabase" should be same as given in current release prior to upgrade ex. adp_common_db.
+  postgresDatabase: adp_gs_cm
+  credentials:
+  # If upgrading from EM21 GA/ICP21-01, then value of "kubernetesSecretName" should be same as given in current release prior to upgrade if whenever secret is required.
+    kubernetesSecretName: eric-cm-database-pg-credentials
+    keyForUserId: custom-user
+    keyForUserPw: custom-pwd
+    keyForSuperPw: super-pwd
+    keyForMetricsPw: metrics-pwd
+    keyForReplicaId: replica-user
+    keyForReplicaPw: replica-pwd
+  brAgent:
+    enabled: false
+    logLevel: "info"
+    RootLogLevel: "info"
+    PGAgentLogLevel: "info"
+  # If upgrading from EM21 GA/ICP21-01, then value of "backupTypeList" should be same as given in nameOverride field eg. "eric-data-document-database-pg"
+    backupTypeList:
+    - "eric-cm-database-pg"
+    #backupDataModelConfig:
+  service:
+    endpoints:
+      postgres:
+        tls:
+          enforced: required
+      postgresExporter:
+        tls:
+          enforced: optional
+  probes:
+    postgres:
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        failureThreshold: 70
+        timeoutSeconds: 32
+      livenessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 15
+        failureThreshold: 10
+        timeoutSeconds: 15
+      readinessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        timeoutSeconds: 15
+        failureThreshold: 6
+        successThreshold: 1
+    metrics:
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        failureThreshold: 70
+        timeoutSeconds: 10
+      livenessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        failureThreshold: 20
+        timeoutSeconds: 10
+      readinessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        timeoutSeconds: 10
+        failureThreshold: 15
+        successThreshold: 1
+    brm:
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        failureThreshold: 50
+        timeoutSeconds: 10
+      livenessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        failureThreshold: 6
+        timeoutSeconds: 10
+      readinessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        timeoutSeconds: 10
+        failureThreshold: 10
+        successThreshold: 1
+    bra:
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        failureThreshold: 50
+        timeoutSeconds: 10
+      livenessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        failureThreshold: 6
+        timeoutSeconds: 10
+      readinessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        timeoutSeconds: 10
+        failureThreshold: 6
+        successThreshold: 1
+  resources:
+    postgres:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        cpu: "1"
+        memory: "2560Mi"
+    brm:
+      requests:
+        memory: "256Mi"
+        cpu: {{ "100m" if systemProfile == 'small' else "300m" }}
+      limits:
+        cpu: "1"
+        memory: "512Mi"
+    bra:
+      requests:
+        memory: "1Gi"
+        cpu: {{ "50m" if systemProfile == 'small' else "500m" }}
+        ephemeral-storage: "10Gi"
+      limits:
+        cpu: "1"
+        memory: "2Gi"
+        ephemeral-storage: "12Gi"
+      jvm:
+        initialMemoryAllocationPercentage: 50
+        smallMemoryAllocationMaxPercentage: 70
+        largeMemoryAllocationMaxPercentage: 50
+    hooklauncher:
+      requests:
+        memory: "50Mi"
+        cpu: "50m"
+        ephemeral-storage:
+      limits:
+        memory: "100Mi"
+        cpu: "100m"
+        ephemeral-storage:
+  # Sets inter-pod anti-affinity, supported values : 'soft/hard'
+  affinity:
+    podAntiAffinity: "soft"
+  podDisruptionBudget:
+      minAvailable:
+      maxUnavailable:
+  tolerations:
+    postgres: []
+    brAgent:
+     - key: node.kubernetes.io/not-ready
+       operator: Exists
+       effect: NoExecute
+       tolerationSeconds: 0
+     - key: node.kubernetes.io/unreachable
+       operator: Exists
+       effect: NoExecute
+       tolerationSeconds: 0
+    cleanuphook:
+     - key: node.kubernetes.io/not-ready
+       operator: Exists
+       effect: NoExecute
+       tolerationSeconds: 0
+     - key: node.kubernetes.io/unreachable
+       operator: Exists
+       effect: NoExecute
+       tolerationSeconds: 0
+    hooklauncher:
+      - key: node.kubernetes.io/not-ready
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 0
+      - key: node.kubernetes.io/unreachable
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 0
+  topologySpreadConstraints:
+    postgres: []
+  nodeSelector:
+    postgres: {}
+    brAgent: {}
+    cleanuphook: {}
+    hooklauncher: {}
+  labels: {}
+  annotations: {}
+
+eric-lm-database-pg:
+  enabled: true
+  imageCredentials:
+    repoPath:
+  persistentVolumeClaim:
+    size: 5Gi
+    storageClassName: {{ storageClassName }}
+  postgresDatabase: licensemanager_db
+  credentials:
+  # If upgrading from EM21 GA/ICP21-01,  then creation of a new secret with name eric-lm-database-pg-credentials may be required. Refer update guide.
+    kubernetesSecretName: eric-lm-database-pg-credentials
+    keyForUserId: custom-user
+    keyForUserPw: custom-pwd
+    keyForSuperPw: super-pwd
+    keyForMetricsPw: metrics-pwd
+    keyForReplicaId: replica-user
+    keyForReplicaPw: replica-pwd
+  brAgent:
+    enabled: false
+    logLevel: "info"
+    RootLogLevel: "info"
+    PGAgentLogLevel: "info"
+    backupTypeList:
+    - "eric-lm-database-pg"
+    #backupDataModelConfig:
+  service:
+    endpoints:
+      postgres:
+        tls:
+          enforced: required
+      postgresExporter:
+        tls:
+          enforced: optional
+  probes:
+    postgres:
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        failureThreshold: 70
+        timeoutSeconds: 32
+      livenessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 15
+        failureThreshold: 10
+        timeoutSeconds: 15
+      readinessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        timeoutSeconds: 15
+        failureThreshold: 6
+        successThreshold: 1
+    metrics:
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        failureThreshold: 70
+        timeoutSeconds: 10
+      livenessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        failureThreshold: 20
+        timeoutSeconds: 10
+      readinessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        timeoutSeconds: 10
+        failureThreshold: 15
+        successThreshold: 1
+    brm:
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        failureThreshold: 50
+        timeoutSeconds: 10
+      livenessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        failureThreshold: 6
+        timeoutSeconds: 10
+      readinessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        timeoutSeconds: 10
+        failureThreshold: 10
+        successThreshold: 1
+    bra:
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        failureThreshold: 50
+        timeoutSeconds: 10
+      livenessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        failureThreshold: 6
+        timeoutSeconds: 10
+      readinessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        timeoutSeconds: 10
+        failureThreshold: 6
+        successThreshold: 1
+  resources:
+    postgres:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        cpu: "1"
+        memory: "2560Mi"
+    brm:
+      requests:
+        memory: "256Mi"
+        cpu: {{ "100m" if systemProfile == 'small' else "300m" }}
+      limits:
+        cpu: "1"
+        memory: "512Mi"
+    bra:
+      requests:
+        memory: "1Gi"
+        cpu: {{ "50m" if systemProfile == 'small' else "500m" }}
+        ephemeral-storage: "10Gi"
+      limits:
+        cpu: "1"
+        memory: "2Gi"
+        ephemeral-storage: "12Gi"
+      jvm:
+        initialMemoryAllocationPercentage: 50
+        smallMemoryAllocationMaxPercentage: 70
+        largeMemoryAllocationMaxPercentage: 50
+    hooklauncher:
+      requests:
+        memory: "50Mi"
+        cpu: "50m"
+        ephemeral-storage:
+      limits:
+        memory: "100Mi"
+        cpu: "100m"
+        ephemeral-storage:
+  # Sets inter-pod anti-affinity, supported values : 'soft/hard'
+  affinity:
+    podAntiAffinity: "soft"
+  tolerations:
+    postgres: []
+    brAgent:
+     - key: node.kubernetes.io/not-ready
+       operator: Exists
+       effect: NoExecute
+       tolerationSeconds: 0
+     - key: node.kubernetes.io/unreachable
+       operator: Exists
+       effect: NoExecute
+       tolerationSeconds: 0
+    cleanuphook:
+     - key: node.kubernetes.io/not-ready
+       operator: Exists
+       effect: NoExecute
+       tolerationSeconds: 0
+     - key: node.kubernetes.io/unreachable
+       operator: Exists
+       effect: NoExecute
+       tolerationSeconds: 0
+    hooklauncher:
+      - key: node.kubernetes.io/not-ready
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 0
+      - key: node.kubernetes.io/unreachable
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 0
+  topologySpreadConstraints:
+    postgres: []
+  nodeSelector:
+    postgres: {}
+    brAgent: {}
+    cleanuphook: {}
+    hooklauncher: {}
+  labels: {}
+  annotations: {}
+
+eric-ah-database-pg:
+  enabled: true
+  imageCredentials:
+    repoPath:
+  persistentVolumeClaim:
+    size: 5Gi
+    storageClassName: {{ storageClassName }}
+  postgresDatabase: adp_gs_ah
+  credentials:
+  # If upgrading from EM21 GA/ICP21-01,  then creation of a new secret with name eric-ah-database-pg-credentials may be required. Refer update guide.
+    kubernetesSecretName: eric-ah-database-pg-credentials
+    keyForUserId: custom-user
+    keyForUserPw: custom-pwd
+    keyForSuperPw: super-pwd
+    keyForMetricsPw: metrics-pwd
+    keyForReplicaId: replica-user
+    keyForReplicaPw: replica-pwd
+  brAgent:
+    enabled: false
+    logLevel: "info"
+    RootLogLevel: "info"
+    PGAgentLogLevel: "info"
+    backupTypeList:
+    - "eric-ah-database-pg"
+    #backupDataModelConfig:
+  service:
+    endpoints:
+      postgres:
+        tls:
+          enforced: required
+      postgresExporter:
+        tls:
+          enforced: optional
+  probes:
+    postgres:
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        failureThreshold: 70
+        timeoutSeconds: 32
+      livenessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 15
+        failureThreshold: 10
+        timeoutSeconds: 15
+      readinessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        timeoutSeconds: 15
+        failureThreshold: 6
+        successThreshold: 1
+    metrics:
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        failureThreshold: 70
+        timeoutSeconds: 10
+      livenessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        failureThreshold: 20
+        timeoutSeconds: 10
+      readinessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        timeoutSeconds: 10
+        failureThreshold: 15
+        successThreshold: 1
+    brm:
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        failureThreshold: 50
+        timeoutSeconds: 10
+      livenessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        failureThreshold: 6
+        timeoutSeconds: 10
+      readinessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        timeoutSeconds: 10
+        failureThreshold: 10
+        successThreshold: 1
+    bra:
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        failureThreshold: 50
+        timeoutSeconds: 10
+      livenessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        failureThreshold: 6
+        timeoutSeconds: 10
+      readinessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        timeoutSeconds: 10
+        failureThreshold: 6
+        successThreshold: 1
+  resources:
+    postgres:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        cpu: "1"
+        memory: "2560Mi"
+    brm:
+      requests:
+        memory: "256Mi"
+        cpu: {{ "100m" if systemProfile == 'small' else "300m" }}
+      limits:
+        cpu: "1"
+        memory: "512Mi"
+    bra:
+      requests:
+        memory: "1Gi"
+        cpu: {{ "50m" if systemProfile == 'small' else "500m" }}
+        ephemeral-storage: "10Gi"
+      limits:
+        cpu: "1"
+        memory: "2Gi"
+        ephemeral-storage: "12Gi"
+      jvm:
+        initialMemoryAllocationPercentage: 50
+        smallMemoryAllocationMaxPercentage: 70
+        largeMemoryAllocationMaxPercentage: 50
+    hooklauncher:
+      requests:
+        memory: "50Mi"
+        cpu: "50m"
+        ephemeral-storage:
+      limits:
+        memory: "100Mi"
+        cpu: "100m"
+        ephemeral-storage:
+  # Sets inter-pod anti-affinity, supported values : 'soft/hard'
+  affinity:
+    podAntiAffinity: "soft"
+  tolerations:
+    postgres: []
+    brAgent:
+     - key: node.kubernetes.io/not-ready
+       operator: Exists
+       effect: NoExecute
+       tolerationSeconds: 0
+     - key: node.kubernetes.io/unreachable
+       operator: Exists
+       effect: NoExecute
+       tolerationSeconds: 0
+    cleanuphook:
+     - key: node.kubernetes.io/not-ready
+       operator: Exists
+       effect: NoExecute
+       tolerationSeconds: 0
+     - key: node.kubernetes.io/unreachable
+       operator: Exists
+       effect: NoExecute
+       tolerationSeconds: 0
+    hooklauncher:
+      - key: node.kubernetes.io/not-ready
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 0
+      - key: node.kubernetes.io/unreachable
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 0
+  topologySpreadConstraints:
+    postgres: []
+  nodeSelector:
+    postgres: {}
+    brAgent: {}
+    cleanuphook: {}
+    hooklauncher: {}
+  labels: {}
+  annotations: {}
+
+eric-lm-combined-server:
+  enabled: true
+  imageCredentials:
+    repoPath:
+  database:
+    name: licensemanager_db
+    host: eric-lm-database-pg
+    # eric-lm-database-pg-credentials secret custom-user value must match with the userName parameter when global.security.tls.enabled is false.
+    userName: lmuser
+    credentials:
+      secretName: eric-lm-database-pg-credentials
+    tls:
+      enforced: required
+  licenseServerClient:
+    logLevel: info
+    licenseServer:
+      clientId:
+      thrift:
+        host: {{ nels.host }}
+        port: 9095
+    asih:
+      # licenseServerClient.asih.host - The host name of ASIH service
+      host: eric-si-application-sys-info-handler
+      # licenseServerClient.asih.tls - TLS is enabled or not on ASIH connection, true or false
+      tls: true
+    affinity: {}
+  licenseConsumerHandler:
+    logLevel: info
+    service:
+      endpoints:
+        externalHttps:
+          tls:
+            enforced: optional
+            verifyClientCertificate: optional
+    affinity: {}
+    podDisruptionBudget:
+    # licenseConsumerHandler.podDisruptionBudget.minAvailable - minimum number of available instances allowed during voluntary disruptions
+      minAvailable: 1
+    # licenseConsumerHandler.podDisruptionBudget.maxUnavailable - maximum number of unavailable instances allowed during voluntary disruptions
+      maxUnavailable:
+  tls:
+    lch:
+      externalAPIPort: 18326
+  podDisruptionBudget:
+    licenseConsumerHandler:
+      # podDisruptionBudget.licenseConsumerHandler.minAvailable - minimum number of available instances allowed during voluntary disruptions
+      minAvailable: 1
+      # podDisruptionBudget.licenseConsumerHandler.maxUnavailable - maximum number of unavailable instances allowed during voluntary disruptions
+      maxUnavailable:
+  tolerations:
+    licenseConsumerHandler: []
+  # Explicitly specify tolerations for the singleton stateless workload
+    licenseServerClient:
+      - key: node.kubernetes.io/not-ready
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 0
+      - key: node.kubernetes.io/unreachable
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 0
+    hooklauncher: []
+  nodeSelector:
+    licenseConsumerHandler: {}
+    licenseServerClient: {}
+    hooklauncher: {}
+  replicaCount:
+    # replicaCount.licenseConsumerHandler - number of License Consumer Handler pod replicas
+    licenseConsumerHandler: 2
+    # replicaCount.licenseServerClient - number of License Server Client pod replicas
+    licenseServerClient: 1
+  resources:
+    eric-lm-license-consumer-handler:
+      limits:
+        cpu: {{ "1000m" if systemProfile == 'small' else "2000m" }}
+        memory: 2048Mi
+      requests:
+        cpu: {{ "500m" if systemProfile == 'small' else "1000m" }}
+        memory: 512Mi
+      jvm:
+        initialMemoryAllocationPercentage: 50%
+        smallMemoryAllocationMaxPercentage: 50%
+        largeMemoryAllocationMaxPercentage: 50%
+    eric-lm-license-server-client:
+      limits:
+        cpu: 1000m
+        memory: 2048Mi
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      jvm:
+        initialMemoryAllocationPercentage: 50%
+        smallMemoryAllocationMaxPercentage: 50%
+        largeMemoryAllocationMaxPercentage: 50%
+    eric-lm-database-migration:
+      limits:
+        cpu: {{ "1000m" if systemProfile == 'small' else "2000m" }}
+        memory: "2048Mi"
+      requests:
+        cpu: {{ "150m" if systemProfile == 'small' else "500m" }}
+        memory: "128Mi"
+    hooklauncher:
+      limits:
+        memory: "100Mi"
+        cpu: "50m"
+      requests:
+        memory: "50Mi"
+        cpu: "20m"
+  affinity:
+    # affinity.podAntiAffinity - hard|soft inter-pod anti-affinity policy
+    podAntiAffinity: "hard"
+  labels: {}
+  annotations: {}
+  probes:
+    eric-lm-license-consumer-handler:
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 1
+        timeoutSeconds: 1
+      livenessProbe:
+        initialDelaySeconds: 20
+        periodSeconds: 10
+        timeoutSeconds: 10
+      readinessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        timeoutSeconds: 10
+    eric-lm-license-server-client:
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 1
+        timeoutSeconds: 1
+      livenessProbe:
+        initialDelaySeconds: 30
+        periodSeconds: 10
+        timeoutSeconds: 10
+      readinessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        timeoutSeconds: 10
+
+eric-cm-mediator:
+  enabled: true
+  imageCredentials:
+    repoPath:
+  cmkey:
+    enable: true
+  cmm:
+    logLevel: "Info"
+  resources:
+    eric-cm-mediator:
+      requests:
+        memory: "256Mi"
+        cpu: {{ "300m" if systemProfile == 'small' else "500m" }}
+      limits:
+        memory: "512Mi"
+        cpu: {{ "1000m" if systemProfile == 'small' else "2000m" }}
+    eric-cm-mediator-notifier:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+      limits:
+        memory: "512Mi"
+        cpu: {{ "1000m" if systemProfile == 'small' else "2000m" }}
+    eric-cm-key-init:
+      requests:
+        memory: "32Mi"
+        cpu: "100m"
+      limits:
+        memory: "64Mi"
+        cpu: "200m"
+    eric-cm-mediator-init-container:
+      requests:
+        memory: "16Mi"
+        cpu: "50m"
+      limits:
+        memory: "32Mi"
+        cpu: "100m"
+    hooklauncher:
+      requests:
+        memory: "50Mi"
+        cpu: "20m"
+      limits:
+        memory: "100Mi"
+        cpu: "50m"
+  backend:
+    # If upgrading from EM21 GA/ICP21-01, then change hostname value to "eric-data-document-database-pg"
+    hostname: "eric-cm-database-pg"
+    # dbname values must match with the value given in "eric-cm-database-pg.postgresDatabase".
+    dbname: adp_gs_cm
+    # If upgrading from EM21 GA/ICP21-01, then dbuser values must be same as given in current release for eric-data-document-database-pg.dbuser proir to upgrade.
+    dbuser: cm
+  credentials:
+    kubernetesSecretName: eric-cm-database-pg-credentials
+    keyForUserId: custom-user
+    keyForUserPw: custom-pwd
+  tolerations:
+    eric-cm-mediator: []
+    eric-cm-mediator-notifier:
+      - key: node.kubernetes.io/not-ready
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 0
+      - key: node.kubernetes.io/unreachable
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 0
+    eric-cm-key-init: []
+    hooklauncher: []
+  nodeSelector:
+    eric-cm-mediator: {}
+    eric-cm-mediator-notifier: {}
+    eric-cm-key-init: {}
+    hooklauncher: {}
+  podDisruptionBudget:
+    eric-cm-mediator:
+      minAvailable: 50%
+      #maxUnavailable:
+  service:
+    endpoints:
+      restapi:
+        tls:
+          enforced: optional
+          verifyClientCertificate: optional
+  probes:
+    eric-cm-mediator:
+      livenessProbe:
+        initialDelaySeconds: 7
+        periodSeconds: 17
+        timeoutSeconds: 10
+      readinessProbe:
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        timeoutSeconds: 10
+    eric-cm-mediator-notifier:
+      livenessProbe:
+        initialDelaySeconds: 7
+        periodSeconds: 17
+        timeoutSeconds: 10
+  labels: {}
+  annotations: {}
+
+eric-ctrl-bro:
+  enabled: true
+  bro:
+    deleteVBRM: true
+    logging:
+      level: info
+      rootLevel: info
+      consoleFormat: json
+  metrics:
+    enabled: true
+  imageCredentials:
+    repoPath: proj-adp-eric-ctrl-bro-drop
+  persistence:
+    persistentVolumeClaim:
+      size: 5Gi
+      storageClassName: {{ storageClassName }}
+      storageConnectivity: networked
+  log:
+  # supported values: ["console", "tcp"]
+    outputs: ["console"]
+  resources:
+    backupAndRestore:
+      limits:
+        cpu: "2"
+        memory: "4Gi"
+      requests:
+        cpu: {{ "500m" if systemProfile == 'small' else "1" }}
+        memory: "2Gi"
+      jvm:
+        initialMemoryAllocationPercentage: 50
+        smallMemoryAllocationMaxPercentage: 80
+        largeMemoryAllocationMaxPercentage: 90
+    hooklauncher:
+      requests:
+        memory: "50Mi"
+        cpu: "50m"
+        ephemeral-storage: "100Mi"
+      limits:
+        memory: "100Mi"
+        cpu: "100m"
+        ephemeral-storage: "100Mi"
+  service:
+    endpoints:
+      broToAgent:
+        tls:
+          enforced: required
+          verifyClientCertificate: optional
+      restActions:
+        tls:
+          enforced: optional
+          verifyClientCertificate: optional
+  probes:
+    backupAndRestore:
+      startupProbe:
+        failureThreshold: 30
+        periodSeconds: 10
+        initialDelaySeconds: 0
+        timeoutSeconds: 15
+      livenessProbe:
+        failureThreshold: 3
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        timeoutSeconds: 15
+      readinessProbe:
+        failureThreshold: 3
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 15
+  nodeSelector:
+    backupAndRestore: {}
+    hooklauncher: {}
+  tolerations:
+   # backupAndRestore:
+   # hooklauncher:
+  labels: {}
+
+eric-data-coordinator-zk:
+  enabled: true
+  nameOverride: ""
+  probes:
+    datacoordinatorzk:
+      livenessProbe:
+        initialDelaySeconds: 15
+        periodSeconds: 10
+        timeoutSeconds: 15
+      readinessProbe:
+        initialDelaySeconds: 15
+        periodSeconds: 10
+        timeoutSeconds: 15
+    brAgent:
+      livenessProbe:
+        initialDelaySeconds: 15
+        periodSeconds: 10
+        timeoutSeconds: 15
+      readinessProbe:
+        initialDelaySeconds: 15
+        periodSeconds: 10
+        timeoutSeconds: 15
+  imageCredentials:
+    repoPath:
+  persistence:
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName }}
+      enabled: true
+      size: 10Gi
+  replicaCount: 3
+  # Configure additional zookeeper jvm flags. For example, "-Dzookeeper.skipACL=yes -Dzookeeper.forceSync=no"
+  dczkJvmFlags:
+  logLevel: "INFO"
+  resources:
+    datacoordinatorzk:
+      requests:
+        cpu: {{ "600m" if systemProfile == 'small' else "1" }}
+        memory: "2Gi"
+        ephemeral-storage:
+      limits:
+        cpu: "2"
+        memory: "4Gi"
+        ephemeral-storage:
+      jvm:
+        initialMemoryAllocationPercentage: 50
+        smallMemoryAllocationMaxPercentage: 70
+        largeMemoryAllocationMaxPercentage: 50
+    brAgent:
+     requests:
+       cpu: {{ "100m" if systemProfile == 'small' else "1" }}
+       memory: "1Gi"
+       ephemeral-storage:
+     limits:
+       cpu: "1"
+       memory: "2Gi"
+       ephemeral-storage:
+     jvm:
+        initialMemoryAllocationPercentage: 50
+        smallMemoryAllocationMaxPercentage: 70
+        largeMemoryAllocationMaxPercentage: 50
+    metricsexporter:
+      requests:
+        cpu: "100m"
+        memory: "8Mi"
+      limits:
+        cpu: "200m"
+        memory: "32Mi"
+    hooklauncher:
+      requests:
+        memory: "50Mi"
+        cpu: "20m"
+      limits:
+        memory: "100Mi"
+        cpu: "50m"
+  brAgent:
+    enabled: false
+    logLevel: "INFO"
+    brLabelValue:
+    backupTypeList:
+    - "eric-data-coordinator-zk"
+  # Sets inter-pod anti-affinity, supported values : 'soft/hard'
+  affinity:
+    podAntiAffinity: "soft"
+  podDisruptionBudget: {}
+  # Select either one of below parameters with your expected values.
+   # maxUnavailable: 1
+   # minAvailable: "51%"
+  tolerations:
+    datacoordinatorzk: []
+    brAgent:
+    - key: node.kubernetes.io/not-ready
+      operator: Exists
+      effect: NoExecute
+      tolerationSeconds: 0
+    - key: node.kubernetes.io/unreachable
+      operator: Exists
+      effect: NoExecute
+      tolerationSeconds: 0
+    hooklauncher: []
+  nodeSelector:
+    datacoordinatorzk: {}
+    brAgent: {}
+  service:
+    endpoints:
+      datacoordinatorzk:
+        tls:
+          enforced: "optional"
+          verifyClientCertificate: "required"
+          peer:
+            enforced: "optional"
+  labels: {}
+  annotations: {}
+
+eric-data-message-bus-kf:
+  enabled: true
+  nameOverride: ""
+  imageCredentials:
+    messagebuskf:
+      repoPath:
+    metricsexporter:
+      repoPath:
+    hooklauncher:
+      repoPath:
+  probes:
+    messagebuskf:
+      readinessProbe:
+        initialDelaySeconds: 60
+        periodSeconds: 10
+        timeoutSeconds: 15
+      livenessProbe:
+        initialDelaySeconds: 60
+        periodSeconds: 30
+        timeoutSeconds: 15
+  persistence:
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName }}
+      enabled: true
+      size: 5Gi
+  dataCoordinator:
+     clientServiceName: "eric-data-coordinator-zk"
+     clientPort: "2181"
+  replicaCount: 3
+  configurationOverrides:
+    "zookeeper.connection.timeout.ms": 30000
+    "zookeeper.session.timeout.ms": 30000
+    "default.replication.factor": 3
+    "offsets.topic.replication.factor": 3
+    "offsets.topic.num.partitions": 24
+    "offsets.topic.segment.bytes": "1048576"
+    "log.retention.hours": 168
+    "log.cleanup.policy": "delete"
+    "log.cleaner.enable": "true"
+    "log4j.root.loglevel": "INFO"
+    "log.cleaner.min.compaction.lag.ms": 0
+    "log.segment.bytes": "10485760"
+    "jvm.performance.opts" : "-server -XX:MaxGCPauseMillis=20 -XX:InitiatingHeapOccupancyPercent=35 -XX:+ExplicitGCInvokesConcurrent -Djava.awt.headless=true"
+    "min.insync.replicas": 2
+  resources:
+    messagebuskf:
+      requests:
+        cpu: {{ "500m" if systemProfile == 'small' else "1" }}
+        memory: "1Gi"
+        ephemeral-storage:
+      limits:
+        cpu: "2"
+        memory: "6Gi"
+        ephemeral-storage:
+      jvm:
+        initialMemoryAllocationPercentage: 50
+        smallMemoryAllocationMaxPercentage: 70
+        largeMemoryAllocationMaxPercentage: 50
+    metricsexporter:
+      requests:
+        cpu: "100m"
+        memory: "8Mi"
+      limits:
+        cpu: "200m"
+        memory: "32Mi"
+    hooklauncher:
+      requests:
+        memory: "50Mi"
+        cpu: "20m"
+      limits:
+        memory: "100Mi"
+        cpu: "50m"
+  security:
+    tls:
+      messagebuskf:
+        port: 9093
+  service:
+     endpoints:
+       messagebuskf:
+         tls:
+             enforced: "required"
+             verifyClientCertificate: "optional"
+       dataCoordinator:
+         tls:
+           enforced: "required"
+  # Sets inter-pod anti-affinity, supported values : 'soft/hard'
+  affinity:
+    podAntiAffinity: "soft"
+  # The available Message Bus KF pods required during voluntary disruption.
+  podDisruptionBudget: {}
+    # Select either one of below parameters with your expected values.
+    # maxUnavailable: 1
+    # minAvailable: 2
+  tolerations:
+    messagebuskf: []
+    hooklauncher: []
+  nodeSelector: {}
+  labels: {}
+  annotations: {}
+
+eric-data-search-engine:
+  enabled: true
+  imageCredentials:
+    repoPath:
+  logLevel: "info"
+  brAgent:
+    enabled: false
+    cleanRestore: true
+    backupTypeList:
+    - eric-data-search-engine
+  persistence:
+    data:
+      persistentVolumeClaim:
+        size: 10Gi
+        storageClassName: {{ storageClassName }}
+    backup:
+      persistentVolumeClaim:
+        size: 10Gi
+        storageClassName: {{ storageClassName }}
+    master:
+      persistentVolumeClaim:
+        size: 10Gi
+        storageClassName: {{ storageClassName }}
+  resources:
+    ingest:
+      limits:
+        cpu: "500m"
+        memory: "1Gi"
+      requests:
+        cpu: {{ "200m" if systemProfile == 'small' else "500m" }}
+        memory: "1Gi"
+    master:
+      limits:
+        cpu: "500m"
+        memory: "1Gi"
+      requests:
+        cpu: {{ "200m" if systemProfile == 'small' else "500m" }}
+        memory: "1Gi"
+    data:
+      limits:
+        cpu: "500m"
+        memory: "2Gi"
+      requests:
+        cpu: {{ "200m" if systemProfile == 'small' else "500m" }}
+        memory: "2Gi"
+    metrics:
+      limits:
+        cpu: "100m"
+        memory: "128Mi"
+      requests:
+        cpu: "25m"
+        memory: "64Mi"
+    tlsproxy:
+      limits:
+        cpu: "100m"
+        memory: "128Mi"
+      requests:
+        cpu: "25m"
+        memory: "64Mi"
+    bragent:
+      limits:
+        cpu: "500m"
+        memory: "1Gi"
+      requests:
+        cpu: {{ "100m" if systemProfile == 'small' else "500m" }}
+        memory: "1Gi"
+    hooklauncher:
+      requests:
+        memory: "50Mi"
+        cpu: "20m"
+      limits:
+        memory: "100Mi"
+        cpu: "50m"
+  service:
+    network:
+      protocol:
+        IPv6: false
+    endpoints:
+      rest:
+        tls:
+          enforced: required
+          verifyClientCertificate: optional
+  probes:
+    ingest:
+      livenessProbe:
+        initialDelaySeconds: 600
+        periodSeconds: 30
+        timeoutSeconds: 15
+      readinessProbe:
+        initialDelaySeconds: 180
+        periodSeconds: 30
+        timeoutSeconds: 15
+    master:
+      livenessProbe:
+        initialDelaySeconds: 600
+        periodSeconds: 30
+        timeoutSeconds: 15
+      readinessProbe:
+        initialDelaySeconds: 180
+        periodSeconds: 30
+        timeoutSeconds: 15
+    data:
+      livenessProbe:
+        initialDelaySeconds: 600
+        periodSeconds: 30
+        timeoutSeconds: 15
+      readinessProbe:
+        initialDelaySeconds: 180
+        periodSeconds: 30
+        timeoutSeconds: 15
+      startupProbe:
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        timeoutSeconds: 15
+    bragent:
+      livenessProbe:
+        initialDelaySeconds: 300
+        timeoutSeconds: 5
+      readinessProbe:
+        initialDelaySeconds: 15
+        timeoutSeconds: 5
+    metrics:
+      livenessProbe:
+        initialDelaySeconds: 300
+        periodSeconds: 10
+        timeoutSeconds: 15
+      readinessProbe:
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        timeoutSeconds: 15
+      startupProbe:
+        initialDelaySeconds: 20
+        periodSeconds: 10
+        timeoutSeconds: 15
+    tlsproxy:
+      livenessProbe:
+        initialDelaySeconds: 300
+        periodSeconds: 10
+        timeoutSeconds: 15
+      readinessProbe:
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        timeoutSeconds: 15
+      startupProbe:
+        initialDelaySeconds: 20
+        periodSeconds: 10
+        timeoutSeconds: 15
+  autoSetRequiredWorkerNodeSysctl: true
+  # Sets inter-pod anti-affinity, supported values : 'soft/hard'
+  affinity:
+    podAntiAffinity: "soft"
+  podDisruptionBudget:
+    data:
+      maxUnavailable: 1
+    ingest:
+      maxUnavailable: 1
+    master:
+      maxUnavailable: 1
+  tolerations:
+    bragent:
+      - key: node.kubernetes.io/not-ready
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 0
+      - key: node.kubernetes.io/unreachable
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 0
+    data: []
+    ingest: []
+    master: []
+    preupgradehook: []
+    hooklauncher: []
+  nodeSelector:
+    ingest: {}
+    master: {}
+    data: {}
+    bragent: {}
+    preupgradehook: {}
+    hooklauncher: {}
+  labels: {}
+  annotations: {}
+
+eric-log-shipper:
+  enabled: true
+  imageCredentials:
+    repoPath:
+  logLevel: "info"
+  probes:
+    logshipper:
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 30
+        timeoutSeconds: 15
+      livenessProbe:
+        initialDelaySeconds: 0
+        timeoutSeconds: 15
+        periodSeconds: 30
+  resources:
+    logshipper:
+      requests:
+        memory: "100Mi"
+        cpu: "100m"
+      limits:
+        memory: "1Gi"
+        cpu: "250m"
+    hooklauncher:
+      requests:
+        memory: "50Mi"
+        cpu: "20m"
+      limits:
+        memory: "100Mi"
+        cpu: "50m"
+  additionalVolumes: |
+    - name: docker-containers
+      hostPath:
+        path: /var/lib/docker/containers
+    - name: kubernetes-containers
+      hostPath:
+        path: /var/log/pods
+    - name: kubelet-pods
+      hostPath:
+        path: /var/lib/kubelet/pods
+  additionalVolumeMounts: |
+    - name: docker-containers
+      mountPath: /var/lib/docker/containers
+      readOnly: true
+    - name: kubernetes-containers
+      mountPath: /var/log/pods
+      readOnly: true
+    - name: kubelet-pods
+      mountPath: /var/lib/kubelet/pods
+      readOnly: true
+  rbac:
+    automountServiceAccountToken: true
+    createClusterRole: true
+    createClusterRoleBinding: true
+  logshipper:
+    name: eric-log-shipper
+    autodiscover:
+      enabled: true
+      namespace: {{ vnflcm.namespace }}
+      logplane: "em-containerlogs"
+      json:
+        enabled: true
+        target: "json"
+      hints:
+        enabled: true
+      templates:
+        - condition:
+            equals:
+              kubernetes.container.runtime: containerd
+          config:
+            - type: log
+              paths:
+                - "/var/log/pods/*_${data.kubernetes.pod.uid}/${data.kubernetes.container.name}/*.log"
+              fields:
+                componentName: "em-container"
+              fields_under_root: true
+              exclude_lines: ["^\\s+[\\-`('.|_]"]  # drop asciiart lines
+              multiline.pattern: '^\{'
+              multiline.negate: true
+              multiline.match: after
+
+        - condition.and:
+          - equals:
+              kubernetes.container.name: "manager"
+          - equals:
+              kubernetes.annotations.managerlogharvest: "true"
+          config:
+            - type: log
+              paths:
+                - "/var/lib/kubelet/pods/${data.kubernetes.pod.uid}/volumes/**/Manager/CXC*/log/MANAGER.*.0.log"
+                - "/var/lib/kubelet/pods/${data.kubernetes.pod.uid}/volumes/**/Manager/CXC*/log/catalina.out"
+              fields:
+                componentName: "em-manager"
+              fields_under_root: true
+              exclude_lines: ["^\\s+[\\-`('.|_]"]  # drop asciiart lines
+              multiline.pattern: '^\{'
+              multiline.negate: true
+              multiline.match: after
+        - condition.and:
+          - equals:
+              kubernetes.container.name: "db"
+          - equals:
+              kubernetes.annotations.managerlogharvest: "true"
+          config:
+            - type: log
+              paths:
+                - "/var/lib/kubelet/pods/${data.kubernetes.pod.uid}/volumes/**/mgrdb_*/data/log/*.log"
+              fields:
+                componentName: "em-postgres"
+              fields_under_root: true
+              exclude_lines: ["^\\s+[\\-`('.|_]"]  # drop asciiart lines
+              multiline.pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+              multiline.negate: true
+              multiline.match: after
+        - condition:
+            equals:
+              kubernetes.annotations.onlinelogharvest: "true"
+          config:
+            - type: log
+              paths:
+                - "/var/lib/kubelet/pods/${data.kubernetes.pod.uid}/volumes/**/Online/log/${data.kubernetes.annotations.server}.*.0.log"
+                - "/var/lib/kubelet/pods/${data.kubernetes.pod.uid}/volumes/**/Online/log/${data.kubernetes.annotations.server}.*.runlog"
+              fields:
+                componentName: "em-online"
+              fields_under_root: true
+              exclude_lines: ["^\\s+[\\-`('.|_]"]  # drop asciiart lines
+              multiline.pattern: '^\{'
+              multiline.negate: true
+              multiline.match: after
+        - condition.and:
+          - equals:
+              kubernetes.container.name: "tracer"
+          - equals:
+              kubernetes.annotations.tracerlogharvest: "true"
+          config:
+            - type: log
+              paths:
+                - "/var/lib/kubelet/pods/${data.kubernetes.pod.uid}/volumes/**/Online/log/TRACER.*.0.log"
+                - "/var/lib/kubelet/pods/${data.kubernetes.pod.uid}/volumes/**/Online/log/Tracer.*.runlog"
+              fields:
+                componentName: "em-tracer"
+              fields_under_root: true
+              exclude_lines: ["^\\s+[\\-`('.|_]"]  # drop asciiart lines
+              multiline.pattern: '^\{'
+              multiline.negate: true
+              multiline.match: after
+        - condition.and:
+          - equals:
+              kubernetes.container.name: "server"
+          - equals:
+              kubernetes.annotations.fmlogharvest: "true"
+          config:
+            - type: log
+              paths:
+                - "/var/lib/kubelet/pods/${data.kubernetes.pod.uid}/volumes/**/${data.kubernetes.annotations.server}/CXC*/storage/ProcessManager/ProcessManager*.log"
+                - "/var/lib/kubelet/pods/${data.kubernetes.pod.uid}/volumes/**/${data.kubernetes.annotations.server}/CXC*/storage/ProcessManager/Auto-Start*.log"
+                - "/var/lib/kubelet/pods/${data.kubernetes.pod.uid}/volumes/**/${data.kubernetes.annotations.server}/CXC*/storage/ProcessManager/LogManager*.log"
+                - "/var/lib/kubelet/pods/${data.kubernetes.pod.uid}/volumes/**/${data.kubernetes.annotations.server}/CXC*/storage/ProcessManager/BGwPerformanceMonitor.log"
+                - "/var/lib/kubelet/pods/${data.kubernetes.pod.uid}/volumes/**/${data.kubernetes.annotations.server}/CXC*/storage/ProcessManager/Collector*.log"
+                - "/var/lib/kubelet/pods/${data.kubernetes.pod.uid}/volumes/**/${data.kubernetes.annotations.server}/CXC*/storage/ProcessManager/Processor*.log"
+                - "/var/lib/kubelet/pods/${data.kubernetes.pod.uid}/volumes/**/${data.kubernetes.annotations.server}/CXC*/storage/ProcessManager/Distributor*.log"
+                - "/var/lib/kubelet/pods/${data.kubernetes.pod.uid}/volumes/**/${data.kubernetes.annotations.server}/CXC*/storage/ProcessManager/RemoteProcessManager*.log"
+                - "/var/lib/kubelet/pods/${data.kubernetes.pod.uid}/volumes/**/${data.kubernetes.annotations.server}/CXC*/storage/ProcessManager/DUPLOGS/*.log"
+                - "/var/lib/kubelet/pods/${data.kubernetes.pod.uid}/volumes/**/${data.kubernetes.annotations.server}/CXC*/storage/ProcessManager/AuditTrailLogEntry*.log"
+                - "/var/lib/kubelet/pods/${data.kubernetes.pod.uid}/volumes/**/${data.kubernetes.annotations.server}/CXC*/storage/ProcessManager/ConsolidatorLogEntry*.log"
+                - "/var/lib/kubelet/pods/${data.kubernetes.pod.uid}/volumes/**/${data.kubernetes.annotations.server}/NMStorage/*eric-bss-em-fm-*/NodeManager/NodeManager*.log"
+                - "/var/lib/kubelet/pods/${data.kubernetes.pod.uid}/volumes/**/${data.kubernetes.annotations.server}/CXC*/storage/ProcessManager/SDKLOGS/*.log"
+                - "/var/lib/kubelet/pods/${data.kubernetes.pod.uid}/volumes/**/${data.kubernetes.annotations.server}/CXC*/storage/ProcessManager/Validation*.log"
+                - "/var/lib/kubelet/pods/${data.kubernetes.pod.uid}/volumes/**/${data.kubernetes.annotations.server}/CXC*/storage/ProcessManager/BSCS_*.log"
+              fields:
+                componentName: "em-fe"
+              fields_under_root: true
+              exclude_lines: ["^\\s+[\\-`('.|_]"]  # drop asciiart lines
+              multiline.pattern: '^\{'
+              multiline.negate: true
+              multiline.match: after
+        - condition.and:
+          - equals:
+              kubernetes.container.name: "controller"
+          - equals:
+              kubernetes.annotations.streamlogharvest: "true"
+          config:
+            - type: log
+              paths:
+                - "/var/lib/kubelet/pods/${data.kubernetes.pod.uid}/volumes/**/${data.kubernetes.annotations.server}/controller/logs/*.log"
+              fields:
+                componentName: "em-controller"
+              fields_under_root: true
+              exclude_lines: ["^\\s+[\\-`('.|_]"]  # drop asciiart lines
+              multiline.pattern: '^\{'
+              multiline.negate: true
+              multiline.match: after
+        - condition.and:
+          - equals:
+              kubernetes.container.name: "jobmanager"
+          - equals:
+              kubernetes.annotations.streamlogharvest: "true"
+          config:
+            - type: log
+              paths:
+                - "/var/lib/kubelet/pods/${data.kubernetes.pod.uid}/volumes/**/${data.kubernetes.annotations.server}/jmtm/logs/${data.kubernetes.pod.name}/*.log"
+              fields:
+                componentName: "em-streammediation"
+              fields_under_root: true
+              exclude_lines: ["^\\s+[\\-`('.|_]"]  # drop asciiart lines
+              multiline.pattern: '^\{'
+              multiline.negate: true
+              multiline.match: after
+        - condition.and:
+          - equals:
+              kubernetes.container.name: "taskmanager"
+          - equals:
+              kubernetes.annotations.streamlogharvest: "true"
+          config:
+            - type: log
+              paths:
+                - "/var/lib/kubelet/pods/${data.kubernetes.pod.uid}/volumes/**/${data.kubernetes.annotations.server}/jmtm/logs/${data.kubernetes.pod.name}/*.log"
+              fields:
+                componentName: "em-streammediation"
+              fields_under_root: true
+              exclude_lines: ["^\\s+[\\-`('.|_]"]  # drop asciiart lines
+              multiline.pattern: '^\{'
+              multiline.negate: true
+              multiline.match: after
+    cfgData: ""
+    harvester:
+      closeTimeout: "60m"
+      ignoreOlder: "0"
+  tolerations: []
+  nodeSelector:
+    hooklauncher: {}
+  labels: {}
+  annotations: {}
+
+eric-log-transformer:
+  enabled: true
+  imageCredentials:
+    repoPath: 
+  logLevel: "info"
+  jvmHeap: 4096m
+  searchengine:
+    logplaneConfig:
+    - field: "[extra_data][componentName]"
+      value: "em-container"
+      newLogplane: "em-containerlogs"
+    - field: "[extra_data][componentName]"
+      value: "em-manager"
+      newLogplane: "em-managerlogs"
+    - field: "[extra_data][componentName]"
+      value: "em-postgres"
+      newLogplane: "em-postgreslogs"
+    - field: "[extra_data][componentName]"
+      value: "em-online"
+      newLogplane: "em-onlinelogs"
+    - field: "[extra_data][componentName]"
+      value: "em-tracer"
+      newLogplane: "em-tracerlogs"
+    - field: "[extra_data][componentName]"
+      value: "em-fe"
+      newLogplane: "em-felogs"
+    - field: "[extra_data][componentName]"
+      value: "em-controller"
+      newLogplane: "em-controllerlogs"
+    - field: "[extra_data][componentName]"
+      value: "em-streammediation"
+      newLogplane: "em-streammediationlogs"
+  egress:
+    syslog:
+      enabled: false
+      defaultFacility: 1
+      defaultSeverity: 6
+      tls:
+        enabled: true
+      certificates:
+        asymmetricKeyCertificateName: log-syslog-client
+        trustedCertificateListName: log-syslog-client
+      remoteHosts:
+        - host: ""
+          port:
+      inclusions:
+        - field: "[facility]"
+          value: "log audit"
+        - field: "[facility]"
+          value: "log alert"
+        - field: "[facility]"
+          value: "security/authorization messages"
+        - field: "[metadata][category]"
+          contains: "-privacy-"
+      exclusions: []
+      filter: |
+        if [@metadata][beat] == "filebeat" {
+          if "docker" in [tags] {
+            grok {
+              match => {
+                "source" => "/var/log/containers/%{DATA:pod_name}_%{DATA:namespace}_%{GREEDYDATA:container_name}-%{DATA:container_id}.log"
+              }
+              remove_field => ["source"]
+            }
+          }
+          # json-in-log is in tags if the log field comes from a docker log where
+          # each line was already in JSON. Handle them by parsing the content of
+          # the log field and ignore the other fields added by docker.
+          if "json-in-log" in [tags] {
+            json {
+              source => "[json][log]"
+              remove_field => ["json"]
+            }
+          }
+          # Docker logs from pods that do not write JSON come pre-parsed from
+          # log shipper. The fields used by docker need to be renamed etc. to fit
+          # the ADP design rules.
+          else {
+            mutate {
+              rename => {"[log]" => "[message]"}
+              rename => {"[stream]" => "[severity]"}
+              rename => {"[time]" => "[timestamp]"}
+            }
+            # Do nothing if feild version exist and has value.
+            if [version] {
+             
+            }
+            #Add field version with value 1.1.0 if version does not exist
+            else {
+               mutate {
+                  add_field => {"[version]" => "1.1.0"}
+              }   
+            }
+            if [severity] == "stderr" {
+              mutate {
+                replace => {"[severity]" => "error"}
+              }
+            }
+            else if [severity] == "stdout" {
+              mutate {
+                replace => {"[severity]" => "info"}
+              }
+            }
+            mutate {
+              copy => {"[container_name]" => "[service_id]"}
+            }
+          }
+          mutate {
+            remove_field => ["log"]
+          }
+          if [facility] == "log alert" {
+            if [extra_data][manager][alarm_severity] == "Information" {
+               mutate {
+                 replace => { "[severity]" => "Notice" }
+               }
+            }
+            else if [extra_data][manager][alarm_severity] == "Minor" {
+             mutate {
+                  replace => { "[severity]" => "Error" }
+              }
+            }
+            else if [extra_data][manager][alarm_severity] == "Major" {
+             mutate {
+                  replace => { "[severity]" => "Critical" }
+              }
+            }
+            else if [extra_data][manager][alarm_severity] == "Critical" {
+             mutate {
+                  replace => { "[severity]" => "Alert" }
+              }
+            }
+            else if [extra_data][manager][alarm_severity] == "Warning" {
+             mutate {
+                  replace => { "[severity]" => "Warning" }
+              }
+            }
+            else if [extra_data][manager][alarm_severity] == "Cleared" {
+             mutate {
+                  replace => { "[severity]" => "Notice" }
+              }
+            }
+            else if [extra_data][manager][alarm_severity] == "Acknowledge" {
+             mutate {
+                  replace => { "[severity]" => "Notice" }
+              }
+            }
+          }  
+          mutate {
+            copy => {"[version]" => "[log][version]"}
+            copy => {"[timestamp]" => "[log][timestamp]"}
+            copy => {"[severity]" => "[log][severity]"}
+            copy => {"[message]" => "[log][message]"}
+            copy => {"[facility]" => "[log][facility]"}
+            copy => {"[service_id]" => "[log][service_id]"}
+          }
+          
+          if [subject]  {
+            mutate {
+              copy => {"[subject]" => "[log][subject]"}
+            }      
+          }
+          mutate {
+           remove_field => ["message"]
+          }
+          mutate {
+            rename => {"[log]" => "[message]"}
+          }
+        }
+
+  config:
+    adpJson:
+      validation:
+        enabled: true
+      transformation:
+        enabled: true
+    filter: |
+      if [componentName] {
+         mutate {
+           rename => {"[componentName]" => "[extra_data][componentName]"} 
+        }
+      }
+  resources:
+    logtransformer:
+      requests:
+        cpu: {{ "200m" if systemProfile == 'small' else "250m" }}
+        memory: 6Gi
+      limits:
+        cpu: 1000m
+        memory: 6Gi
+      jvm:
+        initialMemoryAllocationPercentage: 67
+        smallMemoryAllocationMaxPercentage: 50
+        largeMemoryAllocationMaxPercentage: 67
+    metrics:
+      limits:
+        cpu: "100m"
+        memory: "256Mi"
+      requests:
+        cpu: "25m"
+        memory: "64Mi"
+      jvm:
+        initialMemoryAllocationPercentage: 15
+        smallMemoryAllocationMaxPercentage: 30
+        largeMemoryAllocationMaxPercentage: 30
+    tlsproxy:
+      limits:
+        cpu: "100m"
+        memory: "128Mi"
+      requests:
+        cpu: "25m"
+        memory: "64Mi"
+    hooklauncher:
+      requests:
+        memory: "50Mi"
+        cpu: "20m"
+      limits:
+        memory: "100Mi"
+        cpu: "50m"
+  # Sets inter-pod anti-affinity, supported values : 'soft/hard'
+  affinity:
+    podAntiAffinity: "soft"
+  podDisruptionBudget:
+    maxUnavailable: 1
+  probes:
+    logtransformer:
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 30
+        timeoutSeconds: 15
+      livenessProbe:
+        initialDelaySeconds: 0
+        timeoutSeconds: 15
+        periodSeconds: 30
+      readinessProbe:
+        initialDelaySeconds: 80
+        timeoutSeconds: 10
+        periodSeconds: 10
+    metrics:
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 30
+        timeoutSeconds: 15
+      livenessProbe:
+        initialDelaySeconds: 0
+        timeoutSeconds: 15
+        periodSeconds: 30
+      readinessProbe:
+        initialDelaySeconds: 40
+        timeoutSeconds: 15
+        periodSeconds: 30
+    tlsproxy:
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 30
+        timeoutSeconds: 15
+      livenessProbe:
+        initialDelaySeconds: 0
+        timeoutSeconds: 15
+        periodSeconds: 5
+      readinessProbe:
+        initialDelaySeconds: 1
+        timeoutSeconds: 15
+        periodSeconds: 30
+  tolerations: []
+  nodeSelector:
+    hooklauncher: {}
+  labels: {}
+  annotations: {}
+
+eric-pm-bulk-reporter:
+  enabled: true
+  imageCredentials:
+    repoPath:
+  service:
+    annotations:
+      sharedVIPLabel: "em{{ instance }}-oam"
+      addressPoolName: "em{{ instance }}-oam"
+    loadBalancerIP: ''
+  userConfig:
+    secretKey: "user-config.yaml"
+    secretName: "pm-br-sftp-users-secret"
+    ldap:
+      enabled: {{ 'false' if systemProfile == 'small' else 'true' }}
+  persistentVolumeClaim:
+    enabled: false
+    #The block type storageClasses are only supported, and NFS is not supported.
+    storageClassName: {{ storageClassName }}
+    size: 5Gi
+  security:
+    tls:
+      pmServer:
+        certificateAuthorityBackwardCompatibility: true
+      ldapServer:
+        enabled: true
+  probes:
+    bulkreporter:
+      readinessProbe:
+        initialDelaySeconds: 5
+        periodSeconds: 15
+        timeoutSeconds: 15
+      livenessProbe:
+        initialDelaySeconds: 15
+        periodSeconds: 15
+        timeoutSeconds: 15
+  env:
+    fileLocation: /PerformanceManagementReportFiles
+    maxNoOfPmFiles: 1000
+    logLevel: info
+    iscompressed: false
+    nodeName: ""
+    nodeType: ""
+  yangModelSupport:
+    enabled: false
+  resources:
+    initcontainer:
+      requests:
+        cpu: 50m
+        memory: 50Mi
+      limits:
+        cpu: '1'
+        memory: 200Mi
+    bulkreporter:
+      requests:
+        cpu: 100m
+        memory: 50Mi
+      limits:
+        cpu: '1'
+        memory: 200Mi
+    alarmreporter:
+      requests:
+        cpu: {{ "50m" if systemProfile == 'small' else "100m" }}
+        memory: 50Mi
+      limits:
+        cpu: '1'
+        memory: 200Mi
+    pmsftp:
+      requests:
+        cpu: 50m
+        memory: 50Mi
+      limits:
+        cpu: '1'
+        memory: 200Mi
+    hooklauncher:
+      requests:
+        memory: "50Mi"
+        cpu: "20m"
+      limits:
+        memory: "100Mi"
+        cpu: "50m"
+  podDisruptionBudget:
+    minAvailable: 0
+  tolerations:
+    eric-pm-bulk-reporter:
+      - key: node.kubernetes.io/not-ready
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 0
+      - key: node.kubernetes.io/unreachable
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 0
+    hooklauncher: []
+  nodeSelector: {}
+  affinity: {}
+  labels: {}
+  annotations: {}
+  applicationId:
+    enabled: false
+
+eric-pm-server:
+  enabled: true
+  imageCredentials:
+    repoPath:
+  rbac:
+    appMonitoring:
+      enabled: true
+      configFileCreate: false
+  probes:
+    server:
+      readinessProbe:
+        initialDelaySeconds: 30
+        periodSeconds: 10
+        timeoutSeconds: 30
+      livenessProbe:
+        initialDelaySeconds: 30
+        periodSeconds: 10
+        timeoutSeconds: 15
+    reverseproxy:
+      readinessProbe:
+        initialDelaySeconds: 5
+        periodSeconds: 15
+        timeoutSeconds: 15
+      livenessProbe:
+        initialDelaySeconds: 15
+        periodSeconds: 15
+        timeoutSeconds: 15
+    exporter:
+      readinessProbe:
+        initialDelaySeconds: 5
+        periodSeconds: 15
+        timeoutSeconds: 15
+      livenessProbe:
+        initialDelaySeconds: 15
+        periodSeconds: 15
+        timeoutSeconds: 15
+    configmapreload:
+      readinessProbe:
+        initialDelaySeconds: 30
+        periodSeconds: 10
+        timeoutSeconds: 30
+      livenessProbe:
+        initialDelaySeconds: 30
+        periodSeconds: 10
+        timeoutSeconds: 15
+  resources:
+    eric-pm-initcontainer:
+      requests:
+        cpu: "50m"
+        memory: "50Mi"
+      limits:
+        cpu: "1"
+        memory: "200Mi"
+    eric-pm-server:
+      limits:
+        cpu: '2'
+        memory: {{ '32Gi' if systemProfile == 'small' else '2048Mi' }}
+      requests:
+        cpu: 250m
+        memory: 512Mi
+    eric-pm-configmap-reload:
+      limits:
+        cpu: 200m
+        memory: 32Mi
+      requests:
+        cpu: {{ '50m' if systemProfile == 'small' else '100m' }}
+        memory: 8Mi
+    eric-pm-exporter:
+      limits:
+        cpu: 200m
+        memory: 32Mi
+      requests:
+        cpu: {{ '50m' if systemProfile == 'small' else '100m' }}
+        memory: 8Mi
+    eric-pm-reverseproxy:
+      limits:
+        cpu: '2'
+        memory: 128Mi
+      requests:
+        cpu: 100m
+        memory: 32Mi
+  service:
+    endpoints:
+      reverseproxy:
+        tls:
+          enforced: optional
+          verifyClientCertificate: optional
+          certificateAuthorityBackwardCompatibility: true
+  server:
+    persistentVolume:
+      enabled: true
+      storageClass: {{ storageClassName }}
+      size: 10Gi
+    retention: {{ '3d' if systemProfile == 'small' else '7d' }}
+    affinity: {}
+  podDisruptionBudget:
+    minAvailable: 0
+  tolerations:
+    eric-pm-server: []
+    hooklauncher: []
+  nodeSelector: {}
+  serverFiles:
+    prometheus.yml: |
+      global:
+        scrape_interval: 60s
+        scrape_timeout: 30s
+        evaluation_interval: 1m
+      scrape_configs:
+
+        ## node-metric-federation job to federation infrastructure metrices from Victoria Metrics.
+        # Provide Victoria Metrics vmselect service name, KSM service name, Node Exporter service name and namespace of monitoring package
+
+        - job_name: 'node-metric-federation'
+          honor_labels: true
+          # For other platform, specify metrics_path of prometheus 
+          metrics_path: '/select/0/prometheus/federate'
+        #  scheme: 'https'
+        #  tls_config:
+        #    insecure_skip_verify: true
+          metric_relabel_configs:
+            - source_labels: [__name__]
+              target_label: counterName
+          params:
+            'match[]':
+              # specify kube-state-metrics and node-exporter service name in match condition from monitoring namespace.
+              - '{kubernetes_name="eric-pm-kube-state-metrics"}'
+              - '{kubernetes_name="eric-pm-node-exporter"}'
+              - '{job="kubernetes-nodes-cadvisor"}'
+          static_configs:
+            - targets:
+                # specify victoria metrics vmselect or PM service name and port in static_configs.target from monitoring namespace.
+                - 'eric-victoria-metrics-cluster-vmselect.monitoring:8481'
+
+
+        # The relabeling allows the actual pod scrape endpoint to be configured via the
+        # following annotations:
+        #
+        # * `em.pm/scrape`: Only scrape pods that have a value of `true`
+        # * `em.pm/path`: If the metrics path is not `/metrics` override this.
+        # * `em.pm/port`: Scrape the pod on the indicated port instead of the default of `9250`.
+
+        - job_name: 'eric-em-components'
+          scheme: 'https'
+          tls_config:
+            ca_file: /run/secrets/cacert/cacertbundle.pem
+            server_name: certified-scrape-target
+            #insecure_skip_verify: true
+          scrape_interval: '60s'
+          scrape_timeout: '30s'
+          kubernetes_sd_configs:
+            - role: 'pod'
+              namespaces:
+                names:
+                  - {{ vnflcm.namespace }}
+          relabel_configs:
+            - source_labels: [__meta_kubernetes_pod_annotation_em_pm_scrape]
+              action: keep
+              regex: true
+            - source_labels: [__meta_kubernetes_pod_annotation_em_pm_path]
+              action: replace
+              target_label: __metrics_path__
+              regex: (.+)
+            - source_labels: [__address__, __meta_kubernetes_pod_annotation_em_pm_port]
+              action: replace
+              regex: ([^:]+)(?::\d+)?;(\d+)
+              replacement: ${1}:${2}
+              target_label: __address__
+            - action: labelmap
+              regex: __meta_kubernetes_pod_label_(.+)
+            - source_labels: [__meta_kubernetes_namespace]
+              action: replace
+              target_label: kubernetes_namespace
+            - source_labels: [__meta_kubernetes_pod_name]
+              action: replace
+              target_label: kubernetes_pod_name
+            - source_labels: [__meta_kubernetes_pod_annotation_em_pm_source]
+              action: drop
+              regex: stream
+        - job_name: 'eric-em-sm-component'
+          scheme: 'https'
+          tls_config:
+            ca_file: /run/secrets/cacert/cacertbundle.pem
+            server_name: certified-scrape-target
+            #insecure_skip_verify: true
+          scrape_interval: '10s'
+          scrape_timeout: '10s'
+          kubernetes_sd_configs:
+            - role: 'pod'
+              namespaces:
+                names:
+                  - {{ vnflcm.namespace }}
+          relabel_configs:
+            - source_labels: [__meta_kubernetes_pod_annotation_em_pm_scrape]
+              action: keep
+              regex: true
+            - source_labels: [__meta_kubernetes_pod_annotation_em_pm_path]
+              action: replace
+              target_label: __metrics_path__
+              regex: (.+)
+            - source_labels: [__address__, __meta_kubernetes_pod_annotation_em_pm_port]
+              action: replace
+              regex: ([^:]+)(?::\d+)?;(\d+)
+              replacement: ${1}:${2}
+              target_label: __address__
+            - source_labels: [__meta_kubernetes_pod_annotation_em_pm_source]
+              action: keep
+              regex: stream
+  labels: {}
+  annotations: {}
+
+pmServerIngress:
+  enabled: false
+  hostname:
+  ingressClass:
+  tls:
+    enabled: true
+    certm:
+      keyName:
+      certificateName:
+  labels: {}
+  annotations: {}
+
+eric-fh-alarm-handler:
+  enabled: true
+  affinity:
+    podAntiAffinity: "hard"
+  imageCredentials:
+    repoPath:
+  probes:
+    alarmHandler:
+      livenessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 17
+        timeoutSeconds: 15
+      readinessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        timeoutSeconds: 10
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        timeoutSeconds: 5
+    ericsecoauthproxy:
+      startupProbe:
+        initialDelaySeconds: 1
+        periodSeconds: 5
+        timeoutSeconds: 5
+      livenessProbe:
+        periodSeconds: 5
+        timeoutSeconds: 5
+      readinessProbe:
+        periodSeconds: 5
+        timeoutSeconds: 5
+  backend:
+    hostname: "eric-ah-database-pg"
+    dbname: adp_gs_ah
+    dbuser: ah
+  credentials:
+    kubernetesSecretName: eric-ah-database-pg-credentials
+    keyForUserId: custom-user
+    keyForUserPw: custom-pwd
+    keyForSuperPw: super-pwd
+  replicaCount: 2
+  alarmhandler:
+    logLevel: "Info"
+    faultMapperReloadTimer: 60
+    configmap:
+      faultmappings: "eric-fh-alarm-handler-faultmappings"
+  resources:
+    alarmhandler:
+      requests:
+        memory: "384Mi"
+        cpu: {{ '400m' if systemProfile == 'small' else '500m' }}
+      limits:
+        memory: "512Mi"
+        cpu: "1000m"
+    topiccreator:
+      requests:
+        memory: "384Mi"
+        cpu: {{ '100m' if systemProfile == 'small' else '500m' }}
+      limits:
+        memory: "512Mi"
+        cpu: "1000m"
+    hooklauncher:
+      requests:
+        memory: "50Mi"
+        cpu: "20m"
+      limits:
+        memory: "100Mi"
+        cpu: "50m"
+  service:
+    endpoints:
+      restapi:
+        tls:
+          enforced: optional
+          verifyClientCertificate: optional
+  podDisruptionBudget:
+    minAvailable: 50%
+  tolerations:
+    hooklauncher: []
+    alarmhandler: []
+  nodeSelector: {}
+  labels: {}
+  annotations: {}
+
+eric-fh-snmp-alarm-provider:
+  enabled: true
+  imageCredentials:
+    repoPath:
+  service:
+    loadBalancerIP:
+    annotations:
+      sharedVIPLabel: "em{{ instance }}-oam"
+      addressPoolName: "em{{ instance }}-oam"
+    secretName: snmp-alarm-provider-config
+  oamVIP:
+    enabled: false
+    vip:   # example: "10.210.167.174"
+    destIp :   # example: "10.210.140.93 10.210.150.90 10.250.110.70"
+    # Must be set to 'true' when deploying on an IPv6 cluster
+    ipv6Stack: false
+  resources:
+    alarmprovider:
+      requests:
+        memory: "384Mi"
+        cpu: "0.1"
+        ephemeral-storage: 2Gi
+      limits:
+        memory: "1.5Gi"
+        cpu: "0.5"
+        ephemeral-storage: 4Gi
+      jvm:
+        initialMemoryAllocationPercentage: 50
+        smallMemoryAllocationMaxPercentage: 70
+        largeMemoryAllocationMaxPercentage: 50
+    vip:
+      requests:
+        memory: "30Mi"
+        cpu: "25m"
+        ephemeral-storage: 100Mi
+      limits:
+        memory: "50Mi"
+        cpu: "40m"
+        ephemeral-storage: 200Mi
+    hooklauncher:
+      requests:
+        memory: "50Mi"
+        cpu: "50m"
+      limits:
+        memory: "100Mi"
+        cpu: "100m"
+  probes:
+    snmpAP:
+      livenessProbe:
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        timeoutSeconds: 15
+      readinessProbe:
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        timeoutSeconds: 15
+  tolerations:
+    snmpAP:
+      - key: node.kubernetes.io/not-ready
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 0
+      - key: node.kubernetes.io/unreachable
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 0
+    cmmJob:
+      - key: node.kubernetes.io/not-ready
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 0
+      - key: node.kubernetes.io/unreachable
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 0
+    hooklauncher: []
+  nodeSelector:
+    snmpAP: {}
+    hooklauncher: {}
+  labels: {}
+  annotations: {}
+
+eric-sec-key-management:
+  enabled: true
+  imageCredentials:
+    repoPath:
+  # replicaCount, number of KMS pod instances. Only one of them is active. Max value is 2. if set to 2, requires persistence.type as etcd. 
+  replicaCount:
+    kms: 2
+  logLevel: "info"
+  persistence:
+    type: etcd
+  service:
+    tls:
+      enabled: true
+  resources:
+    shelter:
+      requests:
+        memory: "400Mi"
+        cpu: "100m"
+      limits:
+        memory: "1200Mi"
+        cpu: "300m"
+    vault:
+      requests:
+        memory: "400Mi"
+        cpu: "100m"
+      limits:
+        memory: "1200Mi"
+        cpu: "300m"
+    hooklauncher:
+      requests:
+        memory: "100Mi"
+        cpu: "50m"
+      limits:
+        memory: "100Mi"
+        cpu: "50m"
+  probes:
+    shelter:
+      livenessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        timeoutSeconds: 5
+      readinessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        timeoutSeconds: 4
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        timeoutSeconds: 1
+    vault:
+      livenessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        timeoutSeconds: 5
+      readinessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        timeoutSeconds: 4
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        timeoutSeconds: 1
+  ## podDisruptionBudget, enables workload to be able to properly deal with voluntary disruptions
+  ## applicable when replicas are greater than 1, parameters are mutually exclusive.
+  podDisruptionBudget:
+    minAvailable: 1
+    maxUnavailable:
+  ## tolerations, node tolerations for the pod(s)
+  tolerations: []
+  nodeSelector: {}
+  # Sets inter-pod anti-affinity, supported values : 'soft/hard'
+  affinity:
+    podAntiAffinity: "hard"
+  labels: {}
+  annotations: {}
+
+eric-data-distributed-coordinator-ed:
+  enabled: true
+  imageCredentials:
+    repoPath:
+  persistence:
+    persistentVolumeClaim:
+      size: 5Gi
+      storageClassName: {{ storageClassName }}
+      enabled: true
+  brAgent:
+    enabled: false
+    logLevel: "INFO"
+    backupTypeList:
+    - "eric-data-distributed-coordinator-ed"
+    dcedReadTimeout: 50
+  service:
+    endpoints:
+      dced:
+        acls:
+          adminSecret: etcdsecret
+          rootPassword: etcdpasswd
+  resources:
+    init:
+      requests:
+        cpu: "200m"
+        memory: "200Mi"
+        ephemeral-storage:
+      limits:
+        cpu: "500m"
+        memory: "500Mi"
+        ephemeral-storage:
+    dced:
+      requests:
+        cpu: {{ "50m" if systemProfile == 'small' else "400m" }}
+        memory: "400Mi"
+        ephemeral-storage:
+      limits:
+        cpu: "1"
+        memory: "1Gi"
+        ephemeral-storage:
+    brAgent:
+      requests:
+        cpu: {{ "50m" if systemProfile == 'small' else "400m" }}
+        memory: "400Mi"
+        ephemeral-storage:
+      limits:
+        cpu: "1"
+        memory: "2Gi"
+        ephemeral-storage:
+      jvm:
+       initialMemoryAllocationPercentage: 50
+       smallMemoryAllocationMaxPercentage: 70
+       largeMemoryAllocationMaxPercentage: 50
+    hooklauncher:
+      requests:
+        memory: "50Mi"
+        cpu: "20m"
+        ephemeral-storage: "100Mi"
+      limits:
+        memory: "100Mi"
+        cpu: "50m"
+        ephemeral-storage: "100Mi"
+  probes:
+    dced:
+      readinessProbe:
+        failureThreshold: 3
+        initialDelaySeconds: 30
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 15
+      livenessProbe:
+        failureThreshold: 3
+        initialDelaySeconds: 30
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 15
+      startupProbe:
+        initialDelaySeconds: 30
+        timeoutSeconds: 15
+        failureThreshold: 12
+        periodSeconds: 10
+    brAgent:
+      readinessProbe:
+        failureThreshold: 3
+        initialDelaySeconds: 15
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 15
+      livenessProbe:
+        failureThreshold: 3
+        initialDelaySeconds: 15
+        periodSeconds: 10
+        timeoutSeconds: 15
+  nodeSelector:
+    dced: {}
+    brAgent: {}
+  # Sets inter-pod anti-affinity, supported values : 'soft' or 'hard'
+  affinity:
+    podAntiAffinity: "hard"
+  podDisruptionBudget: {}
+  # Select either one of below parameters with your expected values.
+   # maxUnavailable: 1
+   # minAvailable: "51%"    
+  ## Tolerations to influence scheduling decisions made by Kubernetes scheduler
+  tolerations:
+    dced: []
+    brAgent:
+    - key: node.kubernetes.io/not-ready
+      operator: Exists
+      effect: NoExecute
+      tolerationSeconds: 0
+    - key: node.kubernetes.io/unreachable
+      operator: Exists
+      effect: NoExecute
+      tolerationSeconds: 0
+    hooklauncher: []
+  topologySpreadConstraints:
+    dced: []
+  labels: {}
+  annotations: {}
+
+eric-sec-sip-tls:
+  enabled: true
+  imageCredentials:
+    repoPath:
+  logLevel: info
+  replicaCount: 2
+  affinity:
+    podAntiAffinity: "soft"
+  resources:
+    sip-tls:
+      requests:
+        memory: "200Mi"
+        cpu: "100m"
+      limits:
+        memory: "400Mi"
+        cpu: "1000m"
+    sip-tls-supervisor:
+      requests:
+        memory: "200Mi"
+        cpu: "100m"
+      limits:
+        memory: "400Mi"
+        cpu: "300m"
+    sip-tls-init:
+      requests:
+        memory: "100Mi"
+        cpu: "100m"
+      limits:
+        memory: "200Mi"
+        cpu: "300m"
+  internalCertificate:
+    validLifetimeSeconds: 3600
+    renewalThresholdRatio: 0.9
+    clusterDomain: cluster.local
+  kafka:
+    hostname: eric-data-message-bus-kf-client
+    port: 9093
+    tls:
+      enabled: true
+      verifyHostname: false
+## podDisruptionBudget, enables workload to be able to properly deal with voluntary disruptions
+## applicable when replicas are greater than 1, parameters are mutually exclusive
+  podDisruptionBudget:
+    minAvailable: 1
+    maxUnavailable:
+  tolerations: []
+  nodeSelector: {}
+  probes:
+    sip-tls:
+      livenessProbe:
+        initialDelaySeconds: 30
+        timeoutSeconds: 15
+        periodSeconds: 30
+      readinessProbe:
+        initialDelaySeconds: 5
+        timeoutSeconds: 15
+        periodSeconds: 30
+      startupProbe:
+        initialDelaySeconds: 0
+        timeoutSeconds: 5
+        periodSeconds: 10
+    sip-tls-supervisor:
+      livenessProbe:
+        initialDelaySeconds: 0
+        timeoutSeconds: 10
+        periodSeconds: 30
+      readinessProbe:
+        initialDelaySeconds: 5
+        timeoutSeconds: 15
+        periodSeconds: 30
+      startupProbe:
+        initialDelaySeconds: 0
+        timeoutSeconds: 5
+        periodSeconds: 10
+  labels: {}
+  annotations: {}
+  supervisor:
+    ## How much longer (in seconds) are the emergency certificates valid than their original counterpart.
+    ## The minimum recommended value is 15778800 (half year)
+    emergencyTtl: "15778800" 
+
+eric-sec-certm:
+  enabled: true
+  imageCredentials:
+    repoPath:
+  log:
+    certm:
+      level: info
+  features:
+    yang:
+      enabled: false
+  resources:
+    certm:
+      limits:
+        cpu: "1000m"
+        memory: "2Gi"
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+      jvm:
+        initialMemoryAllocationPercentage: 25
+        smallMemoryAllocationMaxPercentage: 50
+        largeMemoryAllocationMaxPercentage: 50
+    hooklauncher:
+      requests:
+        memory: "50Mi"
+        cpu: "50m"
+      limits:
+        memory: "100Mi"
+        cpu: "100m"
+  probes:
+    certm:
+      startupProbe:
+        initialDelaySeconds: 0
+        timeoutSeconds: 5
+        periodSeconds: 2
+      livenessProbe:
+        initialDelaySeconds: 0
+        timeoutSeconds: 4
+        periodSeconds: 5
+      readinessProbe:
+        initialDelaySeconds: 0
+        timeoutSeconds: 3
+        periodSeconds: 4
+  tolerations:
+    eric-sec-certm:
+    - key: node.kubernetes.io/not-ready
+      operator: Exists
+      effect: NoExecute
+      tolerationSeconds: 0
+    - key: node.kubernetes.io/unreachable
+      operator: Exists
+      effect: NoExecute
+      tolerationSeconds: 0
+    hooklauncher: []
+  nodeSelector: {}
+  labels: {}
+  annotations: {}
+
+eric-lcm-helm-chart-registry:
+  enabled: true
+  imageCredentials:
+    repoPath:
+  ingress:
+    enabled: false
+    serviceName: eric-tm-ingress-controller-cr
+    useHttpProxy: true
+    hostname:
+    ingressClass: "emingress"
+    tls:
+      enabled: false
+      secretName: ""
+      verifyClientCertificate: false
+    certificates:
+      asymmetricKeyCertificateName: hcr-http-server/hcr-http-server
+      trustedCertificateListName: hcr-http-server
+  init:
+    logLevel: info
+  env:
+    open:
+      DEBUG: false
+      ALLOW_OVERWRITE: false
+      AUTH_ANONYMOUS_GET: true
+    secret:
+      # username for basic http authentication, default value is 'admin'
+      BASIC_AUTH_USER: admin
+      # password for basic http authentication, if no value set, it will generate random password
+      BASIC_AUTH_PASS: sysAdm1n@Day0
+  auth:
+    bearerAuth:
+      enabled: false
+      realm: "https://eric-sec-access-mgmt-http:8443/auth/realms/local-ldap3/protocol/docker-v2/auth"
+      rootcertSecret: iamrootca
+      service: hcr
+  service:
+    endpoints:
+      registry:
+        tls:
+          verifyClientCertificate: optional
+  resources:
+    registry:
+      requests:
+        memory: 256Mi
+        cpu: 100m
+      limits:
+        memory: 1280Mi
+        cpu: 500m
+    brAgent:
+      requests:
+        memory: 128Mi
+        cpu: 100m
+        ephemeral-storage: 2Gi
+      limits:
+        memory: 1280Mi
+        cpu: 500m
+        ephemeral-storage: 16Gi
+      jvm:
+        initialMemoryAllocationPercentage: 50
+        smallMemoryAllocationMaxPercentage: 70
+        largeMemoryAllocationMaxPercentage: 50
+    sidecar:
+      requests:
+        memory: 128Mi
+        cpu: 300m
+      limits:
+        memory: 1280Mi
+        cpu: 1500m
+      jvm:
+        initialMemoryAllocationPercentage: 50
+        smallMemoryAllocationMaxPercentage: 70
+        largeMemoryAllocationMaxPercentage: 50
+    migration:
+      requests:
+        memory: 128Mi
+        cpu: 100m
+      limits:
+        memory: 1280Mi
+        cpu: 500m
+      jvm:
+        initialMemoryAllocationPercentage: 50
+        smallMemoryAllocationMaxPercentage: 70
+        largeMemoryAllocationMaxPercentage: 50
+    init:
+      requests:
+        memory: 128Mi
+        cpu: 100m
+      limits:
+        memory: 256Mi
+        cpu: 200m
+      jvm:
+        initialMemoryAllocationPercentage: 50
+        smallMemoryAllocationMaxPercentage: 70
+        largeMemoryAllocationMaxPercentage: 50
+    hooklauncher:
+      requests:
+        memory: "50Mi"
+        cpu: "20m"
+        ephemeral-storage: "100Mi"
+      limits:
+        memory: "100Mi"
+        cpu: "100m"
+        ephemeral-storage: "100Mi"
+  persistence:
+    persistentVolumeClaim:
+      accessMode: ReadWriteOnce
+      size: 8Gi
+      storageClassName: {{ storageClassName }}
+  brAgent:
+    enabled: false
+    logLevel: info
+    backupTypeList:
+    - "eric-lcm-helm-chart-registry"
+    restPort: 7001
+  probes:
+    registry:
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        timeoutSeconds: 5
+        successThreshold: 1
+        failureThreshold: 60
+      livenessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        timeoutSeconds: 5
+        successThreshold: 1
+        failureThreshold: 3
+      readinessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        timeoutSeconds: 5
+        successThreshold: 1
+        failureThreshold: 3
+    brAgent:
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        timeoutSeconds: 5
+        successThreshold: 1
+        failureThreshold: 60
+      livenessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        timeoutSeconds: 30
+        successThreshold: 1
+        failureThreshold: 5
+      readinessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        timeoutSeconds: 5
+        successThreshold: 1
+        failureThreshold: 5
+    sidecar:
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        timeoutSeconds: 5
+        successThreshold: 1
+        failureThreshold: 60
+      livenessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        timeoutSeconds: 30
+        successThreshold: 1
+        failureThreshold: 5
+  tolerations: []
+  affinity:
+    podAntiAffinity: "soft"
+# When EM supports more than 1 replica of helm chart registry, PDB feature won't require any changes and will work as expected.
+  podDisruptionBudget:
+    minAvailable: 90%
+  nodeSelector:
+    registry: {}
+    brAgent: {}
+    migration: {}
+    hooklauncher: {}
+  updateStrategy:
+    type: Recreate
+    brAgent:
+      type: Recreate
+  labels: {}
+  annotations: {}
+  topologySpreadConstraints: []
+
+eric-tm-ingress-controller-cr:
+  enabled: {{ 'true' if systemProfile == 'small' else 'false' }}
+  nameOverride: ""
+  rbac:
+    create: true
+  imageCredentials:
+    repoPath:
+  service:
+    loadBalancerIP:
+    externalTrafficPolicy: Local
+    annotations:
+      sharedVIPLabel: "em{{ instance }}-chf-iccr"
+      addressPoolName: "em{{ instance }}-chf-iccr"
+      cloudProviderLB: {}
+  listeners:
+    v4Only: false
+  ingressClass: emingress
+  logLevel:
+    access: info
+  clientCertificate:
+    enabled: true
+    secret:
+  bandwidth:
+    contour:
+      maxEgressRate: 300M
+    envoy:
+      maxEgressRate:
+    hooklauncher:
+      maxEgressRate:
+  timeout:
+    envoy:
+      downstreamTcpIdleTimeout:
+      upstreamTcpConnectTimeout:
+  resources:
+    contour:
+      requests:
+        cpu: "50m"
+        memory: "250Mi"
+        ephemeral-storage:
+      limits:
+        cpu: "75m"
+        memory: {{ "600Mi" if systemProfile == 'small' else "300Mi" }}
+        ephemeral-storage:
+    envoy:
+      requests:
+        cpu: "100m"
+        memory: "250Mi"
+        ephemeral-storage:
+      limits:
+        cpu: "1"
+        memory: "300Mi"
+        ephemeral-storage:
+    initconfig:
+      requests:
+        cpu: {{ "100m" if systemProfile == 'small' else "300m" }}
+        memory: "250Mi"
+        ephemeral-storage:
+      limits:
+        cpu: "500m"
+        memory: "350Mi"
+        ephemeral-storage:
+    contourinit:
+      requests:
+        cpu: "50m"
+        memory: "250Mi"
+        ephemeral-storage:
+      limits:
+        cpu: "75m"
+        memory: "300Mi"
+        ephemeral-storage:
+    hooklauncher:
+      requests:
+        cpu: "20m"
+        memory: "50Mi"
+        ephemeral-storage:
+      limits:
+        cpu: "50m"
+        memory: "100Mi"
+        ephemeral-storage:
+  probes:
+    contour:
+      livenessProbe:
+        failureThreshold: 3
+        initialDelaySeconds: 20
+        periodSeconds: 10
+        timeoutSeconds: 2
+      readinessProbe:
+        failureThreshold: 3
+        initialDelaySeconds: 20
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 2
+    envoy:
+      readinessProbe:
+        failureThreshold: 3
+        initialDelaySeconds: 3
+        periodSeconds: 3
+        successThreshold: 1
+        timeoutSeconds: 1
+  affinity:
+    contour:
+      podAntiAffinity: "soft"
+  podDisruptionBudget:
+    contour:
+      minAvailable: 1
+      maxUnavailable:
+  tolerations:
+    contour: []
+    envoy: []
+    hooklauncher: []
+  annotations: {}
+  labels: {}
+  nodeSelector:
+    contour: {}
+    envoy: {}
+    hooklauncher: {}
+  updateStrategy:
+    envoy:
+      rollingUpdate:
+        maxUnavailable: 25%
+        maxSurge: 1
+  metrics:
+    enabled: false
+
+eric-idam-database-pg:
+  enabled: true
+  imageCredentials:
+    repoPath:
+  persistentVolumeClaim:
+    size: 5Gi
+    storageClassName: {{ storageClassName }}
+  postgresDatabase: idam
+  credentials:
+    kubernetesSecretName: eric-idam-database-pg-credentials
+    keyForUserId: custom-user
+    keyForUserPw: custom-pwd
+    keyForSuperPw: super-pwd
+    keyForMetricsPw: metrics-pwd
+    keyForReplicaId: replica-user
+    keyForReplicaPw: replica-pwd
+  brAgent:
+    enabled: false
+    logLevel: "info"
+    backupTypeList:
+    - "eric-idam-database-pg"
+    #backupDataModelConfig:
+  probes:
+    postgres:
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        failureThreshold: 70
+        timeoutSeconds: 32
+      livenessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 15
+        failureThreshold: 10
+        timeoutSeconds: 15
+      readinessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        timeoutSeconds: 15
+        failureThreshold: 6
+        successThreshold: 1
+    metrics:
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        failureThreshold: 70
+        timeoutSeconds: 10
+      livenessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        failureThreshold: 20
+        timeoutSeconds: 10
+      readinessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        timeoutSeconds: 10
+        failureThreshold: 15
+        successThreshold: 1
+    brm:
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        failureThreshold: 50
+        timeoutSeconds: 10
+      livenessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        failureThreshold: 6
+        timeoutSeconds: 10
+      readinessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        timeoutSeconds: 10
+        failureThreshold: 10
+        successThreshold: 1
+    bra:
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        failureThreshold: 50
+        timeoutSeconds: 10
+      livenessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        failureThreshold: 6
+        timeoutSeconds: 10
+      readinessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        timeoutSeconds: 10
+        failureThreshold: 6
+        successThreshold: 1
+  resources:
+    postgres:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        cpu: "1"
+        memory: "2560Mi"
+    brm:
+      requests:
+        memory: "256Mi"
+        cpu: {{ "100m" if systemProfile == 'small' else "300m" }}
+      limits:
+        cpu: "1"
+        memory: "512Mi"
+    bra:
+      requests:
+        memory: "1Gi"
+        cpu: {{ "50m" if systemProfile == 'small' else "500m" }}
+        ephemeral-storage: "10Gi"
+      limits:
+        cpu: "1"
+        memory: "2Gi"
+        ephemeral-storage: "12Gi"
+      jvm:
+        initialMemoryAllocationPercentage: 50
+        smallMemoryAllocationMaxPercentage: 70
+        largeMemoryAllocationMaxPercentage: 50
+    hooklauncher:
+      requests:
+        memory: "50Mi"
+        cpu: "50m"
+        ephemeral-storage:
+      limits:
+        memory: "100Mi"
+        cpu: "100m"
+        ephemeral-storage:
+  # Sets inter-pod anti-affinity, supported values : 'soft/hard'
+  affinity:
+    podAntiAffinity: "soft"
+  tolerations:
+    postgres: []
+    brAgent:
+     - key: node.kubernetes.io/not-ready
+       operator: Exists
+       effect: NoExecute
+       tolerationSeconds: 0
+     - key: node.kubernetes.io/unreachable
+       operator: Exists
+       effect: NoExecute
+       tolerationSeconds: 0
+    cleanuphook:
+      - key: node.kubernetes.io/not-ready
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 0
+      - key: node.kubernetes.io/unreachable
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 0
+  topologySpreadConstraints:
+    postgres: []
+  nodeSelector:
+    postgres: {}
+    brAgent: {}
+    cleanuphook: {}
+    hooklauncher: {}
+  labels: {}
+  annotations: {}
+
+eric-sec-access-mgmt:
+  enabled: true
+  imageCredentials:
+    repoPath:
+  logLevel: info
+  resources:
+    preupgrade:
+      requests:
+        memory: "50Mi"
+        cpu: "50m"
+        ephemeral-storage: "500Mi"
+      limits:
+        memory: "100Mi"
+        cpu: "100m"
+        ephemeral-storage: "1Gi"
+    iam:
+      requests:
+        memory: "512Mi"
+        cpu: "300m"
+        ephemeral-storage: "2Gi"
+      limits:
+        memory: "2Gi"
+        cpu: "3000m"
+        ephemeral-storage: "4Gi"
+      jvm:
+        memory:
+          initialMemoryAllocationPercentage: 60%
+          smallMemoryAllocationMaxPercentage: 70%
+          largeMemoryAllocationMaxPercentage: 60%
+    iam-init:
+      requests:
+        memory: "512Mi"
+        cpu: "300m"
+        ephemeral-storage: "1Gi"
+      limits:
+        memory: "2036Mi"
+        cpu: "3000m"
+        ephemeral-storage: "2Gi"
+    iamagent:
+      requests:
+        memory: "512Mi"
+        cpu: "50m"
+        ephemeral-storage: "512Mi"
+      limits:
+        memory: "1024Mi"
+        cpu: "300m"
+        ephemeral-storage: "1Gi"
+      jvm:
+        initialMemoryAllocationPercentage: 50%
+        smallMemoryAllocationMaxPercentage: 70%
+        largeMemoryAllocationMaxPercentage: 50%
+    hooklauncher:
+      requests:
+        memory: "50Mi"
+        cpu: "20m"
+        ephemeral-storage: "100Mi"
+      limits:
+        memory: "100Mi"
+        cpu: "50m"
+        ephemeral-storage: "100Mi"
+    shh15prerollbackjob:
+      requests:
+        memory: "50Mi"
+        cpu: "20m"
+        ephemeral-storage: "100Mi"
+      limits:
+        memory: "100Mi"
+        cpu: "50m"
+        ephemeral-storage: "100Mi"
+    shh15postrollbackjob:
+      requests:
+        memory: "50Mi"
+        cpu: "20m"
+        ephemeral-storage: "100Mi"
+      limits:
+        memory: "100Mi"
+        cpu: "50m"
+        ephemeral-storage: "100Mi"
+  statefulset:
+    adminSecret: eric-sec-access-mgmt-creds
+    userkey: kcadminid
+    passwdkey: kcpasswd
+    additionalEnv:
+    - name: KEYCLOAK_LOGLEVEL
+      value: INFO
+    - name: ROOT_LOGLEVEL
+      value: INFO
+  bandwidth:
+    maxEgressRate: "30M"
+  replicaCount: 2
+  persistence:
+    dbName: idam
+    dbHost: eric-idam-database-pg
+    dbsecret: eric-idam-database-pg-credentials
+    dbUserkey: custom-user
+    dbPasswdkey: custom-pwd
+  brAgent:
+    enabled: false
+    brLabelValue: "IAMAgent"
+    backupTypeList:
+    - "eric-idam-database-pg"
+  ldap:
+    enabled: true
+    denyLockedUsers: false
+  accountManager:
+    enabled: false
+  application:
+    dockerv2:
+      enabled: true
+  sipoauth2:
+    enabled: false
+  tls:
+    client:
+      pg:
+        issuer: eric-idam-database-pg-client-ca
+        subject: "iamuser"
+  ingress:
+    ## Toggle Ingress creation
+    enabled: false
+    iccrServiceName: eric-tm-ingress-controller-cr
+    responseTimeout: "60s"
+    idleTimeout: "300s"
+    hostname: ""
+    tls:
+      ## Toggle TLS secured communication for the Ingress
+      enabled: true
+      existingSecret: ""
+    certificates:
+      asymmetricKeyCertificateName: "oauth2-server/oauth2-server"
+    caCertificateSecret: "eric-tm-ingress-controller-cr-client-ca"
+    ingressClass: "emingress"
+  probes:
+    iam:
+      livenessProbe:
+        initialDelaySeconds: 120
+        periodSeconds: 10
+        failureThreshold: 3
+        timeoutSeconds: 15
+      readinessProbe:
+        initialDelaySeconds: 30
+        periodSeconds: 10
+        successThreshold: 2
+        failureThreshold: 10
+        timeoutSeconds: 15
+    iamagent:
+      livenessProbe:
+        initialDelaySeconds: 20
+        periodSeconds: 10
+        failureThreshold: 10
+        timeoutSeconds: 15
+      readinessProbe:
+        initialDelaySeconds: 20
+        periodSeconds: 3
+        failureThreshold: 1
+        timeoutSeconds: 15
+  podDisruptionBudget:
+    minAvailable: 50%
+    maxUnavailable:
+  tolerations:
+    iam: []
+    preupgrade: []
+    hooklauncher: []
+    shh15prerollbackjob: []
+    shh15postrollbackjob: []
+  topologySpreadConstraints: []
+  affinity:
+    podAntiAffinity: "hard"
+  nodeSelector:
+    iam: {}
+    preupgrade: {}
+    hooklauncher: {}
+    shh15prerollbackjob: {}
+    shh15postrollbackjob: {}
+  labels: {}
+  annotations: {}
+
+eric-sec-ldap-server:
+  enabled: true
+  imageCredentials:
+    repoPath:
+  brAgent:
+    enabled: false
+    brLabelValue: "LDAPAgent"
+    backupTypeList:
+    - "eric-sec-ldap-server"
+  ldap:
+    accountmanager:
+      dormantUserCheckInterval: 86400
+  persistence:
+    persistentVolumeClaim:
+      enabled: true
+      storageClassName: {{ storageClassName }}
+      accessMode: "ReadWriteOnce"
+      size: 5Gi
+  replicaCount: 2
+  additionalEnv:
+  - name: "LDAP_LOG_LEVEL"
+    value: "128"
+  service:
+    endpoints:
+      ldap:
+        tls:
+          enforced: optional
+          verifyClientCertificate: optional
+  metrics:
+    enabled: false
+  resources:
+    preupgrade:
+      requests:
+        memory: "50Mi"
+        cpu: "50m"
+        ephemeral-storage: "500Mi"
+      limits:
+        memory: "100Mi"
+        cpu: "100m"
+        ephemeral-storage: "1Gi"
+    ldap:
+      requests:
+        memory: "512Mi"
+        cpu: {{ "100m" if systemProfile == 'small' else "300m" }}
+        ephemeral-storage: "1Gi"
+      limits:
+        memory: "2036Mi"
+        cpu: "1000m"
+        ephemeral-storage: "2Gi"
+    ldapagent:
+      requests:
+        memory: "512Mi"
+        cpu: "50m"
+        ephemeral-storage: "512Mi"
+      limits:
+        memory: "1024Mi"
+        cpu: "300m"
+        ephemeral-storage: "1Gi"
+      jvm:
+        initialMemoryAllocationPercentage: 50
+        smallMemoryAllocationMaxPercentage: 70
+        largeMemoryAllocationMaxPercentage: 50
+    ldapproxy:
+      requests:
+        memory: "512Mi"
+        cpu: {{ "200m" if systemProfile == 'small' else "500m" }}
+        ephemeral-storage: "512Mi"
+      limits:
+        memory: "2036Mi"
+        cpu: "1000m"
+        ephemeral-storage: "1Gi"
+    ldapinit:
+      requests:
+        memory: "512Mi"
+        cpu: "100m"
+        ephemeral-storage: "1Gi"
+      limits:
+        memory: "2036Mi"
+        cpu: "500m"
+        ephemeral-storage: "2Gi"
+    hooklauncher:
+      requests:
+        memory: "50Mi"
+        cpu: "100m"
+        ephemeral-storage: "100Mi"
+      limits:
+        memory: "100Mi"
+        cpu: "300m"
+        ephemeral-storage: "100Mi"
+  probes:
+    ldap:
+      livenessProbe:
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        failureThreshold: 10
+        timeoutSeconds: 15
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        failureThreshold: 25
+        timeoutSeconds: 15
+      readinessProbe:
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        failureThreshold: 10
+        timeoutSeconds: 70
+    ldapproxy:
+      livenessProbe:
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        failureThreshold: 5
+        timeoutSeconds: 15
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        failureThreshold: 25
+        timeoutSeconds: 15
+      readinessProbe:
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        failureThreshold: 3
+        timeoutSeconds: 15
+    ldapagent:
+      livenessProbe:
+        initialDelaySeconds: 20
+        periodSeconds: 10
+        failureThreshold: 10
+        timeoutSeconds: 15
+      readinessProbe:
+        initialDelaySeconds: 20
+        periodSeconds: 3
+        failureThreshold: 1
+        timeoutSeconds: 15
+## podDisruptionBudget, enables workload to be able to properly deal with voluntary disruptions
+## applicable when replicas are greater than 1, parameters are mutually exclusive.
+  podDisruptionBudget:
+    minAvailable: 1
+    maxUnavailable:
+  tolerations:
+    ldap: []
+    ldapproxy:
+    - key: node.kubernetes.io/not-ready
+      operator: Exists
+      effect: NoExecute
+      tolerationSeconds: 0
+    - key: node.kubernetes.io/unreachable
+      operator: Exists
+      effect: NoExecute
+      tolerationSeconds: 0
+    preupgrade: []
+    hooklauncher: []
+  topologySpreadConstraints:
+    ldap: []
+    ldapproxy: []
+  affinity:
+    podAntiAffinity: "hard"
+  nodeSelector:
+    ldap: {}
+    ldapProxy: {}
+    hooklauncher: {}
+  labels: {}
+  annotations: {}
+
+eric-data-key-value-database-rd:
+  enabled: {{ 'true' if systemProfile == 'small' else 'false' }}
+  imageCredentials:
+    repoPath:
+  nameOverride: ""
+  resources:
+    kvdbOperator:
+      limits:
+        cpu: 500m
+        memory: 200Mi
+        ephemeral-storage: 2Gi
+      requests:
+        cpu: {{ '100m' if systemProfile == 'small' else '200m' }}
+        memory: 100Mi
+        ephemeral-storage: 2Gi
+    hooklauncher:
+      limits:
+        cpu: "200m"
+        memory: "100Mi"
+        ephemeral-storage: "100Mi"
+      requests:
+        cpu: "50m"
+        memory: "50Mi"
+        ephemeral-storage: "100Mi"
+  probes:
+    kvdbOperator:
+      startupProbe:
+        initialDelaySeconds: 0
+        failureThreshold: 60
+        periodSeconds: 10
+        timeoutSeconds: 20
+      livenessProbe:
+        failureThreshold: 30
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 20
+      readinessProbe:
+        failureThreshold: 30
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 20
+  log:
+    kvdbOperator:
+      level: "info"
+      bufferedLines: 2000
+  security:
+    acl:
+      enabled: true
+    tls:
+      # TTL for the client certificate, SIP-TLS default value if not provided
+      certificateTTL:
+  labels: {}
+  nodeSelector: {}
+    #kvdbOperator: {}
+    #hooklauncher: {}
+  tolerations:
+    kvdbOperator:
+     - key: node.kubernetes.io/not-ready
+       operator: Exists
+       effect: NoExecute
+       tolerationSeconds: 0
+     - key: node.kubernetes.io/unreachable
+       operator: Exists
+       effect: NoExecute
+       tolerationSeconds: 0
+    hooklauncher: []
+  annotations: {}
+  # limit Pod Egress bandwidth
+  bandwidth:
+    kvdbOperator:
+      maxEgressRate:
+    hooklauncher:
+      maxEgressRate:
+  # DR-D1123-127 The AppArmor profile will be present as annotations on a pod level
+  appArmorProfile:
+    type: ""
+    localhostProfile: ""
+    kvdbOperator:
+        type: ""
+        localhostProfile: ""
+  # DR-D1123-128 The Seccomp profile will be present in security context on a container level
+  seccompProfile:
+    type: ""
+    localhostProfile: ""
+    kvdbOperator:
+        type: ""
+        localhostProfile: ""
+  logTransformerService:
+    # Log Transformer Service host name to connect to. When TLS is enabled it's also used to create a client certificate signed by the Log Transformer CA.
+    host: "eric-log-transformer"
+
+eric-cnom-server:
+  enabled: true
+  imageCredentials:
+    repoPath:
+  nodeSelector:
+    server:
+    hooklauncher:
+  annotations: {}
+  labels: {}
+  affinity:
+    podAntiAffinity: "soft"
+# EM is supporting PDB but CNOM doesn't support more than 1 replica currently. podDisruptionBudget for this component will start working with CNOM supporting multiple replicas.
+  podDisruptionBudget:
+    # Minimum amount of available Pods e.g. when draining nodes. This is mutually exclusive with
+    # 'podDisruptionBudget.maxUnavailable'.
+    minAvailable:
+    # Maximum amount of unavailable Pods e.g. when draining nodes. This is mutually exclusive with
+    # 'podDisruptionBudget.minAvailable'. If neither 'minAvailable' nor 'maxUnavailable' have
+    # been set, we default to use 'maxUnavailable: 1'
+    # Set 'podDisruptionBudget=null' to not create any PodDisruptionBudget resource at all.
+    maxUnavailable:
+  tolerations:
+    server:
+      - key: node.kubernetes.io/not-ready
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 0
+      - key: node.kubernetes.io/unreachable
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 0
+    hooklauncher: []
+  service:
+    endpoints:
+      api:
+        port: 8585
+        tls:
+          enforced: required
+          verifyClientCertificate: optional
+  ingress:
+    enabled: false
+    host: eric-tm-ingress-controller-cr
+    useHttpProxy: true
+    ingressClass: emingress
+    hostname:
+    tls:
+      verifyClientCertificate: optional
+    certificates:
+      enabled: true
+      asymmetricKeyCertificateName: gui-cnom-http-server
+      trustedCertificateListName: gui-cnom-http-server    
+  resources:
+    server:
+      requests:
+        memory: 400Mi
+        cpu: {{ '100m' if systemProfile == 'small' else '150m' }}
+      limits:
+        memory: 400Mi
+        cpu: 500m
+    init:
+      requests:
+        memory: 50Mi
+        cpu: 50m
+      limits:
+        memory: 100Mi
+        cpu: 100m
+  probes:
+    server:
+      startupProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        timeoutSeconds: 1
+      livenessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        timeoutSeconds: 5
+      readinessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        timeoutSeconds: 1
+  logging:
+    debug: false
+  authentication:
+    enabled: true
+    local:
+      enabled: false
+    ldap:
+      enabled: true
+  documentDatabase:
+    enabled: true
+  alarmHandler:
+    tls:
+      enabled: false
+  pmServer:
+    tls:
+      enabled: true
+      useSipTlsRootCA: true
+  searchEngine:
+    tls:
+      enabled: true
+  bro:
+    enabled: false
+    tls:
+      enabled: false
+  cmMediator:
+    tls:
+      enabled: false
+  keyValueDatabaseRD:
+    tls:
+      enabled: false
+  features:
+    logViewer: true
+    statusOverview: {{ 'false' if systemProfile == 'small' else 'true' }}
+    alarmViewer: false
+    metricViewer: true
+  dashboards:
+    configMaps:
+    -  eric-cnom-server-dashboards
+  metrics:
+    hierarchy:
+      configMap: eric-cnom-server-metric-hierarchy
+    selectorConfig:
+      configMap: eric-cnom-server-metric-selector-config
+
+eric-cnom-document-database-mg:
+  enabled: true
+  imageCredentials:
+    repoPath:
+    registry:
+      url:
+  nodeSelector: {}
+  resources:
+    documentdatabasemg:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  affinity:
+    podAntiAffinity: "soft"
+    topologyKey: "kubernetes.io/hostname"
+  # EM is supporting PDB but CNOM document database mg doesn't support more than 1 replica currently. podDisruptionBudget for this component will start working with CNOM supporting multiple replicas.
+  podDisruptionBudget:
+    # Minimum amount of available Pods e.g. when draining nodes. This is mutually exclusive with
+    # 'podDisruptionBudget.maxUnavailable'.
+    minAvailable:
+    # Maximum amount of unavailable Pods e.g. when draining nodes. This is mutually exclusive with
+    # 'podDisruptionBudget.minAvailable'. If neither 'minAvailable' nor 'maxUnavailable' have
+    # been set, we default to use 'maxUnavailable: 1'
+    # Set 'podDisruptionBudget=null' to not create any PodDisruptionBudget resource at all.
+    maxUnavailable:
+  tolerations: []
+  labels: {}
+  annotations: {}
+  log:
+    mongodb:
+      # Whether to include debug logs
+      debug: false
+  persistence:
+    persistentVolumeClaim:
+      storageClass: {{ storageClassName }}
+      size: 10Gi
+  probes:
+    maincontainer:
+      livenessProbe:
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        timeoutSeconds: 10
+      readinessProbe:
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        timeoutSeconds: 10
+
+eric-si-application-sys-info-handler:
+  enabled: true
+  imageCredentials:
+    repoPath:
+  replicaCount: 1
+  asih:
+    reportTimeInterval: "12"
+    applicationId: {{ nodeName }}
+    enableCmypConfig: false
+    uploadSwimInformation: false
+    # Enable the collection of ASIH metrics (to enable only in case of deployment with TLS Enabled)
+    pmMetricsTLS: true
+  applicationInfoService:
+    scheme: https
+    port: 9099
+  service:
+    endpoints:
+      restApi:
+        tls:
+          enforced: "required"
+          verifyClientCertificate: "required"
+  probes:
+    eric-si-application-sys-info-handler:
+      livenessProbe:
+        initialDelaySeconds: {{ '10' if systemProfile == 'small' else '0' }}
+        periodSeconds: 40
+        timeoutSeconds: 15
+      readinessProbe:
+        initialDelaySeconds: {{ '10' if systemProfile == 'small' else '0' }}
+        periodSeconds: 30
+        timeoutSeconds: 10
+      startupProbe:
+        initialDelaySeconds: 10
+        timeoutSeconds: 10
+        periodSeconds: 10
+  resources:
+    eric-si-application-sys-info-handler:
+      limits:
+        cpu: "100m"
+        memory: 100Mi
+      requests:
+        cpu: "50m"
+        memory: 50Mi
+    hooklauncher:
+      requests:
+        memory: "50Mi"
+        cpu: "20m"
+      limits:
+        memory: "100Mi"
+        cpu: "50m"
+  nodeSelector:
+    eric-si-application-sys-info-handler: {}
+    hooklauncher: {}
+  tolerations:
+    eric-si-application-sys-info-handler:
+      - key: node.kubernetes.io/not-ready
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 0
+      - key: node.kubernetes.io/unreachable
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 0
+    hooklauncher: []
+  affinity: {}
+  annotations: {}
+  labels: {}

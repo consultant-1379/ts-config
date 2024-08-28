@@ -1,0 +1,11 @@
+{
+  "condition": "(substr(AfData.appId,18,41) == \"urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel\")&&(AfData.media.type == \"audio\")",
+  "outputAttributes": [
+    {
+      "attrName": "service",
+      "attrValue": "\"MMTel_audio\"",
+      "result": "permit"
+    }
+  ],
+  "ruleName": "classifyAudio"
+}

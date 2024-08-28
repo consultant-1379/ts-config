@@ -1,0 +1,23 @@
+autowizard false
+config
+
+epg pgw sbi scp scp-instance nscp-ins1
+  priority  1
+  fqdn      {{ indirectCommunication.scp.0.host }}.5gc.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org
+  fqdn-port {{ indirectCommunication.scp.0.port }}
+
+epg pgw sbi scp logical-interface scp-service-if
+epg pgw sbi scp connection-client-profile client-profile-1
+{% if 'n7' in indirectCommunication.interfaces %}
+epg pgw sbi scp enable-conditions pcfscp
+epg pgw sbi scp enable-conditions pcfscp match "PCF|pcf"
+epg pgw sbi scp enable-conditions pcfscp match-type nftype match "PCF|pcf"
+{% endif %}
+
+epg node logical-interface scp-service-if
+ routing-instance default
+ address          1.1.1.1
+
+commit
+end
+

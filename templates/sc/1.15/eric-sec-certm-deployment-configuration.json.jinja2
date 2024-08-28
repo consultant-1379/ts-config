@@ -1,0 +1,28 @@
+{
+  "pkcs12": [
+    {
+      "name": "internode-external-key",
+      "certificate-name": "internode-external-cert",
+      "pkcs12": "{{ certs['eric-wcdb-internode-certs'].p12 | file_b64encode }}",
+      "password": "{{ certs['eric-wcdb-internode-certs'].password }}"
+    },
+    {
+      "name": "cql-client-external-key",
+      "certificate-name": "cql-client-external-cert",
+      "pkcs12": "{{ certs['eric-wcdb-cql-client-certs'].p12 | file_b64encode }}",
+      "password": "{{ certs['eric-wcdb-cql-client-certs'].password }}"
+    },
+    {
+      "name": "cql-server-external-key",
+      "certificate-name": "cql-server-external-cert",
+      "pkcs12": "{{ certs['eric-wcdb-cql-server-certs'].p12 | file_b64encode }}",
+      "password": "{{ certs['eric-wcdb-cql-server-certs'].password }}"
+    }
+  ],
+  "ca-certs": [
+    {
+      "name": "sc-trusted-default-cas",
+      "pem": "{{ trustCAs[0]| file_1line  }}"
+    }
+  ]
+}

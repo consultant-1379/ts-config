@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--version: 1.1.0 -->
+<hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <capabilities>
+        <capability>urn:ietf:params:netconf:base:1.0</capability>
+    </capabilities>
+</hello>]]>]]>
+
+<rpc xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" message-id="1">
+    <edit-config>
+        <target>
+            <running/>
+        </target>
+        <config>
+        <udr-application-counters xmlns="urn:rdns:com:ericsson:oammodel:ericsson-app-counters-udr">
+    <counter-group>
+      <name>GRP_HssIsmActiveUsers</name>
+      <description>Counters for the number of active IMS users stored in the HSS application</description>
+      <administrative-state>unlocked</administrative-state>
+      <data-type>ldap-entry</data-type>
+      <periodicity>one-day</periodicity>
+      <counter>
+        <name>TotalNumberOfActiveImsUsers</name>
+        <description>The number of active IMS users</description>
+        <condition>Value of ImsLastActivityDate is within the rolling period</condition>
+        <administrative-state>unlocked</administrative-state>
+        <data-subtype>assocId</data-subtype>
+        <rule>(ImsImpi.ImsLastActivityDate >= dateToInteger(users-active-period))</rule>
+      </counter>
+    </counter-group>
+    <counter-group>
+      <name>GRP_HssIsmUsersStored</name>
+      <description>Counters for the number of IMS subscribers stored in the HSS application</description>
+      <administrative-state>unlocked</administrative-state>
+      <data-type>ldap-entry</data-type>
+      <counter>
+        <name>TotalNumberOfSubscribersStored</name>
+        <description>The number of IMS subscribers</description>
+        <condition>ImsSubs is present</condition>
+        <administrative-state>unlocked</administrative-state>
+        <data-subtype>assocId</data-subtype>
+        <rule>(ImsSubs.ImsSubsId != null)</rule>
+      </counter>
+      <counter>
+        <name>TotalNumberOfUsersStored</name>
+        <description>The number of IMS users</description>
+        <condition>ImsImpi is present</condition>
+        <administrative-state>unlocked</administrative-state>
+        <data-subtype>assocId</data-subtype>
+        <rule>(ImsImpi.ImsImpiId != null)</rule>
+      </counter>
+      <counter>
+        <name>TotalNumberOfPsiUsersStored</name>
+        <description>The number of IMS users with Public Service Identities (PSIs)</description>
+        <condition>ImsSubs is present and ImsIsPsi=true</condition>
+        <administrative-state>unlocked</administrative-state>
+        <data-subtype>assocId</data-subtype>
+        <rule>(ImsSubs.ImsIsPsi = true)</rule>
+      </counter>
+      <counter>
+        <name>TotalNumberOfSipPublicIdsStored</name>
+        <description>The number of public identities in a Session Initiation Protocol (SIP) Uniform Resource Identifier (URI) format</description>
+        <condition>ImsImpu is present and IMPU="sip:%" (% presents zero or more characters)</condition>
+        <administrative-state>unlocked</administrative-state>
+        <data-subtype>assocId</data-subtype>
+        <rule>(ImsImpu.IMPU = "sip:%")</rule>
+      </counter>
+      <counter>
+        <name>TotalNumberOfTelPublicIdsStored</name>
+        <description>The number of public identities in a Telephone Network Communication Unit (TEL) URI format</description>
+        <condition>ImsImpu is present and IMPU="tel:%" (% presents zero or more characters)</condition>
+        <administrative-state>unlocked</administrative-state>
+        <data-subtype>assocId</data-subtype>
+        <rule>(ImsImpu.IMPU = "tel:%")</rule>
+      </counter>
+      <counter>
+        <name>TotalNumberOfUsersBarred</name>
+        <description>The number of IMS user identities barred for registration</description>
+        <condition>ImsImpi is present and imsBarrInd=true</condition>
+        <administrative-state>unlocked</administrative-state>
+        <data-subtype>assocId</data-subtype>
+        <rule>(ImsImpi.ImsBarrInd = true)</rule>
+      </counter>
+      <counter>
+        <name>TotalNumberOfPublicIdsBarred</name>
+        <description>The number of public identities barred for session establishment</description>
+        <condition>ImsImpu is present and ImsSessBarrInd=true</condition>
+        <administrative-state>unlocked</administrative-state>
+        <data-subtype>assocId</data-subtype>
+        <rule>(ImsImpu.ImsSessBarrInd = true)</rule>
+      </counter>
+    </counter-group>
+        </udr-application-counters>
+        </config>
+    </edit-config>
+</rpc>

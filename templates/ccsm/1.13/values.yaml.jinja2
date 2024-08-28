@@ -1,0 +1,1592 @@
+# External values file
+# Please set up the values regarding to deployment which you want to deploy
+# Please remove the double curly brackets {% raw %}{{}}{% endraw %} surrounding the final value to set it right
+
+
+global:
+  coredumps:
+    enabled: true
+
+  # DSCP marking value in CCSM
+  dscpMarking:
+    dscpDualStack: false
+    egressDscpSBI: 0
+    ingressDscpRepliesSBI: 0
+    ingressDscpRepliesSoapIMSEPC: 0
+
+  licensing:
+    sites:
+    - hostname: "{{nels.host}}"
+      ip: ""
+      priority: 10
+
+  ericsson:
+    licensing:
+      licenseDomains:
+        - productType: "CCSM"
+          customerId: "{{ license.customerId }}"
+          swltId: "{{ license.swltId }}"
+
+  ## CCSM FSGROUP CONFIGURATION
+  #  The next configuration defines the global fsGroup, if different configuration is needed change on purpose.
+  #
+  #  NOTE:
+  #  - The default value 10000 for global.fsGroup.manual will be used when no other value provided.
+  #  - The global.fsGroup.namespace will be only evaluated if global.fsGroup.manual is not set or it
+  #    takes the values false or 0.
+  {% if caas == 'OpenShift' %}
+  fsGroup:
+    manual: false
+    namespace: true
+  {% else %}
+  # fsGroup:
+    # manual: 10000
+    # namespace: true
+  {% endif %}
+
+  # Determines if enable the internal mTLS communication
+  # Enable set it "on" / Disable set it "off"
+  internalMtls:
+    enabled: "on"
+
+  ## CCSM EGREES GATEWAY CONFIGURATION for NRF Agent
+  #  The next configuration defines the global egrees Gateway
+  #  default configuration, if different configuration is needed,
+  #  uncomment and change on purpose.
+  #
+  #  NOTE:
+  #  - When mtls profile is selected, it enables the egrees automatically and
+  #    the endpoint host and port must be updated on purpose.
+  #  - When cleartext profile is selected, it disables egress so enpoints will
+  #    be ignored.
+  istio:
+    # Egrees: Update the endpoint host and port on purpose
+    egress:
+      endpoints:
+        eric-ccsm-sbi-traffic-mtls:
+          {% if caas == 'Tanzu' %}
+          host: "*.{{ vnflcm.clusterName }}.{{ DOMAIN_3GPP_5GC }}"
+          {% else %}
+          host: "*.{{ DOMAIN_3GPP_5GC }}"
+          {% endif %}
+          ports:
+            - port: 443
+              name: https-port-for-mTLS-origination
+              protocol: HTTP2
+              mode: mTLS
+
+  # Determines if enable the Sencondary Network Provider (SENP)
+  # Enable set it "true" / Disable set it "false"
+  secondaryNetwork:
+    enabled: false
+
+  map:
+    #Total number of stacks to be deployed, regardless if they are shared/dedicated. Max stacks number is 4
+    mapStacksNumber: 2
+  {% raw %}
+  ## Valid values: {{eMBB|mIoT}}
+  {% endraw %}
+  networkType: eMBB
+
+  # Service Mesh and CCSM NFs global settings
+  nodeSelector: {{ nodeSelector }}
+  #  ericsson-5gc-se/vnf: ccsm
+
+  # Determines if the nrfagent is going to be deployed or not
+  # This information is required by the microservices that communicate
+  # with the nrfagent so that they create the internal certificates or not
+  # Enable set it "true" / Disable set it "false"
+  nrfagent:
+    enabled: true
+
+  ## CCSM profiles selection
+  # Enable only one profile per group
+  # Size:
+  # - small-system  (Small Size Systems -Enterprise & Telco)
+  # - std-system (Standard System - Telco)
+  # Security in the outgoing/incoming traffic:
+  # - mtls (mTLS)
+  # - cleartext (Clear Text)
+  # IP Stack version:
+  # - ipv4
+  # - ipv6
+  profiles:
+    small-system:
+      enabled: {{ 'true' if systemProfile == 'small' else false | string | lower }}
+    std-system:
+      enabled: {{ 'true' if systemProfile == 'standard' else false | string | lower }}
+    cleartext:
+      enabled: false
+    mtls:
+      enabled: true
+    ipv4:
+      enabled: true
+    ipv6:
+      enabled: false
+
+  ##
+  #  Note:
+  #  When EO/EVNFM is used to deploy the CNF, there is no need to provide
+  #  pullSecret and registry.url parameters since EVNFM will override them
+  #  to use EVNFM Docker registry.
+  pullSecret: null
+  registry:
+    url: {{ registry.url }}
+    imagePullPolicy: IfNotPresent
+
+  # CCSM Security DR-124 - Pod Security Policies (PSP) and Security Context Constraints (SCC).
+  security:
+    {% if caas == 'OpenShift' %}
+    policyBinding:
+      ## create indicate whether needs to auto-create the rolebinding
+      ## for the clusterRole used for pod security policy.
+      create: true
+    policyReferenceMap:
+      ## the clusterRole name defined for pod security policy.
+      default-restricted-security-policy: default-restricted-security-policy
+      plc-privileged-for-sctp-ccsm: plc-privileged-for-sctp-ccsm
+      plc-29c4b823c87a16cad810082eb11106: plc-29c4b823c87a16cad810082eb11106
+      plc-dd66cc53d8554f93ad34971900932e: plc-dd66cc53d8554f93ad34971900932e-wa
+      plc-59d0cf1dcc793a78b6ce30bfbe6553: plc-59d0cf1dcc793a78b6ce30bfbe6553
+      plc-38dc0a0ee2b2564ef10039d2c6c0e0: plc-38dc0a0ee2b2564ef10039d2c6c0e0
+      plc-privileged-for-istio: plc-privileged-for-istio
+      plc-eric-tm-sctp: plc-eric-tm-sctp
+    {% else %}
+    policyBinding:
+      ## create indicate whether needs to auto-create the rolebinding
+      ## for the clusterRole used for pod security policy.
+      create: false
+    policyReferenceMap:
+      ## the clusterRole name defined for pod security policy.
+      default-restricted-security-policy: default-restricted-security-policy
+      plc-privileged-for-swprobes-ccsm: plc-privileged-for-swprobes-ccsm
+      plc-privileged-for-sctp-ccsm: plc-privileged-for-sctp-ccsm
+      plc-e393f1841dfc4cbcca713b5a97eb83: plc-e393f1841dfc4cbcca713b5a97eb83
+      plc-29c4b823c87a16cad810082eb11106: plc-29c4b823c87a16cad810082eb11106
+      plc-9c20871f9bf62c7b09fd0c684ac651: plc-9c20871f9bf62c7b09fd0c684ac651
+      plc-dd66cc53d8554f93ad34971900932e: plc-dd66cc53d8554f93ad34971900932e
+      plc-59d0cf1dcc793a78b6ce30bfbe6553: plc-59d0cf1dcc793a78b6ce30bfbe6553
+      plc-38dc0a0ee2b2564ef10039d2c6c0e0: plc-38dc0a0ee2b2564ef10039d2c6c0e0
+      plc-privileged-for-swprobe: plc-privileged-for-swprobe
+      plc-privileged-for-istio: plc-privileged-for-istio
+      plc-eric-tm-sctp: plc-eric-tm-sctp
+    {% endif %}
+
+  timezone: {{ timezone }}
+
+  # Determines if enable the injection of vTAP agent sidecar for SW PROBE function
+  # Enable set it "true" / Disable set it "false"
+  vtapagent:
+    enabled: {{ 'false' if systemProfile == 'small' else 'true' }}
+
+## SERVICE MESH SPECIFIC SETTINGS
+#  The next configuration defines the Service Mesh default configuration,
+#  if different configuration is needed, uncomment and change on purpose.
+#
+#  NOTE:
+#    Two values between double curly brackets {% raw %}{{mtls|cleartext}}{% endraw %} default values
+#    Do not change the targetPort
+#    Disable eric-ingressgw-<NF>-traffic if no NF will be installed
+eric-ccsm-service-mesh:
+  eric-ingressgw-ausf-traffic:
+    enabled: true
+    service:
+      type: LoadBalancer
+      {% if caas == 'Tanzu' %}
+      loadBalancerSourceRanges: []
+      annotations:
+        cloudProviderLB:
+          aviinfrasetting.ako.vmware.com/name: sig-pool
+          ako.vmware.com/load-balancer-ip: {{ ccsm.ausf5gSigVip }}
+      {% else %}
+      loadBalancerIP: ""
+      loadBalancerSourceRanges: []
+      annotations:
+        addressPoolName: ccsm{{ instance }}-ausf-5g-sig
+        #cloudProviderLB:
+          ##list of cloud provider annotations. Example AWS annotation
+          #service.beta.kubernetes.io/aws-load-balancer-type: "external"
+      {% endif %}
+  eric-ingressgw-udm-traffic:
+    enabled: true
+    service:
+      type: LoadBalancer
+      {% if caas == 'Tanzu' %}
+      loadBalancerSourceRanges: []
+      annotations:
+        cloudProviderLB:
+          aviinfrasetting.ako.vmware.com/name: sig-pool
+          ako.vmware.com/load-balancer-ip: {{ ccsm.udm5gSigVip }}
+      {% else %}
+      loadBalancerIP: ""
+      loadBalancerSourceRanges: []
+      annotations:
+        addressPoolName: ccsm{{ instance }}-udm-5g-sig
+        #cloudProviderLB:
+          ##list of cloud provider annotations. Example AWS annotation
+          #service.beta.kubernetes.io/aws-load-balancer-type: "external"
+      {% endif %}
+  eric-ingressgw-eir-traffic:
+    enabled: {{ 'false' if systemProfile == 'small' else true | string | lower }}
+    service:
+      type: LoadBalancer
+      {% if caas == 'Tanzu' %}
+      loadBalancerSourceRanges: []
+      annotations:
+        cloudProviderLB:
+          aviinfrasetting.ako.vmware.com/name: sig-pool
+          ako.vmware.com/load-balancer-ip: {{ ccsm.eir5gSigVip }}
+      {% else %}
+      loadBalancerIP: ""
+      loadBalancerSourceRanges: []
+      annotations:
+        addressPoolName: ccsm{{ instance }}-eir-5g-sig
+        #cloudProviderLB:
+          ##list of cloud provider annotations. Example AWS annotation
+          #service.beta.kubernetes.io/aws-load-balancer-type: "external"
+      {% endif %}
+  eric-ingressgw-epc-soap-traffic:
+    enabled: false
+    service:
+      type: LoadBalancer
+      {% if caas == 'Tanzu' %}
+      loadBalancerSourceRanges: []
+      annotations:
+        cloudProviderLB:
+          aviinfrasetting.ako.vmware.com/name: oam-pool
+          ako.vmware.com/enable-shared-vip: oam-ccsm-shared
+          ako.vmware.com/load-balancer-ip: {{ ccsm.ccsmOamVip }}
+      {% else %}
+      loadBalancerIP: ""
+      loadBalancerSourceRanges: []
+      annotations:
+        addressPoolName: ccsm{{ instance }}-oam
+        sharedVIPLabel: ccsm-oam
+        #cloudProviderLB:
+          ##list of cloud provider annotations. Example AWS annotation
+          #service.beta.kubernetes.io/aws-load-balancer-type: "external"
+      {% endif %}
+  eric-ingressgw-hss-epc-traffic:
+    enabled: true
+    service:
+      type: LoadBalancer
+      {% if caas == 'Tanzu' %}
+      loadBalancerSourceRanges: []
+      annotations:
+        cloudProviderLB:
+          aviinfrasetting.ako.vmware.com/name: sig-pool
+          ako.vmware.com/load-balancer-ip: {{ ccsm.hssEpcHttpSigVip }}
+      {% else %}
+      loadBalancerIP: ""
+      loadBalancerSourceRanges: []
+      annotations:
+        addressPoolName: ccsm{{ instance }}-hss-epc-http-sig
+        #cloudProviderLB:
+          ##list of cloud provider annotations. Example AWS annotation
+          #service.beta.kubernetes.io/aws-load-balancer-type: "external"
+      {% endif %}
+  eric-ingressgw-ims-soap-traffic:
+    enabled: false
+    service:
+      type: LoadBalancer
+      loadBalancerIP: ""
+      loadBalancerSourceRanges: []
+      annotations:
+        addressPoolName: ccsm{{ instance }}-oam
+        sharedVIPLabel: ccsm-oam
+        #cloudProviderLB:
+          ##list of cloud provider annotations. Example AWS annotation
+          #service.beta.kubernetes.io/aws-load-balancer-type: "external"
+
+# SENP nVIP subChart that belongs to service mesh helm chart
+eric-tm-senp-nvip:
+  config:
+    # Namespace of the SENP Infra (CLC SNIA) installation on the cluster
+    nsmNamespace: eric-clc-snia
+
+#
+# Overwrite the CCSM specific settings
+#
+
+# Overwrite the AUSF Helm values here
+eric-ccsm-ausf:
+  enabled: true
+  eric-ausf-capacity:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-ausf-capacity'].min }}
+      maxReplicas: {{ hpaReplica['eric-ausf-capacity'].max }}
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-ausf-cmjobloader:
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-ausf-engine:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-ausf-engine'].min }}
+      maxReplicas: {{ hpaReplica['eric-ausf-engine'].max }}
+
+eric-ccsm-autonrf:
+  udrHandling:
+    # Seconds to delay UDM deregistration when UDR is not available, to wait to get some new UDRs from NRF.
+    nrfWaitingTime: 0
+  tolerations: []
+  #  - key: node-role.kubernetes.io/control-plane
+  #    effect: NoSchedule
+  #    operator: Exists
+
+eric-ccsm-cmagent:
+  tolerations: []
+  #  - key: node-role.kubernetes.io/control-plane
+  #    effect: NoSchedule
+  #    operator: Exists
+
+eric-ccsm-cmreconciler:
+  tolerations: []
+  #  - key: node-role.kubernetes.io/control-plane
+  #    effect: NoSchedule
+  #    operator: Exists
+
+eric-ccsm-cmvalidator:
+  tolerations: []
+  #  - key: node-role.kubernetes.io/control-plane
+  #    effect: NoSchedule
+  #    operator: Exists
+
+eric-ccsm-datainjector:
+  dscpMarking:
+    egressDscpNoSBI: {{0}}
+  hssHandling:
+    failover:
+      errorHttpServiceUnavailableAsFailNhssUecm: "off"
+  scpHandling:
+    failover:
+      errorHttpServiceUnavailableAsFailNudmUecm: "off"
+      errorHttpServiceUnavailableAsFailNudmSdm: "off"
+      errorHttpServiceUnavailableAsFailNamfMtLoc: "off"
+      errorHttpServiceUnavailableAsFailNamfEvts: "off"
+  udrHandling:
+    failover:
+      errorHttpServiceUnavailableAsFailNudrDr: "off"
+      errorHttpServiceUnavailableAsFailNcudrGudDr: "off"
+  nfHandling:
+    failover:
+      errorHttpServiceUnavailableAsFailNudmUecm: "off"
+      errorHttpServiceUnavailableAsFailNamfLcs: "off"
+      errorHttpServiceUnavailableAsFailNamfEvts: "off"
+
+# Overwrite the EIR Helm values here
+eric-ccsm-eir:
+  enabled: {{ 'false' if systemProfile == 'small' else true | string | lower }}
+  eric-eir-capacity:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-eir-capacity'].min if systemProfile == 'small' else 1 }}
+      maxReplicas: {{ hpaReplica['eric-eir-capacity'].max if systemProfile == 'small' else 20 }}
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-eir-cmagent:
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-eir-diametereireic:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-eir-diametereireic'].min }}
+      maxReplicas: {{ hpaReplica['eric-eir-diametereireic'].max }}
+  eric-eir-eireic:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-eir-eireic'].min }}
+      maxReplicas: {{ hpaReplica['eric-eir-eireic'].max }}
+  eric-eir-gsmadbhandler:
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName }}
+  eric-eir-httpnotifier:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-eir-httpnotifier'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-eir-httpnotifier'].max if systemProfile == 'small' else 20 }}
+  eric-eir-infocollector:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-eir-infocollector'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-eir-infocollector'].max if systemProfile == 'small' else 20 }}
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName }}
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-eir-infocollectorunsucc:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-eir-infocollectorunsucc'].min if systemProfile == 'small' else 1 }}
+      maxReplicas: {{ hpaReplica['eric-eir-infocollectorunsucc'].max if systemProfile == 'small' else 20 }}
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName }}
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-eir-mapeireic:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-eir-mapeireic'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-eir-mapeireic'].max if systemProfile == 'small' else 50 }}
+  eric-eir-s13diameter:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-eir-s13diameter'].min }}
+      maxReplicas: {{ hpaReplica['eric-eir-s13diameter'].max }}
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+
+# Overwrite the HSS-EPC Helm values here
+eric-ccsm-hssepc:
+  enabled: true
+  eric-data-key-value-database-rd:
+    tolerations:
+      kvdbOperator: []
+      #  - key: node-role.kubernetes.io/control-plane
+      #    effect: NoSchedule
+      #    operator: Exists
+  eric-hss-rdoperand:
+    tolerations:
+      node: []
+      #  - key: node-role.kubernetes.io/control-plane
+      #    effect: NoSchedule
+      #    operator: Exists
+  eric-hssepc-capacity:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssepc-capacity'].min }}
+      maxReplicas: {{ hpaReplica['eric-hssepc-capacity'].max }}
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-hssepc-cmagent:
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-hssepc-cmvalidator:
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-hssepc-mttadsinfo:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssepc-mttadsinfo'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssepc-mttadsinfo'].max if systemProfile == 'small' else 20 }}
+  eric-hssepc-mtuesrvcccap:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssepc-mtuesrvcccap'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssepc-mtuesrvcccap'].max if systemProfile == 'small' else 20 }}
+  eric-hssepc-mtstnsrget:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssepc-mtstnsrget'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssepc-mtstnsrget'].max if systemProfile == 'small' else 20 }}
+  eric-hssepc-mtstnsrput:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssepc-mtstnsrput'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssepc-mtstnsrput'].max if systemProfile == 'small' else 20 }}
+  eric-hssepc-mtlocation:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssepc-mtlocation'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssepc-mtlocation'].max if systemProfile == 'small' else 20 }}
+  eric-hssepc-pcscfrestoration:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssepc-pcscfrestoration'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssepc-pcscfrestoration'].max if systemProfile == 'small' else 20 }}
+  eric-hssepc-iratsndereg:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssepc-iratsndereg'].min }}
+      maxReplicas: {{ hpaReplica['eric-hssepc-iratsndereg'].max }}
+  eric-hssepc-s6aauthentication:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssepc-s6aauthentication'].min }}
+      maxReplicas: {{ hpaReplica['eric-hssepc-s6aauthentication'].max }}
+  eric-hssepc-s6acancellocation:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssepc-s6acancellocation'].min }}
+      maxReplicas: {{ hpaReplica['eric-hssepc-s6acancellocation'].max }}
+  eric-hssepc-s6adeletesubscriber:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssepc-s6adeletesubscriber'].min }}
+      maxReplicas: {{ hpaReplica['eric-hssepc-s6adeletesubscriber'].max }}
+  eric-hssepc-s6adiameter:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssepc-s6adiameter'].min }}
+      maxReplicas: {{ hpaReplica['eric-hssepc-s6adiameter'].max }}
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-hssepc-s6ainsertsubscriber:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssepc-s6ainsertsubscriber'].min }}
+      maxReplicas: {{ hpaReplica['eric-hssepc-s6ainsertsubscriber'].max }}
+  eric-hssepc-s6anotify:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssepc-s6anotify'].min }}
+      maxReplicas: {{ hpaReplica['eric-hssepc-s6anotify'].max }}
+  eric-hssepc-s6apurge:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssepc-s6apurge'].min }}
+      maxReplicas: {{ hpaReplica['eric-hssepc-s6apurge'].max }}
+  eric-hssepc-s6aupdatelocation:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssepc-s6aupdatelocation'].min }}
+      maxReplicas: {{ hpaReplica['eric-hssepc-s6aupdatelocation'].max }}
+  eric-hssepc-soap:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssepc-soap'].min }}
+      maxReplicas: {{ hpaReplica['eric-hssepc-soap'].max }}
+  eric-hssepc-s6aprovnotification:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssepc-s6aprovnotification'].min }}
+      maxReplicas: {{ hpaReplica['eric-hssepc-s6aprovnotification'].max }}
+  eric-hssepc-swxdiameter:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssepc-swxdiameter'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssepc-swxdiameter'].max if systemProfile == 'small' else 20 }}
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-hssepc-swxsarreg:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssepc-swxsarreg'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssepc-swxsarreg'].max if systemProfile == 'small' else 20 }}
+  eric-hssepc-swxsardereg:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssepc-swxsardereg'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssepc-swxsardereg'].max if systemProfile == 'small' else 20 }}
+  eric-hssepc-swxsarpgw:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssepc-swxsarpgw'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssepc-swxsarpgw'].max if systemProfile == 'small' else 20 }}
+  eric-hssepc-swxmar:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssepc-swxmar'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssepc-swxmar'].max if systemProfile == 'small' else 20 }}
+  eric-hssepc-swxrtr:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssepc-swxrtr'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssepc-swxrtr'].max if systemProfile == 'small' else 20 }}
+  eric-hssepc-swxprovnotification:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssepc-swxprovnotification'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssepc-swxprovnotification'].max if systemProfile == 'small' else 20 }}
+  eric-hssepc-swxsdmunsub:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssepc-swxsdmunsub'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssepc-swxsdmunsub'].max if systemProfile == 'small' else 20 }}
+
+# Overwrite the HSS-IMS Helm values here.
+eric-ccsm-hssims:
+  enabled: {{ 'true' if systemProfile == 'small' else false | string | lower }}
+  eric-hssims-capacity:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-capacity'].min if systemProfile == 'small' else 1 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-capacity'].max if systemProfile == 'small' else 20 }}
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-hssims-cmagent:
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-hssims-cmvalidator:
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-hssims-shudrrepodata:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-shudrrepodata'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-shudrrepodata'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-shudrimsi:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-shudrimsi'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-shudrimsi'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-shudrimspublicidentity:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-shudrimspublicidentity'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-shudrimspublicidentity'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-shudrimsuserstate:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-shudrimsuserstate'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-shudrimsuserstate'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-shudrcharginginformation:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-shudrcharginginformation'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-shudrcharginginformation'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-shudrscscfname:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-shudrscscfname'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-shudrscscfname'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-shudrmsisdns:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-shudrmsisdns'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-shudrmsisdns'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-shudrtadsinformation:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-shudrtadsinformation'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-shudrtadsinformation'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-shudrlocationinfo:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-shudrlocationinfo'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-shudrlocationinfo'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-shudrstnsr:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-shudrstnsr'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-shudrstnsr'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-shudruesrvcccapability:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-shudruesrvcccapability'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-shudruesrvcccapability'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-shpur:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-shpur'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-shpur'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-shsnr:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-shsnr'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-shsnr'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-soap:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-soap'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-soap'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-shprovnotification:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-shprovnotification'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-shprovnotification'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-shpnr:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-shpnr'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-shpnr'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-shdiameter:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-shdiameter'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-shdiameter'].max if systemProfile == 'small' else 20 }}
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-hssims-cxdiameter:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-cxdiameter'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-cxdiameter'].max if systemProfile == 'small' else 20 }}
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-hssims-cxlir:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-cxlir'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-cxlir'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-cxuar:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-cxuar'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-cxuar'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-cxmar:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-cxmar'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-cxmar'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-cxsarreg:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-cxsarreg'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-cxsarreg'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-cxsardereg:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-cxsardereg'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-cxsardereg'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-cxsarunreg:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-cxsarunreg'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-cxsarunreg'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-cxsarauth:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-cxsarauth'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-cxsarauth'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-cxsarnoassign:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-cxsarnoassign'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-cxsarnoassign'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-cxprovnotifrtr:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-cxprovnotifrtr'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-cxprovnotifrtr'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-cxrtr:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-cxrtr'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-cxrtr'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-cxprovnotifppr:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-cxprovnotifppr'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-cxprovnotifppr'].max if systemProfile == 'small' else 20 }}
+  eric-hssims-cxppr:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-hssims-cxppr'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-hssims-cxppr'].max if systemProfile == 'small' else 20 }}
+
+eric-ccsm-lmagent:
+  tolerations: []
+  #  - key: node-role.kubernetes.io/control-plane
+  #    effect: NoSchedule
+  #    operator: Exists
+
+# Overwrite smsengine Helm values here
+eric-ccsm-smsengine:
+  autoscaling:
+    minReplicas: {{ hpaReplica['eric-ccsm-smsengine'].min if systemProfile == 'small' else 2 }}
+    maxReplicas: {{ hpaReplica['eric-ccsm-smsengine'].max if systemProfile == 'small' else 94 }}
+  tolerations: []
+  #  - key: node-role.kubernetes.io/control-plane
+  #    effect: NoSchedule
+  #    operator: Exists
+
+eric-ccsm-sracmagent:
+  tolerations: []
+  #  - key: node-role.kubernetes.io/control-plane
+  #    effect: NoSchedule
+  #    operator: Exists
+
+# Overwrite the UDM Helm values here
+eric-ccsm-udm:
+  enabled: true
+  global:
+    ## Specific values for Auto-provisioning error handling. Not documented in Day-0 of standard releases.
+    #flexibleErrorHandling:
+    #  autoprovUeauTrigger:
+    #    status: 403
+    #    cause: "AUTHENTICATION_REJECTED"
+    #  autoprovSdmTrigger:
+    #    status: 404
+    #    cause: "DATA_NOT_FOUND"
+    ##
+    hsmconfig:
+      hsminstall: false
+      hagroup: HA_PED_ST3
+      server:
+        # define HSM server with endpoint (IP) and serialnum
+        - endpoint: 10.198.28.25
+          serialnum: "1485999395022"
+        - endpoint: 10.198.28.26
+          serialnum: "1531778547595"
+  eric-udm-amfeenotifications:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-amfeenotifications'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-amfeenotifications'].max if systemProfile == 'small' else 48 }}
+  eric-udm-amfeesubscriptions:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-amfeesubscriptions'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-amfeesubscriptions'].max if systemProfile == 'small' else 48 }}
+  eric-udm-authconf:
+    appArmorProfile:
+      type:
+      localhostProfile:
+  eric-udm-autoprovisioning:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-autoprovisioning'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-autoprovisioning'].max if systemProfile == 'small' else 10 }}
+  eric-udm-blackhole:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-blackhole'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-blackhole'].max }}
+  eric-udm-cancelepclocation:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-cancelepclocation'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-cancelepclocation'].max }}
+  eric-udm-capacity:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-capacity'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-capacity'].max }}
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-udm-cmagent:
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-udm-eapauth:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-eapauth'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-eapauth'].max }}
+    appArmorProfile:
+      type:
+      localhostProfile:
+  eric-udm-eapprimeauth:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-eapprimeauth'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-eapprimeauth'].max }}
+    appArmorProfile:
+      type:
+      localhostProfile:
+  eric-udm-epsauth:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-epsauth'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-epsauth'].max }}
+    appArmorProfile:
+      type:
+      localhostProfile:
+  eric-udm-gbaauth:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-gbaauth'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-gbaauth'].max }}
+    appArmorProfile:
+      type:
+      localhostProfile:
+  eric-udm-imsauth:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-imsauth'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-imsauth'].max }}
+    appArmorProfile:
+      type:
+      localhostProfile:
+  eric-udm-iratamflocation:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-iratamflocation'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-iratamflocation'].max }}
+  eric-udm-iratamfdereg:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-iratamfdereg'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-iratamfdereg'].max }}
+  eric-udm-iratsndereg:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-iratsndereg'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-iratsndereg'].max }}
+  eric-udm-iwk5g2g:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-iwk5g2g'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-iwk5g2g'].max }}
+  eric-udm-mtsmsdeliverystatus:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-mtsmsdeliverystatus'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-mtsmsdeliverystatus'].max if systemProfile == 'small' else 186 }}
+  eric-udm-mtsmsreadystatus:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-mtsmsreadystatus'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-mtsmsreadystatus'].max if systemProfile == 'small' else 186 }}
+  eric-udm-mtsmsroutinginfo:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-mtsmsroutinginfo'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-mtsmsroutinginfo'].max if systemProfile == 'small' else 186 }}
+  eric-udm-mtsmswaitingdata:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-mtsmswaitingdata'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-mtsmswaitingdata'].max if systemProfile == 'small' else 94 }}
+  eric-udm-mtueinfo:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-mtueinfo'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-mtueinfo'].max if systemProfile == 'small' else 20 }}
+  eric-udm-mtlocation:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-mtlocation'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-mtlocation'].max if systemProfile == 'small' else 20 }}
+  eric-udm-pcscfrestnotif:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-pcscfrestnotif'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-pcscfrestnotif'].max if systemProfile == 'small' else 20 }}
+  eric-udm-pcscfrestoration:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-pcscfrestoration'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-pcscfrestoration'].max if systemProfile == 'small' else 20 }}
+  eric-udm-sdmamdata:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-sdmamdata'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-sdmamdata'].max }}
+  eric-udm-sdmimplicitunsub:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-sdmimplicitunsub'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-sdmimplicitunsub'].max }}
+  eric-udm-sdmmultipledataset:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-sdmmultipledataset'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-sdmmultipledataset'].max }}
+  eric-udm-sdmnotif:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-sdmnotif'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-sdmnotif'].max }}
+  eric-udm-sdmnssai:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-sdmnssai'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-sdmnssai'].max }}
+  eric-udm-sdmsmdata:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-sdmsmdata'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-sdmsmdata'].max }}
+  eric-udm-sdmsmfselect:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-sdmsmfselect'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-sdmsmfselect'].max }}
+  eric-udm-sdmsmsdata:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-sdmsmsdata'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-sdmsmsdata'].max if systemProfile == 'small' else 40 }}
+  eric-udm-sdmsmsmngdata:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-sdmsmsdata'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-sdmsmsdata'].max if systemProfile == 'small' else 40 }}
+  eric-udm-sdmsubscriptions:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-sdmsubscriptions'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-sdmsubscriptions'].max }}
+  eric-udm-sdmuectxtsmf:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-sdmuectxtsmf'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-sdmuectxtsmf'].max }}
+  eric-udm-sdmuectxtsmsf:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-sdmuectxtsmsf'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-sdmuectxtsmsf'].max if systemProfile == 'small' else 40 }}
+  eric-udm-ueauth:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-ueauth'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-ueauth'].max }}
+    appArmorProfile:
+      type:
+      localhostProfile:
+  eric-udm-uecmamfderegnotifier:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-uecmamfderegnotifier'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-uecmamfderegnotifier'].max }}
+  eric-udm-uecmamfget:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-uecmamfget'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-uecmamfget'].max }}
+  eric-udm-uecmamfregupdate:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-uecmamfregupdate'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-uecmamfregupdate'].max }}
+  eric-udm-uecmreg:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-uecmreg'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-uecmreg'].max }}
+  eric-udm-uecmsmfderegistration:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-uecmsmfderegistration'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-uecmsmfderegistration'].max }}
+  eric-udm-uecmsmfregistration:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-uecmsmfregistration'].min }}
+      maxReplicas: {{ hpaReplica['eric-udm-uecmsmfregistration'].max }}
+  eric-udm-uecmsmsfdereg:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-uecmsmsfdereg'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-uecmsmsfdereg'].max if systemProfile == 'small' else 40 }}
+  eric-udm-uecmsmsfregget:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-uecmsmsfregget'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-uecmsmsfregget'].max if systemProfile == 'small' else 20 }}
+  eric-udm-uecmsmsfregistration:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-uecmsmsfregistration'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-uecmsmsfregistration'].max if systemProfile == 'small' else 40 }}
+  eric-udm-ueshcm:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-ueshcm'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-ueshcm'].max if systemProfile == 'small' else 20 }}
+  eric-udm-umtsauth:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-umtsauth'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-umtsauth'].max if systemProfile == 'small' else 94 }}
+    appArmorProfile:
+      type:
+      localhostProfile:
+  eric-udm-eesubscribe:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-eesubscribe'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-eesubscribe'].max if systemProfile == 'small' else 20 }}
+    subscription:
+      durationTime: "31536000"
+  eric-udm-eeunsubscribe:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-eeunsubscribe'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-eeunsubscribe'].max if systemProfile == 'small' else 10 }}
+  eric-udm-eesubsidchangenotif:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-eesubsidchangenotif'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-eesubsidchangenotif'].max if systemProfile == 'small' else 20 }}
+  eric-udm-eeamfingressnotif:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-eeamfingressnotif'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-eeamfingressnotif'].max if systemProfile == 'small' else 20 }}
+  eric-udm-eeegressnotif-reach-for-sms:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-eeegressnotif-reach-for-sms'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-eeegressnotif-reach-for-sms'].max if systemProfile == 'small' else 20 }}
+  eric-udm-eeegressnotif-roaming-status:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-eeegressnotif-roaming-status'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-eeegressnotif-roaming-status'].max if systemProfile == 'small' else 20 }}
+  eric-udm-eeegressnotif-supi-pei-indiv:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-eeegressnotif-supi-pei-indiv'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-eeegressnotif-supi-pei-indiv'].max if systemProfile == 'small' else 20 }}
+  eric-udm-eeegressnotif-supi-pei-anyue:
+    autoscaling:
+      minReplicas: {{ hpaReplica['eric-udm-eeegressnotif-supi-pei-anyue'].min if systemProfile == 'small' else 2 }}
+      maxReplicas: {{ hpaReplica['eric-udm-eeegressnotif-supi-pei-anyue'].max if systemProfile == 'small' else 20 }}
+
+
+# Diameter Networking related settings
+eric-stm-diameter:
+  replicaCount: 2
+  secondaryNetwork:
+    sctp:
+      enabled: false
+  configuration:
+    mh:
+      enabled: false
+  service:
+    {% if caas == 'Tanzu' %}
+    annotations:
+      aviinfrasetting.ako.vmware.com/name: sig-pool
+      ako.vmware.com/enable-shared-vip: "dia-ccsm-shared"
+      ako.vmware.com/load-balancer-ip: {{ ccsm.diaSigVip }}
+    {% else %}
+    loadBalancerIP: ""
+    annotations:
+      addressPoolNameDiameterOverTCP: "ccsm{{ instance }}-dia-sig"
+      addressPoolNameDiameterOverSCTP: "ccsm{{ instance }}-dia-sig"
+      sharedVIPLabelDiameterOverSCTP: "dia-sig"
+      sharedVIPLabelDiameterOverTCP: "dia-sig"
+    {% endif %}
+    diameter:
+      ports:
+        tcp:
+          - port:  3868
+            targetPort:  3868
+        sctp:
+          - port:  3868
+            targetPort:  3868
+# Mapproxy settings
+eric-ccsm-mapproxy:
+  {% if caas == 'NFVI-CCD' %}
+  enabled: false
+  {% endif %}
+  global:
+    # This global configuration applies to all eric-ccsm-mapproxy instances
+    map:
+      secondaryNetwork:
+        enabled: false
+      mh:
+        enabled: false
+      configuration:
+        ss7:
+          signalingNetwork:
+            networkStandard: "itu"
+          m3ua:
+            asProfile:
+              - dupu-behavior: "dpc-omitted"
+                dupu-handling: "no-dupu-handling"
+                id: 1
+                interval-for-mtp-status-ind: 8
+                notify-behavior: "resume-after-aspac-ack"
+                timer-divert: 10
+                timer-notify: 0
+                timer-scon: 75
+                timer-tr: 100
+            abatementThresholdLevel1: 150
+            abatementThresholdLevel2: 400
+            abatementThresholdLevel3: 650
+            burstSize: 0
+            checkDpcStatusInIpNetwork: "not-check-opc-status"
+            congestionProcForRemoteSgps: "use-both-daud-and-tscon"
+            forbidMessageFromUnknownDpc: "not-check-opc"
+            handleIncomDataMsgWithoutAs: "discard-msg"
+            internalCongestionLevel1: 250
+            internalCongestionLevel2: 500
+            internalCongestionLevel3: 750
+            loadsharingAlgorithm: "basic"
+            maxNumberOfBurstsWithoutProgress: 0
+            modifiedSlsRotation: "no-sls-rotation"
+            retransmitBufferSize: 1024
+            supportDynamicRegistrOfAsp: "dynamic-identif-only"
+            timerBurst: 10
+            timerBurstJittering: 0
+            timerCongAudit: 60000
+            timerInitConf: 100
+            timerReinit: 100
+            timerRetransmit: 5
+            remoteSpProfile:
+              - assoc-establishment-attempts: 4
+                attempts-of-dauds: 5
+                drst-support: "rfc-4666-compliant"
+                heartbeat-procedure: "hb-off"
+                id: 1
+                max-num-of-affected-dpcs-in-daud: 0
+                ntfy-support: "rfc-4666-compliant"
+                timer-ack: 60
+                timer-assoc: 20
+                timer-audit: 300
+                timer-deactivation: 0
+                timer-hb: 300
+                timer-rec: 100
+                timer42: 8
+                tmt-support: "rfc-4666-compliant"
+          tcapEit:
+            timerDialogue: 30000
+
+  # Overwrite the Mapproxy Helm values here
+  eric-ccsm-mapproxy-1:
+    {% if caas == 'Tanzu' %}
+    enabled: false {#- Uncontrolled IP assignment. Not needed in VMware TS 1.5 #}
+    {% endif %}
+    configuration:
+      secondaryNetwork:
+        # SCTP Endpoints IP addresses
+        eric-ccsm-mapproxy-1-vip-a: 10.10.10.10
+        eric-ccsm-mapproxy-1-vip-b: 10.10.10.20
+    nodeSelector:
+      Deployment: {}
+      #  set-of-workers: mapproxy_ccsm
+    # Networking related settings
+    service:
+      loadBalancerIP: ""
+      annotations:
+        addressPoolName: map-sig
+      sctp:
+        # The list of ports for traffic
+        # default is the list with one port 2905
+        port:
+          - 2905 # default value
+
+  eric-ccsm-mapproxy-2:
+    {% if caas == 'Tanzu' %}
+    enabled: false
+    {% endif %}
+    configuration:
+      secondaryNetwork:
+        # SCTP Endpoints IP addresses
+        eric-ccsm-mapproxy-2-vip-a: 10.10.20.10
+        eric-ccsm-mapproxy-2-vip-b: 10.10.20.20
+    nodeSelector:
+      Deployment: {}
+      #  set-of-workers: mapproxy_ccsm
+    # Networking related settings
+    service:
+      loadBalancerIP: ""
+      annotations:
+        addressPoolName: map-sig-2
+      sctp:
+        # The list of ports for traffic
+        # default is the list with one port 2905
+        port:
+          - 2905 # default value
+
+  eric-ccsm-mapproxy-3:
+    {% if caas == 'Tanzu' %}
+    enabled: false
+    {% endif %}
+    configuration:
+      secondaryNetwork:
+        # SCTP Endpoints IP addresses
+        eric-ccsm-mapproxy-3-vip-a: 10.10.30.10
+        eric-ccsm-mapproxy-3-vip-b: 10.10.30.20
+    nodeSelector:
+      Deployment: {}
+      #  set-of-workers: mapproxy_ccsm
+    # Networking related settings
+    service:
+      loadBalancerIP: ""
+      annotations:
+        addressPoolName: map-sig-3
+      sctp:
+        # The list of ports for traffic
+        # default is the list with one port 2905
+        port:
+          - 2905 # default value
+
+  eric-ccsm-mapproxy-4:
+    {% if caas == 'Tanzu' %}
+    enabled: false
+    {% endif %}
+    configuration:
+      secondaryNetwork:
+        # SCTP Endpoints IP addresses
+        eric-ccsm-mapproxy-4-vip-a: 10.10.40.10
+        eric-ccsm-mapproxy-4-vip-b: 10.10.40.20
+    nodeSelector:
+      Deployment: {}
+      #  set-of-workers: mapproxy_ccsm
+    # Networking related settings
+    service:
+      loadBalancerIP: ""
+      annotations:
+        addressPoolName: map-sig-4
+      sctp:
+        # The list of ports for traffic
+        # default is the list with one port 2905
+        port:
+          - 2905 # default value
+
+# Overwrite the ADP Generic Services Helm values here
+eric-ccsm-adp:
+  eric-probe-virtual-tap-broker:
+    # Indicate whether to switch on the PVTB NBI encryption by DTLS
+    dtls:
+      enabled: false
+  eric-cm-yang-provider:
+    enableCliCommandAuditLogs: true
+    externalTls:
+      netconf:
+        enabled: false
+    service:
+      {% if caas == 'Tanzu' %}
+      annotations:
+        cloudProviderLB:
+          aviinfrasetting.ako.vmware.com/name: oam-pool
+          ako.vmware.com/enable-shared-vip: oam-ccsm-shared
+          ako.vmware.com/load-balancer-ip: {{ ccsm.ccsmOamVip }}
+      {% else %}
+      annotations:
+        addressPoolName: "ccsm{{ instance }}-oam"
+        sharedVIPLabel: "ccsm-oam"
+        #cloudProviderLB:
+          ##list of cloud provider annotations. Example AWS annotation
+          #service.beta.kubernetes.io/aws-load-balancer-type: "external"
+      loadBalancerIP: ""
+      {% endif %}
+      type: LoadBalancer
+      cmNbiPorts:
+        dscp: 0
+  eric-cnom-server:
+    fqdn: {{ cnom.fqdn }}
+    legalNotice: >
+      IF YOU ARE NOT AN AUTHORIZED USER, PLEASE EXIT IMMEDIATELY
+
+
+      This system processes personal information. Handle personal information
+      with care.  Misuse, including unauthorized access, is grounds for legal
+      action.  Version: 1.0, Date: October 27, 2020.
+  eric-ctrl-bro:
+    persistence:
+      persistentVolumeClaim:
+        size: 2Gi
+        storageClassName: {{ storageClassName }}
+    egress:
+      backupStorageSvr:
+        dscp: 0
+  eric-data-coordinator-zk:
+    persistence:
+      persistentVolumeClaim:
+        size: 10Gi
+        storageClassName: {{ storageClassName }}
+  eric-data-distributed-coordinator-ed:
+    persistence:
+      brAgent:
+        backupVolume:
+          storageClassName: {{ storageClassName }}
+      persistentVolumeClaim:
+        size: 2Gi
+        storageClassName: {{ storageClassName }}
+  eric-data-document-database-pg:
+    persistentVolumeClaim:
+      size: 8Gi
+      storageClassName: {{ storageClassName }}
+  eric-data-document-database-pg-ah:
+    persistentVolumeClaim:
+      size: 4Gi
+      storageClassName: {{ storageClassName }}
+  eric-data-document-database-pg-lm:
+    persistentVolumeClaim:
+      size: 4Gi
+      storageClassName: {{ storageClassName }}
+  eric-data-message-bus-kf:
+    persistence:
+      persistentVolumeClaim:
+        size: 10Gi
+        storageClassName: {{ storageClassName }}
+    tolerations:
+      messagebuskf: []
+      #  - key: node-role.kubernetes.io/control-plane
+      #    effect: NoSchedule
+      #    operator: Exists
+  eric-data-object-storage-mn:
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName }}
+    affinity:
+      ##
+      # Set 'soft' when number of available workers less than 4.
+      # Set 'hard' when number of available workers is 4 or more.
+      podAntiAffinity: "hard"
+  eric-data-search-engine:
+    persistence:
+      backup:
+        persistentVolumeClaim:
+          size: 16Mi
+          storageClassName: {{ storageClassName }}
+      data:
+        persistentVolumeClaim:
+          size: 100Gi
+          storageClassName: {{ storageClassName }}
+      master:
+        persistentVolumeClaim:
+          size: 64Mi
+          storageClassName: {{ storageClassName }}
+  eric-fh-snmp-alarm-provider:
+    service:
+      {% if caas == 'Tanzu' %}
+      annotations:
+        cloudProviderLB:
+          aviinfrasetting.ako.vmware.com/name: oam-pool
+          ako.vmware.com/enable-shared-vip: oam-ccsm-shared
+          ako.vmware.com/load-balancer-ip: {{ ccsm.ccsmOamVip }}
+      {% else %}
+      annotations:
+        addressPoolName: "ccsm{{ instance }}-oam"
+        sharedVIPLabel: "ccsm-oam"
+        #cloudProviderLB:
+          ##list of cloud provider annotations. Example AWS annotation
+          #service.beta.kubernetes.io/aws-load-balancer-type: "external"
+      loadBalancerIP: ""
+      {% endif %}
+      type: LoadBalancer
+      snmpPort:
+        dscp: 0
+    sourceIdentifierType: 1
+    sourceIdentifier: "{{ snmp.sourceIdentifier }}"
+  eric-lm-combined-server:
+    licenseConsumerHandler:
+    licenseServerClient:
+      licenseServer:
+        thrift:
+          # host - This parameter will be deprecated. Use global.licensing.sites.hostname instead
+          host: 
+          port: 9095
+    licenseServerIpAddresses:
+      # licenseServerIpAddresses.ip1 - This parameter will be deprecated. Use global.licensing.sites.ip instead
+      ip1:
+      # licenseServerIpAddresses.ip2 - This parameter will be deprecated. Use global.licensing.sites.ip instead
+      ip2:
+    features:
+      alarmHandling:
+        enabled: true
+    egress:
+      licenseServer:
+        dscp: 0
+  eric-lm-unique-object-reporter:
+    uoi:
+      # hostname - This parameter will be deprecated. Use global.licensing.sites.hostname instead
+      hostname: "{{ nels.host }}"
+      # ip - This parameter will be deprecated. Use global.licensing.sites.ip instead
+      ip:
+      port: 8060
+    egress:
+      uorSvr:
+        dscp: 0
+  eric-log-transformer:
+    egress:
+      syslog:
+        enabled: false
+        defaultFacility: 1
+        defaultSeverity: 5
+        tls:
+          enabled: true
+        certificates:
+          asymmetricKeyCertificateName: log-syslog-client
+          trustedCertificateListName: log-syslog-client
+        remoteHosts: []
+        inclusions: []
+        exclusions: []
+        filter: ""
+    networkPolicy:
+      egress: {}
+        #- cidr: 172.17.0.0/32
+        #  ports:
+        #  - protocol: TCP
+        #    port: 1234
+        #  - protocol: UDP
+        #    port: 2345
+  eric-pm-bulk-reporter:
+    env:
+      nodeName: {{ nodeName }}
+    persistentVolumeClaim:
+      size: 500Mi
+      storageClassName: {{ storageClassName }}
+    service:
+      {% if caas == 'Tanzu' %}
+      annotations:
+        aviinfrasetting.ako.vmware.com/name: oam-pool
+        ako.vmware.com/enable-shared-vip: oam-ccsm-shared
+        ako.vmware.com/load-balancer-ip: {{ ccsm.ccsmOamVip }}
+      type: LoadBalancer
+      {% else %}
+      annotations:
+        addressPoolName: "ccsm{{ instance }}-oam"
+        sharedVIPLabel: "ccsm-oam"
+        #cloudProviderLB:
+          ##list of cloud provider annotations. Example AWS annotation
+          #service.beta.kubernetes.io/aws-load-balancer-type: "external"
+      loadBalancerIP: ""
+      type: LoadBalancer
+      pmBulksftpPort:
+        dscp: 0
+      {% endif %}
+  eric-pm-server:
+    server:
+      extraArgs:
+        storage.tsdb.retention.size: 75GB
+      persistentVolume:
+        size: 80Gi
+        storageClass: {{ storageClassName }}
+    rbac:
+      appMonitoring:
+        {% if caas == 'OpenShift' %}
+        enabled: false
+        {% else %}
+        enabled: true
+        {% endif %}
+        federation:
+          jobOverride: true
+          jobConfiguration: |
+            - job_name: 'federate-victoria'
+              scrape_interval: 1m
+              honor_labels: true
+              metrics_path: '/select/0/prometheus/federate'
+              params:
+                'match[]':
+                  - '{job="kubernetes-nodes",namespace="{{ vnflcm.namespace }}"}'
+                  - '{job="kubernetes-nodes-cadvisor",namespace="{{ vnflcm.namespace }}"}'
+              static_configs:
+                - targets:
+                  - 'eric-victoria-metrics-cluster-vmselect.monitoring:8481'
+  eric-sec-admin-user-management:
+    notices:
+      legal: "IF YOU ARE NOT AN AUTHORIZED USER, PLEASE EXIT IMMEDIATELY"
+      privacy: >
+        This system processes personal information. Handle personal information
+        with care.  Misuse, including unauthorized access, is grounds for legal
+        action. Version: 1.0, Date: October 27, 2020.
+  eric-sec-ldap-server:
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName }}
+  eric-si-application-sys-info-handler:
+    asih:
+      ##
+      # It is the main OaM identifier of Application and it is used to support
+      # correlation among different functionalities visible to the Operator
+      # like logs, metrics, alarms, CLI prompt just to mention some.
+      # Format: Must contains 1..32 printable ASCII characters that contains only
+      #   lowercase alphanumeric characters, '-' or '.', starts and ends with
+      #   an alphanumeric character.
+      applicationId: "{{ nodeName }}"
+    tolerations:
+      eric-si-application-sys-info-handler: []
+      #  - key: node-role.kubernetes.io/control-plane
+      #    effect: NoSchedule
+      #    operator: Exists
+  eric-tm-ingress-controller-cr:
+    service:
+      {% if caas == 'Tanzu' %}
+      annotations:
+        cloudProviderLB:
+          aviinfrasetting.ako.vmware.com/name: oam-pool
+          ako.vmware.com/enable-shared-vip: oam-ccsm-shared
+          ako.vmware.com/load-balancer-ip: {{ ccsm.ccsmOamVip }}
+      {% else %}
+      annotations:
+        addressPoolName: "ccsm{{ instance }}-oam"
+        sharedVIPLabel: "ccsm-oam"
+        #cloudProviderLB:
+          ##list of cloud provider annotations. Example AWS annotation
+          #service.beta.kubernetes.io/aws-load-balancer-type: "external"
+      {% endif %}
+
+# Overwrite networkPolicy enabling here
+networkPolicy:
+  enabled: true
+
+# Overwrite the NRF-Agent Helm values here
+eric-ccsm-nrfagent:
+  global:
+    nrfagent:
+      preferredNFType: "UDM"
+    tapagent:
+      enabled: {{ 'false' if systemProfile == 'small' else 'true' }}
+      {% if systemProfile == 'small' %}
+      egress_exclude_ips: "10.255.0.0/16,192.168.0.0/16"
+      {% else %}
+      egress_exclude_ips: "10.96.0.0/12,192.168.0.0/16"
+      {% endif %}
+
+# Overwrite the CCSM SENP CO Helm values here
+eric-ccsm-senpco:
+  # DAY0 Parameters
+  configuration:
+    common:
+      eric-ccsm-trench:
+        ip_family: "ipv4"
+
+      # Attractor A
+      eric-ccsm-attr-a:
+        replicas: 2
+        networkAttachment:
+          attach_name: br-data-1821
+          namespace: default
+        # more gateways can be added for each attractor in the array
+        # any additional gateway added must to be included below
+        # in the gateways section of the configuration with its
+        # day0 parameters.
+        gateways: [eric-ccsm-gw-1, eric-ccsm-gw-3]
+
+      # Attractor B
+      eric-ccsm-attr-b:
+        replicas: 2
+        networkAttachment:
+          attach_name: br-data-1822
+          namespace: default
+        # more gateways can be added for each attractor in the array
+        # any additional gateway added must to be included below
+        # in the gateways section of the configuration with its
+        # day0 parameters.
+        gateways: [eric-ccsm-gw-2, eric-ccsm-gw-4]
+
+      #gateways definition
+      gateways:
+        eric-ccsm-gw-1:
+            address: 10.143.248.98
+            localAsn: "8171"
+            remoteAsn: "4248830031"
+            holdTime: 3s
+        eric-ccsm-gw-2:
+            address: 10.143.248.99
+            localAsn: "8172"
+            remoteAsn: "4248830032"
+            holdTime: 3s
+        eric-ccsm-gw-3:
+            address: 10.143.249.98
+            localAsn: "8173"
+            remoteAsn: "4248830033"
+            holdTime: 3s
+        eric-ccsm-gw-4:
+            address: 10.143.249.99
+            localAsn: "8174"
+            remoteAsn: "4248830034"
+            holdTime: 3s
+
+    diameter:
+      enabled: false
+      # VIPs for SENP CO
+      eric-ccsm-dia-vip-a: 10.15.10.10/32
+      eric-ccsm-dia-vip-b: 10.15.10.20/32
+
+    mapproxy:
+      enabled: false
+      # VIPs for SENP CO
+      eric-ccsm-mapproxy-1-vip-a: 10.10.10.10/32
+      eric-ccsm-mapproxy-1-vip-b: 10.10.10.20/32
+      eric-ccsm-mapproxy-2-vip-a: 10.10.20.10/32
+      eric-ccsm-mapproxy-2-vip-b: 10.10.20.20/32
+      eric-ccsm-mapproxy-3-vip-a: 10.10.30.10/32
+      eric-ccsm-mapproxy-3-vip-b: 10.10.30.20/32
+      eric-ccsm-mapproxy-4-vip-a: 10.10.40.10/32
+      eric-ccsm-mapproxy-4-vip-b: 10.10.40.20/32

@@ -1,0 +1,101 @@
+nodeName: n99-ccsm1
+nodeType: CCSM
+
+vnflcm:
+  clusterName: n99-eccd1
+  namespace: ccsm
+  InstantiateVnfRequest:
+    applicationTimeOut: 3600
+    skipVerification: "true"
+
+nodeSelector:
+  ## For TANZU
+  # aafgroup: aaf1
+  # type: standard
+  ## For NFVI
+  node-pool: pool1
+  type: standard
+
+users:
+  day1:
+  - username: ccsmoam
+    password: Changeme@1st
+    groups:
+    - ausf_admin
+    - udm_sensitive_key_admin
+    - udm_admin
+    - system-admin
+    - nrfagent-admin
+    - hssepc_admin
+    - ccsm-admin
+    - eir_admin
+  - username: ccsmsec
+    password: Changeme@1st
+    groups:
+    - udm_security_admin
+    - nrfagent-security-admin
+    - system-security-admin
+
+license:
+  customerId: "946060"
+  swltId: STA-CCSM-12
+
+cnom:
+  fqdn: cnom.ccrc1-oam.node63-cluster1.sero.gic.ericsson.se
+snmp:
+  agentEngineId: 8000137001C0A899ECCD107E28
+ddc:
+  remotePath: /home/tsuser/ddc/eccd1/n99-ccsm1
+
+# Use hpaReplica to replace the minReplica and maxReplica
+# minReplica:
+#   eric-udm-cancelepclocation: 2
+# maxReplica:
+#   eric-udm-cancelepclocation: 2
+hpaReplica:
+  eric-udm-cancelepclocation: {min: 2, max: 2}
+  eric-udm-capacity: {min: 2, max: 2}
+  eric-udm-epsauth: {min: 5, max: 6}
+
+# # Old
+# udmInstanceId: 841d1b7c-5103-11e9-8c09-99eccd107e28
+# ausfInstanceId: 76f4b62e-f3f7-454e-9562-99eccd1d0793
+# eirInstanceId: 77fba27d-6a44-4074-8d9a-99eccd1fc6ef
+# hssInstanceId: 9448c0d3-6590-4e54-b90f-99eccd1fc48d
+# ausf:
+#   host: ausf1.n99
+#   port: 443
+# udm:
+#   host: udm1.n99
+#   port: 443
+# eir:
+#   host: eir1.n99
+#   port: 443
+# hss:
+#   host: hss1.n99
+#   port: 80
+ccsm:
+  ausf:
+    instanceId: 76f4b62e-f3f7-454e-9562-99eccd1d0793
+    host: ausf1.n99
+    port: 443
+  udm:
+    instanceId: 841d1b7c-5103-11e9-8c09-99eccd107e28
+    host: udm1.n99
+    port: 443
+  eir:
+    instanceId: 77fba27d-6a44-4074-8d9a-99eccd1fc6ef
+    host: eir1.n99
+    port: 443
+  hss:
+    instanceId: 9448c0d3-6590-4e54-b90f-99eccd1fc48d
+    host: hss1.n99
+    port: 80
+
+certs:
+  iccr-external-tls-certificate:
+    p12: ../../../certs/n99/ccsm1/ccsm1-iccr-server.p12
+  eric-ccsm-sbi-server-certs:
+    p12: ../../../certs/n99/ccsm1/ccsm1-sbi-server.p12
+  eric-ccsm-sbi-client-certs:
+    p12: ../../../certs/n99/ccsm1/ccsm1-sbi-client.p12

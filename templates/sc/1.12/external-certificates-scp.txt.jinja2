@@ -1,0 +1,5 @@
+{% if sc.scp.enabled %}
+config
+keystore asymmetric-keys install-asymmetric-key-pkcs12 name scp-sbi-client-key certificate-name scp-sbi-client-cert p12 {{ certs['eric-scp-sbi-client-certs'].p12 | file_b64encode }} p12-password {{ certs['eric-scp-sbi-client-certs'].password }}
+keystore asymmetric-keys install-asymmetric-key-pkcs12 name scp-sbi-server-key certificate-name scp-sbi-server-cert p12 {{ certs['eric-scp-sbi-server-certs'].p12 | file_b64encode }} p12-password {{ certs['eric-scp-sbi-server-certs'].password }}
+{% endif %}

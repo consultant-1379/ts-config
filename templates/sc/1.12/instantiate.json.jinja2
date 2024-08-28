@@ -1,0 +1,27 @@
+{
+  {% if 'clusterName' in vnflcm %}
+  "clusterName": "{{ vnflcm.clusterName }}",
+  {% endif %}
+  {% if sc.sepp.enabled == true or sc.scp.enabled == true %}
+  "targetScaleLevelInfo": [
+        {
+          "aspectId": "sepp_worker_scaling",
+          "scaleLevel": "{{ replicaCount['eric-sepp-worker'] - 2 if sc.sepp.enabled else 0 }}"
+        },
+        {
+          "aspectId": "scp_worker_scaling",
+          "scaleLevel": "{{ replicaCount['eric-scp-worker'] - 2 if sc.scp.enabled else 0 }}"
+        }
+   ],
+  {% endif %}
+  "additionalParams": {
+       "namespace": "{{ vnflcm.namespace }}",
+       "applicationTimeOut": "3600",
+       "skipJobVerification": "false",
+       {% if sc.sepp.enabled == true or sc.scp.enabled == true %}
+       "manoControlledScaling": "true",
+       {% endif %}
+       "skipVerification": "true"
+      }
+}
+

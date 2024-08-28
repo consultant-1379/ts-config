@@ -1,0 +1,8 @@
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: eric-ccdm-critical
+value: 5000000
+preemptionPolicy: PreemptLowerPriority
+globalDefault: false
+description: "CCDM Critical Priority Class"

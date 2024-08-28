@@ -1,0 +1,13 @@
+{
+  "clusterName": "{{ vnflcm.clusterName }}",
+  "additionalParams": {
+    "skipJobVerification": true,
+    "skipVerification": true,
+    "namespace": "{{ vnflcm.namespace }}",
+    "helmNoHooks": false,
+    "cleanUpResources": true,
+    "applicationTimeOut": "2000",
+    "disableOpenapiValidation": false,
+    "helm_client_version": "3.8"
+  }
+}

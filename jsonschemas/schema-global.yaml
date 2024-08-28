@@ -1,0 +1,331 @@
+description: Dual-mode 5G Core JSON Schema for site global user input
+title: Dual-mode 5G Core JSON Schema for global
+type: object
+additionalProperties: false
+required:
+- mnc
+- mcc
+- caas
+- oamDomain
+- nels
+- snmpServer
+- sftpServer
+- locality
+- nrf
+- nssf
+properties:
+  siteId:
+    description: Site ID for Geographical Redundancy configuration. Optional.
+    type: integer
+    default: 1
+    enum:
+    - 1
+    - 2
+  timezone:
+    description: Time zone. Mandatory.
+    type: string
+    default: CET
+  mnc:
+    description: MNC. Mandatory.
+    type: string
+  mcc:
+    description: MCC. Mandatory.
+    type: string
+  caas:
+    description: Container platform. Mandatory.
+    type: string
+    enum:
+    - NFVI-CCD
+    - CNIS
+    - OpenShift
+    - Tanzu
+    - AWS
+    - GDCE
+    - MSFT
+  DCEdgeType:
+    description: DC Edge hardware type. Optional.
+    type: string
+    enum:
+    - Ericsson-R6000
+  systemProfile:
+    description: system profile. Optional.
+    type: string
+    enum:
+    - small
+    - medium
+    - standard
+    default: standard
+  kubernetes_service_ipaddress:
+    description: kubernetes service ipaddress. Optional.
+    type: string
+    default: 10.96.0.1
+
+  oamDomain:
+    description: OAM domain
+    type: string
+
+  nels:
+    description: NeLS server information. Mandatory.
+    type: object
+    additionalProperties: false
+    properties:
+      host:
+        description: NeLS server address. Mandatory.
+        type: string
+      port:
+        description: NeLS server port. Mandatory.
+        type: integer
+  dnsServer:
+    description: List of DNS servers. Mandatory.
+    type: array
+    items:
+      type: string
+  snmpServer:
+    description: SNMP server information. Mandatory.
+    type: object
+    additionalProperties: false
+    properties:
+      host:
+        description: SNMP server address
+        type: string
+  sftpServer:
+    description: SFTP server information. Mandatory.
+    type: object
+    additionalProperties: false
+    properties:
+      host:
+        description: SFTP server address. Mandatory.
+        type: string
+      username:
+        description: SFTP server username. Mandatory.
+        type: string
+      password:
+        description: SFTP server password. Mandatory.
+        type: string
+      publicKey:
+        description: SFTP server public key base64 encode. Optional.
+        type: string
+      privateKey:
+        description: SFTP server private key base64 encode. Optional.
+        type: string
+      hostKey:
+        description: SFTP server hostKey. Optional.
+        type: string
+  locality:
+    description: locality. Mandatory.
+    type: string
+  geored:
+    description: Geographical Redundancy configurations. Optional.
+    type: object
+    default: {}
+    additionalProperties: false
+    properties:
+      udr:
+        description: CCDM UDR Geographical Redundancy configuration. Optional.
+        type: object
+        properties:
+          enabled:
+            description: Enable or disable the CCDM UDR Geographical Redundancy. Optional.
+            type: boolean
+            default: true
+      amf:
+        description: PCC AMF Geographical Redundancy configuration. Optional.
+        type: object
+        properties:
+          enabled:
+            description: Enable or disable the PCC AMF Geographical Redundancy. Optional.
+            type: boolean
+            default: false
+      smfGwc:
+        description: PCC SMF/GW-C Geographical Redundancy configuration. Optional.
+        type: object
+        properties:
+          enabled:
+            description: Enable or disable the PCC SMF/GW-C Geographical Redundancy. Optional.
+            type: boolean
+            default: false
+            # Remove enum constraint in the future when smfGwc geored is supported
+            enum:
+            - false
+      mme:
+        description: PCC MME Geographical Redundancy configuration. Optional.
+        type: object
+        properties:
+          enabled:
+            description: Enable or disable the PCC MME Geographical Redundancy. Optional.
+            type: boolean
+            default: false
+      upf:
+        description: PCG UPF Geographical Redundancy configuration. Optional.
+        type: object
+        properties:
+          enabled:
+            description: Enable or disable the PCG UPF Geographical Redundancy. Optional.
+            type: boolean
+            default: false
+      nrf:
+        description: CCRC NRF Geographical Redundancy configuration. Optional.
+        type: object
+        properties:
+          enabled:
+            description: Enable or disable the CCRC NRF Geographical Redundancy. Optional.
+            type: boolean
+            default: false
+      nssf:
+        description: CCRC NSSF Geographical Redundancy configuration. Optional.
+        type: object
+        properties:
+          enabled:
+            description: Enable or disable the CCRC NSSF Geographical Redundancy. Optional.
+            type: boolean
+            default: false
+      hss:
+        description: CCSM HSS Geographical Redundancy configuration. Optional.
+        type: object
+        properties:
+          enabled:
+            description: Enable or disable the CCSM HSS Geographical Redundancy. Optional.
+            type: boolean
+            default: false
+      pcf:
+        description: CCPC PCF Geographical Redundancy configuration. Optional.
+        type: object
+        properties:
+          enabled:
+            description: Enable or disable the CCPC PCF Geographical Redundancy. Optional.
+            type: boolean
+            default: false
+      bsf:
+        description: SC BSF Geographical Redundancy configuration. Optional.
+        type: object
+        properties:
+          enabled:
+            description: Enable or disable the SC BSF Geographical Redundancy. Optional.
+            type: boolean
+            default: false
+  udrGeo:
+    description: Enable CCDM UDR Geographical Redundancy. Optional. Deprecated.
+    type: boolean
+    default: true
+  amfGeo:
+    description: Enable AMF Geographical Redundancy. Optional. Deprecated.
+    type: boolean
+    default: false
+  smfGwcGeo:
+    description: Enable SMF/GW-C Geographical Redundancy. Optional. Deprecated.
+    type: boolean
+    default: false
+  nrfGeo:
+    description: Enable NRF Geographical Redundancy. Optional. Deprecated.
+    type: boolean
+    default: false
+  nssfGeo:
+    description: Enable NSSF Geographical Redundancy. Optional. Deprecated.
+    type: boolean
+    default: false
+  hssGeo:
+    description: Enable HSS Geographical Redundancy. Optional. Deprecated.
+    type: boolean
+    default: false
+  pcfGeo:
+    description: Enable PCF Geographical Redundancy. Optional. Deprecated.
+    type: boolean
+    default: false
+    enum:
+    - false
+  voice:
+    description: Voice over 4G and 5G configuration. Optional.
+    type: object
+    default: {}
+    additionalProperties: false
+    properties:
+      enabled:
+        description: Enable Voice over 4G and 5G. Optional.
+        type: boolean
+        default: false
+  nrf:
+    description: List of NRF hosts. Mandatory.
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required:
+      - host
+      properties:
+        host:
+          description: NRF host. Mandatory.
+          type: string
+        ipv4:
+          description: NRF V4 IP. Optional.
+          type: string 
+        port:
+          description: NRF port. Optional.
+          type: integer
+          default: 443
+  nssf:
+    description: List of NSSF hosts. Mandatory.
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required:
+      - host
+      properties:
+        host:
+          description: NSSF host. Mandatory.
+          type: string
+        port:
+          description: NSSF port. Optional.
+          type: integer
+          default: 443
+  indirectCommunication:
+    description: indirect communication configuration. Optional.
+    type: object
+    additionalProperties: false
+    default: { enabled: false }
+    properties:
+      enabled:
+        description: enable or disable indirect communication. Optional.
+        type: boolean
+        default: false
+      scp:
+        description: List of SCP hosts. Mandatory when indirect communication is enabled.
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required:
+          - host
+          properties:
+            host:
+              description: NRF host. Mandatory.
+              type: string
+            port:
+              description: NRF port. Optional.
+              type: integer
+              default: 443
+      interfaces:
+        description: List of 3GPP interfaces using indirect communication. Mandatory when indirect communication is enabled.
+        type: array
+        items:
+          type: string
+  storageClassName:
+    description: storage class name. Optional.
+    type: string
+    default: network-block
+  macvlanInterface:
+    description: Host interface for MACVLAN. Valid for NFVI-CCD CaaS. Optional.
+    type: string
+    default: eth4
+  trustCAs:
+    description: List of trust CA certificates. Mandatory.
+    type: array
+    items:
+      description: certificate file path. Mandatory.
+      type: file
+  labdomain:
+    description: Cluster and site name for FQDNs. Valid for VMware CaaS. Optional.
+    type: string
+  ingressDomain:
+    description: Ingress Domain for data-search-engine-tls, pm-server and fh-alarm-handler. Optional.
+    type: string

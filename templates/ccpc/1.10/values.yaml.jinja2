@@ -1,0 +1,1488 @@
+tags:
+  eric-ccpc-sm-pcf-pcrf-data: true
+  eric-ccpc-sm-pcf-pcrf-voice: true
+  {% if caas != "Tanzu" %}
+  eric-ccpc-ue-pcf: false
+  eric-ccpc-geored: false
+  eric-ccpc-n28: false
+  {% endif %}
+  {% if caas == "Tanzu" %}
+  eric-ccpc-ue-pcf: true
+  eric-ccpc-geored: true
+  eric-ccpc-n28: true
+  {% endif %}  
+  eric-ccpc-policy-studio: false
+
+global:
+  {% if caas == "Tanzu" %}
+  nodeSelector:
+    aafgroup: aaf2
+  {% else %}
+  nodeSelector: {}
+  {% endif %}  
+  databaseName: "eric-pcf-dms"
+  profiles:
+    std-system:
+      enabled: {{ 'true' if systemProfile == 'standard' else 'false' | string |lower }}
+    small-system:
+      enabled: {{ 'true' if systemProfile == 'small' else 'false' | string |lower }}
+    cleartext-traffic-gw:
+      enabled: false
+    cleartext-provisioning-gw:
+      enabled: false
+    cleartext-policy-studio-gw:
+      enabled: false
+    cleartext-geored:
+    {% if caas == "Tanzu" %}
+      enabled: true
+    {% else %}
+      enabled: false
+    {% endif %}
+    mtls-traffic-gw:
+      enabled: true
+    mtls-provisioning-gw:
+      enabled: true
+    {% if caas == "Tanzu" %}
+    mtls-policy-studio-gw:
+      enabled: false
+    mtls-geored:
+      enabled: false
+    {% else %}
+    mtls-policy-studio-gw:
+      enabled: {{ 'true' if systemProfile == 'standard' else 'false' | string |lower }}
+    mtls-geored:
+      enabled: {{ 'true' if systemProfile == 'standard' else 'false' | string |lower }}
+    {% endif %}
+    tls-policy-studio-gw:
+      enabled: false
+    tls-provisioning-gw:
+      enabled: false
+    pm-bulk-reporter-osmn-backend:
+      enabled: false
+  {% if caas == "Tanzu" %}
+  applicationId: {{ nodeName }}
+  {% endif %}  
+  autoScaling:
+    enabled: true
+  ericsson:
+    licensing:
+      licenseDomains:
+        - productType: 'CCPC'
+          customerId: '{{ license.customerId }}'
+          swltId: '{{ license.swltId }}'
+  security:
+    policyBinding:
+      create: false
+    policyReferenceMap:
+      default-restricted-security-policy: "default-restricted-security-policy"
+    tls:
+      enabled: true
+  {% if caas != "Tanzu" %}
+  logAnonymization: false
+  {% endif %}  
+  internalMtls:
+    enabled: "on"
+  pullSecret: regcred
+  registry:
+    {% if caas == "Tanzu" %}
+    url: {{ ccpc.registry }}
+    {% else %}  
+    url: armdocker.rnd.ericsson.se
+    {% endif %}
+    imagePullPolicy: IfNotPresent
+  timezone: {{ timezone }}
+  istio:
+    ingress:
+      gateways:
+        eric-pcf-traffic-gw:
+          enabled: true
+        eric-ccpc-provisioning-gw:
+          enabled: true
+        eric-ccpc-policy-studio-gw:
+          {% if caas == "Tanzu" %}
+          enabled: false
+          {% else %}
+          enabled: {{ 'true' if systemProfile == 'standard' else 'false' | string |lower }}
+          {% endif %}
+        eric-pcf-intersite-gw:
+          enabled: false
+      oauth2:
+        eric-pcf-traffic:
+          enabled: false
+          permissive: true
+          selector: "eric-ingressgw-pcf-traffic"
+          keys:
+          - issuer: "nrf-a-id"
+            jwks: '{"keys":[
+                {
+                  "crv":"P-256",
+                  "kid":"key-c-id",
+                  "kty":"EC",
+                  "x":"wO3-TFT5fd-Xqx5f9eGLlJHmR9ZgEvRfEoBLXro97co",
+                  "y":"rETYnJ2jUfav7lFr8I0pQnnF_1nDXfnOWG3vv-gvKEc"
+                }
+              ]}'
+          rules:
+          - paths: ["/npcf-smpolicycontrol/v1*"]
+            methods: ["POST","PUT","PATCH","DELETE"]
+            audiences: ["pcf-a-id"]
+            subjects: ["smf-a-id"]
+            issuers: ["nrf-a-id"]
+            scopes: ["npcf-smpolicycontrol"]
+          - paths: ["/npcf-ue-policy-control/v1*"]
+            methods: ["POST","DELETE"]
+            audiences: ["pcf-a-id"]
+            subjects: ["amf-a-id"]
+            issuers: ["nrf-a-id"]
+            scopes: ["npcf-ue-policy-control"]
+    egress:
+      enabled: true
+      endpoints:
+        eric-ccrc-sbi-traffic-mtls:
+          enabled: true
+          host: "*.{{ DOMAIN_3GPP_5GC }}" #FQDN for CCRC
+          ports:
+            - port: 443 # HTTPS target destination
+              name: https-port-for-mTLS-origination
+              mode: mTLS # Values allowed [ TLS, mTLS ]
+              protocol: HTTP2
+        eric-smf-sbi-traffic-mtls:
+          enabled: true
+          host: "*.{{ DOMAIN_3GPP_5GC }}"
+          ports:
+            - port: 6060 # HTTPS target destination
+              name: https-port-for-mTLS-origination
+              mode: mTLS # Values allowed [ TLS, mTLS ]
+              protocol: HTTP2
+        {% if caas != "Tanzu" %}
+        eric-amf-sbi-traffic-mtls:
+          enabled: true
+          {% if systemProfile == 'small' %}
+          host: "site{{ siteId }}-cluster{{ instance }}-pcc{{ instance }}.amf.5gc.mnc081.mcc240.3gppnetwork.org"
+          {% else %}
+          host: "*.amfset.{{ DOMAIN_3GPP_5GC }}"
+          {% endif %}
+          ports:
+            - port: 443 # HTTPS target destination
+              name: https-port-for-mTLS-origination
+              mode: mTLS # Values allowed [ TLS, mTLS ]
+              protocol: HTTP2
+        {% endif %}
+        eric-scp-sbi-traffic-mtls:
+          {% if caas == "Tanzu" %}
+          enabled: false
+          {% else %}
+          enabled: true
+          {% endif %}
+          {% if indirectCommunication.enabled == true %}
+          host: "{{ indirectCommunication.scp.0.host }}.{{ DOMAIN_3GPP_5GC }}" #FQDN for CCRC
+          {% else %}
+          host: "*.scpset.{{ DOMAIN_3GPP_5GC }}" #  Keep the default FQDN value in day0 file for SCP
+          {% endif %}
+          ports:
+            - port: 443 # HTTPS target destination
+              name: https-port-for-mTLS-origination
+              mode: mTLS # Values allowed [ TLS, mTLS ]
+              protocol: HTTP2
+        {% if caas != "Tanzu" %}
+        eric-ccpc-sbi-traffic-mtls:
+          enabled: true
+          {% if systemProfile == 'small' %}
+          host: "ccpc{{ instance }}-5g-traffic.site{{ siteId }}-cluster{{ instance }}.5gc.mnc081.mcc240.3gppnetwork.org" #FQDN for CCPC
+          {% else %}
+          host: "*.ccpcset.{{ DOMAIN_3GPP_5GC }}" #FQDN for CCPC
+          {% endif %}
+          ports:
+            - port: 443 # HTTPS target destination
+              name: https-port-for-mTLS-origination
+              mode: mTLS # Values allowed [ TLS, mTLS ]
+              protocol: HTTP2
+          resolution: NONE
+        {% endif %}
+  {% if caas == "Tanzu" %}
+  enableCrashDumps: false # enable core dump generation
+  {% else %}
+  enableCrashDumps: true # enable core dump generation
+  {% endif %}
+  tapagent:
+    {% if caas == 'OpenShift' or systemProfile == 'small' %}
+    enabled: false
+    {% else %}
+    enabled: true
+    {% endif %}
+  database:
+    multiSite:
+      runtimeConfigMode:
+        enabled: false
+  diameter:
+    originHostForOutgoingRequests:
+      siteCreatingSession:
+        enabled: true
+  egressproxy:
+    istio:
+      udrSubRetransConfig:
+        attempts: 3
+{% if caas == "Tanzu" %}
+#Define this parameters ONLY on dual stack clusters
+  externalIPv4:
+    enabled: false
+  externalIPv6:
+    enabled: false
+  internalIPFamily: "IPv4"
+{% endif %}
+
+externalcertificate:
+  ingress:
+    trustedCertificateListName: eric-ccpc-sbi-server-certs-cacerts
+    asymmetricKeyCertificateName: eric-ccpc-sbi-server-key/eric-ccpc-sbi-server-certificate
+  egress:
+    trustedCertificateListName: eric-ccpc-sbi-client-certs-cacerts
+    asymmetricKeyCertificateName: eric-ccpc-sbi-client-key/eric-ccpc-sbi-client-certificate
+
+eric-udm-mesh-integration:
+  eric-mesh-controller:
+    pilot:
+      env:
+        PILOT_ENABLE_INBOUND_PASSTHROUGH: "true" #Set to false in dual stack clusters
+  enabled: true
+  eric-ingressgw-pcf-traffic:
+    enabled: true
+    {% if caas == "Tanzu" %}
+    externalTrafficPolicy: Cluster
+    {% else %}
+    externalTrafficPolicy: Local
+    {% endif %}
+    service:
+      {% if caas == "Tanzu" %}
+      annotations:
+        aviinfrasetting.ako.vmware.com/name: sig-pool
+        ako.vmware.com/load-balancer-ip: {{ccpc.traff5gLbIp}}
+      {% else %}
+      loadBalancerIP: "" #Used for setting the ingress-gateway VIP
+      annotations:
+        addressPoolName: ccpc{{ instance }}-5g-traffic
+        cloudProviderLB: {}
+      #Define these parameters ONLY on dual stack clusters
+      # externalIPv4:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-5g-traffic
+      #     sharedVIPLabel: ""
+      # externalIPv6:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-5g-traffic
+      #     sharedVIPLabel: ""
+    dscpDualStack: false
+# Uncomment to define DSCP in target port
+#    ports:
+#      https-mtls:
+#        dscp:
+#      http2-clear:
+#        dscp:
+    {% endif %}
+  eric-ingressgw-ccpc-provisioning:
+    enabled: true
+ {% if caas == "Tanzu" %}
+    externalTrafficPolicy: Cluster
+ {% else %}
+    externalTrafficPolicy: Local
+ {% endif %}    
+    service:
+      {% if caas == "Tanzu" %}
+      annotations:
+        aviinfrasetting.ako.vmware.com/name: oam-pool
+        ako.vmware.com/load-balancer-ip: {{ccpc.prov5gLbIp}}
+      {% else %}
+      loadBalancerIP: "" #Used for setting the ingress-gateway VIP
+      annotations:
+        addressPoolName: ccpc{{ instance }}-5g-prov
+        cloudProviderLB: {}
+      #Define these parameters ONLY on dual stack clusters
+      # externalIPv4:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-5g-prov
+      #     sharedVIPLabel: ""
+      # externalIPv6:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-5g-prov
+      #     sharedVIPLabel: ""
+    dscpDualStack: false
+# Uncomment to define DSCP in target port
+#    ports:
+#      https-mtls:
+#        dscp:
+#      https-tls:
+#        dscp:
+#      http2-clear:
+#        dscp:
+     {% endif %}
+  eric-ingressgw-ccpc-policy-studio:
+    {% if caas == "Tanzu" %}
+    enabled: false
+    externalTrafficPolicy: Cluster
+    {% else %}
+    enabled: {{ 'true' if systemProfile == 'standard' else 'false' | string |lower }}
+    externalTrafficPolicy: Local
+    {% endif %}
+    service:
+      annotations:
+        addressPoolName: ccpc-policy-studio
+        {% if caas != "Tanzu" %}
+        cloudProviderLB: {}
+      #Define these parameters ONLY on dual stack clusters
+      # externalIPv4:
+      #   annotations:
+      #     addressPoolName: ccpc-policy-studio
+      #     sharedVIPLabel: ""
+      # externalIPv6:
+      #   annotations:
+      #     addressPoolName: ccpc-policy-studio
+      #     sharedVIPLabel: ""
+    dscpDualStack: false
+# Uncomment to define DSCP in target port
+#    ports:
+#      https-mtls:
+#        dscp:
+#      https-tls:
+#        dscp:
+#      http2-clear:
+#        dscp:
+        {% endif %}
+  eric-ingressgw-pcf-intersite:
+    enabled: false
+    {% if caas == "Tanzu" %}
+    externalTrafficPolicy: Cluster
+    {% else %}
+    externalTrafficPolicy: Local
+    {% endif %}
+    service:
+      loadBalancerIP: "" #Used for setting the ingress-gateway VIP
+      annotations:
+        addressPoolName: ccpc{{ instance }}-5g-geored
+        {% if caas != "Tanzu" %}
+        cloudProviderLB: {}
+      #Define these parameters ONLY on dual stack clusters
+      # externalIPv4:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-5g-geored
+      #     sharedVIPLabel: ""
+      # externalIPv6:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-5g-geored
+      #     sharedVIPLabel: ""
+    dscpDualStack: false
+# Uncomment to define DSCP in target port
+#    ports:
+#      https-mtls:
+#        dscp:
+#      tls-kvdb-loc:
+#        dscp:
+#      tls-kvdb-recv:
+#        dscp:
+#      http2-clear:
+#        dscp:
+#      tcp-kvdb-loc:
+#        dscp:
+#      tcp-kvdb-recv:
+#        dscp:
+        {% endif %}
+servicemesh:
+  namespace: {{ vnflcm.namespace }}
+
+eric-nrfagent:
+  global:
+    ipStackMode: "'ipv4'"
+    istio:
+      nrfagent_egressrule_enabled: false
+      egress:
+        enabled: true
+        nrfAgent_secretName: "eric-ccpc-sbi-client-certs"
+        caSecretNameSuffix: "-cacert"
+        certsPath: "/etc/istio/egress-certs/"
+        caCertsPath: "/etc/istio/egress-ca-certs/"
+        clientCertificate: "tls.crt"
+        privateKey: "tls.key"
+        caCertificates: "cacert"
+    scheduler:
+      nodeSelector: {}
+# Define the DSCP value
+#  egress:
+#    dscp: 0
+
+#adp: define sevice types and required IPs according to cluster specifics
+eric-adp-5g-udm:
+  eric-lm-combined-server:
+    licenseServerClient:
+      licenseServer:
+        thrift:
+          host: '{{ nels.host }}'
+          port: '{{ nels.port }}'
+    {% if caas == "Tanzu" %}
+    licenseConsumerHandler:
+      service:
+        endpoints:
+          externalHttps:
+    {% else %}
+    service:
+      endpoints:
+        licenseConsumerHandler:
+          restapi:
+    {% endif %}
+            tls:
+              verifyClientCertificate: optional
+
+  eric-si-application-sys-info-handler:
+    nodeSelector: {}
+    asih:
+      {% if caas == "Tanzu" %}
+      applicationId: {{ vnflcm.namespace }}
+      {% else %}
+      applicationId: {{ nodeName }}
+      {% endif %}
+
+  eric-pm-server:
+    server:
+      serviceAccountName: eric-adp-5g-udm-pm-server
+      persistentVolume:
+        storageClass: {{ storageClassName }}
+    rbac:
+      appMonitoring:
+       {% if caas == 'OpenShift' %}
+        enabled: false
+        {% else %}
+        enabled: true
+        {% endif %}
+        federation:
+          jobOverride: true
+          jobConfiguration: |
+            {% if caas == "Tanzu" %}
+            - job_name: 'federate-3pp-caas'
+              scrape_interval: 15s
+              honor_labels: true
+              metrics_path: '/federate'
+              params:
+                'match[]':
+                  - '{job="kubernetes-nodes",namespace="{{ vnflcm.namespace }}"}'
+                  - '{job="kubernetes-nodes-cadvisori",namespace="{{ vnflcm.namespace }}"}'
+              static_configs:
+                - targets:
+                  - 'prometheus-server.monitor:80'
+            {% else %}
+            - job_name: 'federate-victoria'
+              scrape_interval: 1m
+              honor_labels: true
+              metrics_path: '/select/0/prometheus/federate'
+              params:
+                'match[]':
+                  - '{job="kubernetes-nodes",namespace="{{ vnflcm.namespace }}"}'
+                  - '{job="kubernetes-nodes-cadvisor",namespace="{{ vnflcm.namespace }}"}'
+              static_configs:
+                - targets:
+                  - 'eric-victoria-metrics-cluster-vmselect.monitoring:8481'
+            {% endif %}
+    service:
+      endpoints:
+        reverseproxy:
+          tls:
+            enforced: "optional"
+    {% if caas == 'OpenShift' or caas == 'NFVI-CCD' %}
+    resources:
+      eric-pm-exporter:
+        limits:
+          # ticket UDM5GP-58729/UDM5GP-76717, Increase limit.memory from 32Mi to 48Mi to avolid OOMKilled issue
+          memory: 48Mi
+    {% endif %}
+    {% if caas == 'NFVI-CCD' %}
+    resources:
+      eric-pm-server:
+        limits:
+          # UDM5GP-85391, Increase limits.memory from 15Gi to 20Gi to avoid OOMKill isse.
+          memory: 20Gi
+    {% endif %}
+
+  eric-pm-bulk-reporter:
+    nodeSelector: {}
+    userConfig:
+      ldap:
+        enabled: true
+    env:
+      nodeName: "{{ vnflcm.namespace }}"
+      nodeType: CCPC
+    persistentVolumeClaim:
+      storageClassName: "{{ storageClassName }}"
+    objectStorage:
+      secretName: eric-data-object-storage-mn-creds
+    service:
+      annotations:
+        {% if caas == "Tanzu" %}
+        cloudProviderLB:
+          aviinfrasetting.ako.vmware.com/name: oam-pool
+          ako.vmware.com/enable-shared-vip: "oam-ccpc-shared"
+          ako.vmware.com/load-balancer-ip: {{ccpc.oamIp}}
+      type: LoadBalancer
+        {% else %}
+        sharedVIPLabel: ccpc-oam
+        addressPoolName: ccpc{{ instance }}-oam
+        cloudProviderLB: {}
+      type: LoadBalancer
+      loadBalancerIP: ""
+      #Define these parameters ONLY on dual stack clusters
+      # externalIPv4:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-oam
+      #     sharedVIPLabel: ccpc-oam
+      # externalIPv6:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-oam
+      #     sharedVIPLabel: ccpc-oam
+       {% endif %}
+
+  eric-cm-yang-provider:
+    nodeSelector: {}
+    persistentVolumeClaim:
+      storageClassName: "{{ storageClassName }}"
+    service:
+      {% if caas == "Tanzu" %}
+      type: LoadBalancer
+      annotations:
+        cloudProviderLB:
+          aviinfrasetting.ako.vmware.com/name: oam-pool
+          ako.vmware.com/enable-shared-vip: "oam-ccpc-shared"
+          ako.vmware.com/load-balancer-ip: {{ccpc.oamIp}}
+      {% else %}
+      annotations:
+        addressPoolName: ccpc{{ instance }}-oam
+        sharedVIPLabel: ccpc-oam
+        cloudProviderLB: {}
+      type: LoadBalancer
+      loadBalancerIP: ""
+      #Define these parameters ONLY on dual stack clusters
+      # externalIPv4:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-oam
+      #     sharedVIPLabel: ccpc-oam
+      # externalIPv6:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-oam
+      #     sharedVIPLabel: ccpc-oam
+      {% endif %}
+    ldap:
+      enabled: true
+      ipv6Enabled: false
+    authorization:
+      enabled: true
+    keyManagement:
+      storeHostKeys: false
+    externaldb:
+      dbuser: customname
+    pmMetrics:
+      enabled: true
+      enableQueryMetricsCommands: true
+      httpsHost: eric-pm-server:9089
+    externalTls:
+      netconf:
+        enabled: false
+
+  eric-cm-mediator:
+    nodeSelector: {}
+    cmkey:
+      enable: true
+    backend:
+      dbuser: customname
+
+  eric-data-document-database-pg:
+    nodeSelector:
+      postgres: {}
+      brAgent: {}
+      cleanuphook: {}
+    persistentVolumeClaim:
+      storageClassName: "{{ storageClassName }}"
+      backup:
+        storageClassName: "{{ storageClassName }}"
+
+  eric-data-document-database-pg-ah:
+    enabled: true
+    nodeSelector:
+      postgres: {}
+      brAgent: {}
+      cleanuphook: {}
+    postgresDatabase: adp_gs_ah
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName }}
+
+  eric-data-document-database-pg-lm:
+    enabled: true
+    nodeSelector:
+      postgres: {}
+      brAgent: {}
+      cleanuphook: {}
+    postgresDatabase: adp_gs_lm
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName }}
+
+  eric-data-document-database-pg-iam:
+    nodeSelector:
+      postgres: {}
+      brAgent: {}
+      cleanuphook: {}
+    postgresDatabase: adp_gs_iam
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName }}
+
+  eric-sec-access-mgmt:
+    http:
+      hostValidation:
+        allowedHosts: {{ ccpc.provFqdn }}
+    nodeSelector: {}
+
+  eric-sec-ldap-server:
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName }}
+    nodeSelector:
+      ldap: {}
+      ldapAgent: {}
+      ldapProxy: {}
+
+  eric-sec-key-management:
+    nodeSelector: {}
+
+  eric-sec-sip-tls:
+    nodeSelector: {}
+
+  eric-log-transformer:
+    egress:
+      syslog:
+        enabled: false
+        tls:
+          enabled: true
+        certificates:
+          asymmetricKeyCertificateName: log-syslog-client
+          trustedCertificateListName: log-syslog-client
+        remoteHosts: []
+        inclusions: []
+        exclusions: []
+        filter: ""
+
+  eric-data-search-engine:
+    nodeSelector:
+      data: {}
+      ingest: {}
+      master: {}
+      bragent: {}
+    persistence:
+      data:
+        persistentVolumeClaim:
+          storageClassName: "{{ storageClassName }}"
+      # For data-search-engine >= 6.0.0-29
+      master:
+        persistentVolumeClaim:
+          storageClassName: {{ storageClassName }}
+    service:
+      network:
+        protocol:
+          IPv6: false #If ipv6 is used, it must be set to true
+
+  eric-data-search-engine-curator:
+    nodeSelector: {}
+
+  eric-data-coordinator-zk:
+    nodeSelector:
+      brAgent: {}
+      datacoordinatorzk: {}
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: "{{ storageClassName }}"
+    {% if caas == 'OpenShift' %}
+    # UDM5GP-54517/UDM5GP-76246
+    resources:
+      metricsexporter:
+        limits:
+          memory: "64Mi"
+    {% endif %}
+
+  eric-data-distributed-coordinator-ed:
+    {% if caas == "Tanzu" %}
+    #TR IA35412#
+    resources:
+      metricsexporter:
+        limits:
+          memory: 64Mi
+    {% endif %}  
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: {{ storageClassName }}
+      brAgent:
+        backupVolume:
+          storageClassName: "{{ storageClassName }}"
+    {% if caas == 'OpenShift' or caas == 'NFVI-CCD' %}
+    # UDM5GP-76250/UDM5GP-87269, Increase container metricsexporter memory from 32Mi to 64Mi to avoid OOM issue
+    resources:
+      metricsexporter:
+        limits:
+          memory: "64Mi"
+    {% endif %}
+
+  eric-data-message-bus-kf:
+    nodeSelector: {}
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: "{{ storageClassName }}"
+
+  {% if caas == "Tanzu" %}
+  eric-cnom-document-database-mg:
+    nodeSelector: {}
+    persistence:
+      storageClass: "{{ storageClassName }}"
+    serviceAccountName: default
+  {% endif %}
+
+  eric-cnom-server:
+    nodeSelector: {}
+    fqdn: {{ cnom.fqdn }}
+    dashboards:
+      configMap: eric-ccpc-cnom-dashboards
+    {% if caas == "Tanzu" %}
+    externalTls:
+      enabled: true
+    {% endif %}
+
+  eric-fh-alarm-handler:
+    nodeSelector: {}
+    backend:
+      dbname: adp_gs_ah
+      dbuser: customname
+
+  eric-fh-snmp-alarm-provider:
+    nodeSelector: {}
+    service:
+      {% if caas == "Tanzu" %}
+      type: LoadBalancer
+      annotations:
+        cloudProviderLB:
+          aviinfrasetting.ako.vmware.com/name: oam-pool
+          ako.vmware.com/enable-shared-vip: "oam-ccpc-shared"
+          ako.vmware.com/load-balancer-ip: {{ ccpc.oamIp }}
+      {% else %}
+      annotations:
+        sharedVIPLabel: ccpc-oam
+        addressPoolName: ccpc{{ instance }}-oam
+        cloudProviderLB: {}
+      type: LoadBalancer
+      loadBalancerIP: ""
+      #Define these parameters ONLY on dual stack clusters
+      # externalIPv4:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-oam
+      #     sharedVIPLabel: ccpc-oam
+      # externalIPv6:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-oam
+      #     sharedVIPLabel: ccpc-oam
+      {% endif %}
+    sourceIdentifierType: 1
+    sourceIdentifier: 127.0.0.1
+
+  eric-ctrl-bro:
+   nodeSelector: {}
+   persistence:
+     persistentVolumeClaim:
+       size: 1Gi
+       storageClassName: {{ storageClassName }}
+
+  eric-tm-ingress-controller-cr:
+    service:
+      {% if caas == "Tanzu" %}
+      type: LoadBalancer
+      annotations:
+        cloudProviderLB:
+          aviinfrasetting.ako.vmware.com/name: oam-pool
+          ako.vmware.com/enable-shared-vip: "oam-ccpc-shared"
+          ako.vmware.com/load-balancer-ip: {{ ccpc.oamIp }}
+      {% else %}
+      annotations:
+        sharedVIPLabel: ccpc-oam
+        addressPoolName: ccpc{{ instance }}-oam
+        cloudProviderLB: {}
+      type: LoadBalancer
+      loadBalancerIP: ""
+      #Define these parameters ONLY on dual stack clusters
+      # externalIPv4:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-oam
+      #     sharedVIPLabel: ccpc-oam
+      # externalIPv6:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-oam
+      #     sharedVIPLabel: ccpc-oam
+      {% endif %}
+    nodeSelector:
+      envoy: {}
+    resources:
+    # NFVI-CCD has the same problem as CNIS and OpenShift
+    # According ADP Service User Guide
+      contour:
+        limits:
+    {% if caas == "Tanzu" %}
+          memory: "500Mi"
+    {% else %}
+          cpu: 150m
+          memory: "1000Mi"
+      envoy:
+        limits:
+          cpu: "2"
+          memory: "600Mi"
+     {% endif %}
+
+  eric-odca-diagnostic-data-collector:
+    env:
+      enableFileCollector: true
+    objectStorage:
+      enabled: true
+    nodeSelector: {}
+ {% if caas != "Tanzu" %}
+    {% if caas == 'NFVI-CCD' %}
+    # UDM5GP-82567, Increase CPU/ephemeral-storage resource to avoid high CPU utilization and crash issue.
+    resources:
+      diagnostic-data-collector:
+        requests:
+          memory: 512Mi
+          cpu: 500m
+        limits:
+          memory: 1024Mi
+          ephemeral-storage: 17Gi
+          cpu: 1500m
+    {% else %}
+    #UDM5GP-82567
+    resources:
+      diagnostic-data-collector:
+        requests:
+          memory: 512Mi
+          cpu: 500m
+        limits:
+          memory: 1024Mi
+          cpu: 1000m
+    {% endif %}
+ {% endif %}
+
+  eric-data-object-storage-mn:
+    affinity:
+      podAntiAffinity: "hard"
+ {% if caas == "Tanzu" %}
+    credentials:
+      kubernetesSecretName: eric-data-object-storage-mn-creds
+    {% endif %}
+    persistentVolumeClaim:
+      storageClassName: "{{ storageClassName }}"
+
+    {% if caas == 'OpenShift' or caas == 'Tanzu'%}
+  eric-log-shipper:
+    {% if caas == 'OpenShift' %}
+    rbac:
+      automountServiceAccountToken: true
+      createClusterRole: true
+      createClusterRoleBinding: true
+ {% endif %}  
+    logshipper:
+      privileged: true
+      cfgData: ""
+      autodiscover:
+        enabled: true
+        namespace: ".RELEASE.NAMESPACE"
+        logplane: adp-app-logs
+        hints:
+          enabled: false
+        paths:
+          - /var/log/pods/${data.kubernetes.namespace}_${data.kubernetes.pod.name}_${data.kubernetes.pod.uid}/**/*.log
+        useContainerInput: true
+    additionalVolumes: |
+      - name: crio-containers
+        hostPath:
+          path: /var/log/containers
+      - name: kubernetes-containers
+        hostPath:
+          path: /var/log/pods
+    additionalVolumeMounts: |
+      - name: crio-containers
+        mountPath: /var/log/containers
+        readOnly: true
+      - name: kubernetes-containers
+        mountPath: /var/log/pods
+        readOnly: true
+    {% endif %}
+
+eric-stm-diameter:
+  {% if caas == "Tanzu" %}
+  service:
+    replicaCount: {{ replicaCount['eric-stm-diameter'] }}
+    type: LoadBalancer
+  annotations:
+    aviinfrasetting.ako.vmware.com/name: sig-pool
+    ako.vmware.com/load-balancer-ip: {{ ccpc.traff4gLbIp}}
+  {% else %}
+  replicaCount: {{ replicaCount['eric-stm-diameter'] }} # Default 2
+  # UDM5GP-82572, Increase the limits.memory from 95Mi to 300Mi to avoid high diameter memory utilization.
+  resources:
+    diameter:
+      limits:
+        memory: 300Mi
+  service:
+    sctp:
+      enable: true
+    annotations:
+      cloudProviderLB: {}
+    tcp:
+      enable: true
+    externalIPv4:
+      enabled: true
+      annotations:
+        addressPoolNameDiameterOverTCP: "ccpc{{ instance }}-4g-traffic"
+        sharedVIPLabelDiameterOverTCP: ""
+    externalIPv6:
+      enabled: false
+      annotations:
+        addressPoolNameDiameterOverTCP: "ccpc{{ instance }}-4g-traffic"
+        sharedVIPLabelDiameterOverTCP: ""
+    certificates:
+      asymmetricKeyCertificateName: diameter-tls
+      trustedCertificateListName: diameter-tls
+{% endif %}
+  initialConfig:
+    dsl:
+      enableIPv6: false
+    sctp:
+      enable: false
+
+eric-slt-dsl:
+  {% if caas == "Tanzu" %}
+  replicaCount: {{ replicaCount['eric-stl-dsl'] }}
+  {% endif %}
+  initialConfig:
+    dsl:
+      enableIPv6: false
+
+datamodel:
+  redundantCopies: 1
+
+dms:
+    {% if systemProfile == 'standard' and caas != "Tanzu" %}
+    # UDM5GP-87281, Increase the dms-server memory from 48Gi to 50Gi to avoid KVDB memory alarm
+  resources:
+    server:
+      requests:
+        memory: 50Gi
+      limits:
+        memory: 50Gi
+    {% endif %}
+  nameOverride: "eric-pcf-dms"
+  {% if caas != "Tanzu" %}
+  replicaCount:
+    server: {{ replicaCount['eric-pcf-dms-server'] }} # Default 4
+  {% endif %}
+  persistence:
+    backup:
+      persistentVolumeClaim:
+        enabled: true
+        storageClassName: {{ storageClassName }}
+        locator:
+          size: 64Mi
+        server:
+          size: 8Gi
+        adminMgr:
+          size: 1Gi
+    data:
+      persistentVolumeClaim:
+        enabled: true
+        storageClassName: {{ storageClassName }}
+        {% if systemProfile != 'small' and caas != 'Tanzu'%}
+        server:
+          size: {{ ((pvcSize['eric-pcf-dms-server']/1.07374)|round(0, 'ceil'))|int }}Gi # Default 30Gi
+        {% endif %}
+    gwsender:
+      persistentVolumeClaim:
+        enabled: false
+        storageClassName: {{ storageClassName }}
+        size: 1Gi
+  nodeSelector:
+    locator:
+    server:
+    adminMgr:
+ {% if caas == "Tanzu" %}
+  brAgent:
+    backupTypeList:
+      - "eric-ccpc-provisioned-data-backup"
+ {% else %}
+    brAgent: {}
+ {% endif %}
+  multiSite:
+    enabled: false
+    runtimeConfigMode:
+      enabled: false
+    locator:
+      localHost:
+  ipv6stackPreferred: false
+
+dms-operator:
+  nodeSelector:
+    operator: {}
+  ipv6stackPreferred: false
+
+eric-pcf-license-handler:
+  {% if caas == "Tanzu" %}
+  licensehandler:
+    nodeSelector: {}
+  {% else %}
+  nodeSelector: {}
+  licensehandler:
+  {% endif %}  
+    licenses:
+      data:
+        smpc_bp:
+          enabled: true
+        smpc_miot_bp:
+          enabled: true
+        smpc_data_vp:
+          enabled: true
+        smpc_miot_data_vp:
+          enabled: true
+        smpc_voice_vp:
+          enabled: true
+        smpc_voice_miot_vp:
+          enabled: true
+  {% if caas != "Tanzu" %}  
+        ampc_bp:
+          enabled: {{ 'true' if systemProfile == 'standard' else 'false' | string |lower }}
+  {% endif %}  
+
+eric-pcf-nrf-registration:
+  nodeSelector: {}
+
+da:
+  nodeSelector: {}
+  autoScaling:
+    {% if caas == "Tanzu" %}
+    minReplicas: {{ minReplica['eric-ccpc-data-access'] }}
+    maxReplicas: {{ maxReplica['eric-ccpc-data-access'] }}
+  dataaccess:
+    replicaCount: {{ replicaCount['eric-ccpc-data-access'] }}
+    {% else %}  
+    minReplicas: {{ hpaReplica['eric-ccpc-data-access'].min }} # Default 5
+    maxReplicas: {{ hpaReplica['eric-ccpc-data-access'].max }} # Default 150
+    {% endif %}
+
+eric-pcf-session-management-policy-control:
+  nodeSelector: {}
+  autoScaling:
+    {% if caas == "Tanzu" %}
+    minReplicas: {{ minReplica['eric-pcf-session-management-policy-control'] }}
+    maxReplicas: {{ maxReplica['eric-pcf-session-management-policy-control'] }}
+    {% else %}    
+    minReplicas: {{ hpaReplica['eric-pcf-session-management-policy-control'].min }} # Default 2
+    maxReplicas: {{ hpaReplica['eric-pcf-session-management-policy-control'].max }} # Default 70
+    {% endif %}
+  sessionmanagementpolicycontrol:
+    {% if caas == "Tanzu" %}  
+    replicaCount: {{ replicaCount['eric-pcf-session-management-policy-control'] }}
+    smpcConfiguration:
+      properties:
+        checkForSessionAlive: false
+        inactivityPeriod: 86400
+
+    resources:
+      limits:
+        memory: 1Gi
+ {% else %}
+    smpcConfiguration:
+      properties:
+        checkForSessionAlive: true
+        inactivityPeriod: 86400
+# Define the DSCP value
+#  egress:
+#    dscp: 0
+ {% endif %}
+    {% if caas == 'OpenShift' %}
+    # UDM5GP-58730/UDM5GP-76300
+    resources:
+      limits:
+        memory: 1Gi
+    {% elif caas == 'NFVI-CCD' %}
+    # UDM5GP-86623, Increase the limits.memory from 512Mi to 3Gi to avoid OOMKilled issue.
+    resources:
+      limits:
+        memory: 3Gi
+      requests:
+        memory: 1Gi
+    {% endif %}
+
+eric-pcf-ue-policy-control:
+  nodeSelector: {}
+  autoScaling:
+    {% if caas == "Tanzu" %}
+    minReplicas: {{ minReplica['eric-pcf-ue-policy-control'] }}
+    maxReplicas: {{ maxReplica['eric-pcf-ue-policy-control'] }}
+    {% else %}
+    minReplicas: {{ hpaReplica['eric-pcf-ue-policy-control'].min }} # Default 2
+    maxReplicas: {{ hpaReplica['eric-pcf-ue-policy-control'].max }} # Default 60
+# Uncomment to define DSCP value
+#  egress:
+#    dscp:
+   {% endif %}
+
+eric-pcrf-ipcan-session-management:
+  nodeSelector: {}
+  autoScaling:
+    {% if caas == "Tanzu" %}
+    minReplicas: {{ minReplica['eric-pcrf-ipcan-session-management'] }}
+    maxReplicas: {{ maxReplica['eric-pcrf-ipcan-session-management'] }}
+    {% else %}  
+    minReplicas: {{ hpaReplica['eric-pcrf-ipcan-session-management'].min }} # Default 2
+    maxReplicas: {{ hpaReplica['eric-pcrf-ipcan-session-management'].max }} # Default 70
+    {% endif %}
+  ipcansessionmanagement:
+    {% if caas == "Tanzu" %}
+    replicaCount: {{ replicaCount['eric-pcf-ue-policy-control'] }}
+ {% endif %}
+    diameter:
+      dsd:
+        network_type: "ip"
+    ipsmConfiguration:
+      properties:
+    {% if caas == "Tanzu" %}
+        checkForSessionAlive: false
+  {% else %}
+        checkForSessionAlive: true
+  {% endif %}
+        inactivityPeriod: 86400
+    {% if caas == 'NFVI-CCD' %}
+    # UDM5GP-86874, Increase the limits.memory from 500Mi to 1000Mi to avoid OOMKilled issue.
+    resources:
+      limits:
+        memory: 1000Mi
+    {% endif %}
+
+eric-pcf-charging:
+  nodeSelector: {}
+  {% if caas == "Tanzu" %}
+  enabled: true
+  {% endif %}
+  autoScaling:
+    {% if caas == "Tanzu" %}
+    minReplicas: {{ minReplica['eric-pcf-charging'] }}
+    maxReplicas: {{ maxReplica['eric-pcf-charging'] }}
+    {% else %}    
+    minReplicas: {{ hpaReplica['eric-pcf-charging'].min }} # Default 2
+    maxReplicas: {{ hpaReplica['eric-pcf-charging'].max }} # Default 70
+    {% endif %}
+
+eric-pcf-rx-policy-control:
+
+  {% if caas == "Tanzu" %}
+  autoScaling:
+    minReplicas: {{ minReplica['eric-pcf-rx-policy-control'] }}
+    maxReplicas: {{ maxReplica['eric-pcf-rx-policy-control'] }}
+  {% else %}
+  nodeSelector: {}
+  autoScaling:
+    minReplicas: {{ hpaReplica['eric-pcf-rx-policy-control'].min }} # Default 2
+    maxReplicas: {{ hpaReplica['eric-pcf-rx-policy-control'].max }} # Default 60
+  {% endif %}
+  rxpolicycontrol:
+    diameter:
+      dsd:
+        network_type: "ip"
+    rxpcConfiguration:
+      properties:
+        afStrWaitNetlocTimeout: 3000
+
+prov:
+  nodeSelector: {}
+
+eric-pcf-peer-discoverer:
+  {% if caas == "Tanzu" %}
+  peerdiscoverer:
+    nodeSelector: {}
+  {% else %}
+  nodeSelector: {}
+  peerdiscoverer:
+  {% endif %}
+    config:
+      data:
+        connectivityConfiguration:
+          tlsMode: 2
+          alpnProtocols: h2,http/1.1
+          timeout: 500
+          outlier:
+            consecutiveFailures: 3
+          healthCheck:
+            interval: 1000
+            unhealthyThreshold: 3
+            healthyThreshold: 1
+            resource: /nudr-dr/v2/policy-data/ues/imsi-100000/sm-data
+   {% if caas == "Tanzu" %}
+            acceptedCodes:
+              - 200,503
+              - 504,600
+   {% else %}
+            acceptedCodes:
+              - 200,300
+              - 404,405
+            unhealthyTresholdCodes:
+              - 300,403
+              - 405,600
+   {% endif %}
+        targetNFSpecification:
+          maxRedundantNFs: 3
+
+eric-pcf-peer-discoverer-chf:
+  {% if caas == "Tanzu" %}
+  peerdiscoverer:
+    nodeSelector: {}
+  {% else %}
+  nodeSelector: {}
+  peerdiscoverer:
+  {% endif %}
+    config:
+      data:
+        connectivityConfiguration:
+          tlsMode: 2
+          alpnProtocols: h2,http/1.1
+          timeout: 500
+          outlier:
+            consecutiveFailures: 3
+          healthCheck:
+            interval: 1000
+            unhealthyThreshold: 3
+            healthyThreshold: 1
+            resource: /nchf-spendinglimitcontrol/v1/subscriptions/imsi100000
+  {% if caas == "Tanzu" %}
+            acceptedCodes:
+              - 200,503
+              - 504,600
+  {% else %}
+            acceptedCodes:
+              - 200,300
+              - 404,405
+            unhealthyTresholdCodes:
+              - 300,403
+              - 405,600
+  {% endif %}
+        targetNFSpecification:
+          maxRedundantNFs: 3
+
+eric-pcf-peer-discoverer-bsf:
+  {% if caas == "Tanzu" %}
+  peerdiscoverer:
+    nodeSelector: {}
+  {% else %}
+  nodeSelector: {}
+  peerdiscoverer:
+  {% endif %}
+    config:
+      data:
+        connectivityConfiguration:
+          tlsMode: 2
+          alpnProtocols: h2,http/1.1
+          timeout: 500
+          outlier:
+            consecutiveFailures: 3
+          healthCheck:
+            interval: 1000
+            unhealthyThreshold: 3
+            healthyThreshold: 1
+            resource: /nbsf-management/v1/pcfBindings/pcf-dummy-bindingid
+   {% if caas == "Tanzu" %}
+            acceptedCodes:
+              - 200,503
+              - 504,600
+   {% else %}
+            acceptedCodes:
+              - 200,300
+              - 404,406
+            unhealthyTresholdCodes:
+              - 300,403
+              - 406,600
+   {% endif %}
+        targetNFSpecification:
+          maxRedundantNFs: 3
+
+eric-pcf-peer-discoverer-ccpc:
+  {% if caas == "Tanzu" %}
+  peerdiscoverer:
+    nodeSelector: {}
+  {% else %}
+  nodeSelector: {}
+  peerdiscoverer:
+  {% endif %}
+    config:
+      data:
+        connectivityConfiguration:
+          alpnProtocols: h2,http/1.1
+          timeout: 1720
+          outlier:
+            consecutiveFailures: 3
+        targetNFSpecification:
+          maxRedundantNFs: 3
+
+eric-pcf-egress-proxy:
+  nodeSelector: {}
+  autoScaling:
+    {% if caas == "Tanzu" %}
+    minReplicas: {{ minReplica['eric-pcf-egress-proxy'] }}
+    maxReplicas: {{ maxReplica['eric-pcf-egress-proxy'] }}
+    {% else %}  
+    minReplicas: {{ hpaReplica['eric-pcf-egress-proxy'].min }} # Default 2
+    maxReplicas: {{ hpaReplica['eric-pcf-egress-proxy'].max }} # Default 60
+# Uncomment to define DSCP value
+#  egress:
+#    dscp:
+   {% endif %}
+  egressproxy:
+    {% if caas == "Tanzu" %}
+    replicaCount: {{ replicaCount['eric-pcf-egress-proxy'] }}
+ {% endif %}
+    secure:
+      secret:
+        cert:
+          name: eric-ccpc-sbi-client-certs
+        cacert:
+          name: eric-ccpc-sbi-client-certs-cacert
+  {% if caas == 'OpenShift' or caas=='CNIS'%}
+    # UDM5GP-77809
+    resources:
+      limits:
+        memory: 400Mi
+  # UDM5GP-77809
+  envoymanager:
+    resources:
+      limits:
+        memory: 176Mi
+  {% endif %}
+
+eric-pcf-egress-proxy-chf:
+  {% if caas == "Tanzu" %}
+  enabled: true  
+  autoScaling:
+    minReplicas: {{ minReplica['eric-pcf-egress-proxy-chf'] }}
+    maxReplicas: {{ maxReplica['eric-pcf-egress-proxy-chf'] }}
+  {% else %}
+  nodeSelector: {}
+  autoScaling:
+    minReplicas: {{ hpaReplica['eric-pcf-egress-proxy-chf'].min }} # Default 2
+    maxReplicas: {{ hpaReplica['eric-pcf-egress-proxy-chf'].max }} # Default 40
+# Uncomment to define DSCP value
+#  egress:
+#    dscp:
+  {% endif %}
+  egressproxy:
+  {% if caas == "Tanzu" %}
+    nodeSelector: {}
+  {% endif %}
+    secure:
+      secret:
+        cert:
+          name: eric-ccpc-sbi-client-certs
+        cacert:
+          name: eric-ccpc-sbi-client-certs-cacert
+
+eric-pcf-egress-proxy-bsf:
+  {% if caas == "Tanzu" %}
+  autoScaling:
+    minReplicas: {{ minReplica['eric-pcf-egress-proxy-bsf'] }}
+    maxReplicas: {{ maxReplica['eric-pcf-egress-proxy-bsf'] }}
+  {% else %}
+  nodeSelector: {}
+  autoScaling: 
+    minReplicas: {{ hpaReplica['eric-pcf-egress-proxy-bsf'].min }} # Default 2
+    maxReplicas: {{ hpaReplica['eric-pcf-egress-proxy-bsf'].max }} # Default 40
+# Uncomment to define DSCP value
+#  egress:
+#    dscp:
+  {% endif %}
+  egressproxy:
+    {% if caas == "Tanzu" %}
+    nodeSelector: {}
+    {% endif %}
+    secure:
+      secret:
+        cert:
+          name: eric-ccpc-sbi-client-certs
+        cacert:
+          name: eric-ccpc-sbi-client-certs-cacert
+
+eric-pcf-egress-proxy-ccpc:
+  {% if caas == "Tanzu" %}
+  autoScaling:
+    minReplicas: {{ minReplica['eric-pcf-egress-proxy-ccpc'] }}
+    maxReplicas: {{ maxReplica['eric-pcf-egress-proxy-ccpc'] }}
+  {% else %}
+  nodeSelector: {}
+  autoScaling: 
+    minReplicas: {{ hpaReplica['eric-pcf-egress-proxy-ccpc'].min }} # Default 2
+    maxReplicas: {{ hpaReplica['eric-pcf-egress-proxy-ccpc'].max }} # Default 30
+  {% endif %}
+  egressproxy:
+  {% if caas == "Tanzu" %}
+    nodeSelector: {}
+  {% endif %}  
+    secure:
+      secret:
+        cert:
+          name: eric-ccpc-sbi-client-certs
+        cacert:
+          name: eric-ccpc-sbi-client-certs-cacert
+  {% if caas == 'OpenShift' or caas == 'CNIS' %}
+    # UDM5GP-76258 update resources of egressproxy and envoymanager
+    resources:
+      limits:
+        memory: 200Mi
+      requests:
+        memory: 170Mi
+  # UDM5GP-76258 update resources of egressproxy and envoymanager
+  envoymanager:
+    resources:
+      requests:
+        cpu: 47m
+        memory: 76Mi
+      limits:
+        memory: 91Mi
+  {% endif %}
+
+eric-pcf-geored-controller:
+  nodeSelector: {}
+  autoScaling:
+    minReplicas: 1
+    maxReplicas: 1
+
+eric-pcf-kvdb-supervisor:
+  nodeSelector: {}
+  persistence:
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName }}
+
+eric-pcf-end-user-notifier:
+  nodeSelector: {}
+{% if caas != "Tanzu" %}  
+  autoScaling:
+    minReplicas: {{ hpaReplica['eric-pcf-end-user-notifier'].min }} # Default 2
+    maxReplicas: {{ hpaReplica['eric-pcf-end-user-notifier'].max }} # Default 60
+# Define the DSCP value
+#  egress:
+#    dscp: 0
+{% endif %}
+
+eric-data-sftp-server:
+  {% if caas == "Tanzu" %}
+  objectStorage:
+    accessSecretName: "eric-data-object-storage-mn-creds"
+  {% endif %}
+  service:
+    annotations:
+      sharedVIPLabel: ccpc-oam
+      addressPoolName: ccpc{{ instance }}-oam
+      #Define these parameters ONLY on dual stack clusters
+      # externalIPv4:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-oam
+      #     sharedVIPLabel: ccpc-oam
+      # externalIPv6:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-oam
+      #     sha:redVIPLabel: ccpc-oam

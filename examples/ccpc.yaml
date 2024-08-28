@@ -1,0 +1,103 @@
+######################################
+## CNF general information
+######################################
+nodeName: n280-eccd1-ccpc1
+nodeType: CCPC
+instance: 1
+
+vnflcm:
+  clusterName: n280-eccd1
+  namespace: ccpc1
+#  InstantiateVnfRequest:
+#    applicationTimeOut: 3600
+#    skipVerification: "true"
+
+users:
+#  day0:
+#    username: sysadmin
+#    password: Dm5GC@S0lut!on
+  day1:
+  - username: ccpc-admin
+    password: Changeme@1st
+    groups:
+    - pcf-admin
+    - sragent-admin
+    - system-admin
+    - nrfagent-admin
+    - pcf-prov-admin
+  - username: ccpc-sec
+    password: Changeme@1st
+    groups:
+    - pcf-security-admin
+    - system-security-admin
+    - nrfagent-security-admin
+
+license:
+  customerId: "946060"
+  swltId: STA-CCPC-14
+
+cnom:
+  fqdn: cnom.ccpc1-oam.n280-eccd1.sero.gic.ericsson.se
+
+snmp:
+  agentEngineId: 800000c104636370633163317331
+  sourceIdentifier: 10.143.139.85
+
+ddc:
+  remotePath: ddc/n280-eccd1-ccpc1
+
+vtap:
+  remotePath: vtap/n280-eccd1-ccpc1
+
+certs:
+  iccr-external-tls-certificate:
+    p12: ../../../certs/n280-eccd1/ccpc1/ccpc1-iccr-server.p12
+  eric-ccpc-sbi-server-certificate:
+    p12: ../../../certs/n280-eccd1/ccpc1/ccpc1-sbi-server.p12
+  eric-ccpc-sbi-client-certificate:
+    p12: ../../../certs/n280-eccd1/ccpc1/ccpc1-sbi-client.p12
+  eric-ccpc-provision-server-certificate:
+    p12: ../../../certs/n280-eccd1/ccpc1/ccpc1-provision-server.p12
+
+######################################
+## CNF specific information
+######################################
+ccpc:
+  provFqdn: ccpc1-5g-prov.n280-eccd1.sero.gic.ericsson.se
+  smfSbiNotifyHost: pcc1-smf-notification.site1-cluster1
+  pcf:
+    instanceId: 98aae42e-da25-4329-acf0-504346a1c1d1
+    host: ccpc1-5g-traffic.site1-cluster1
+    port: 443
+    nfSetId: set01.pcfset.5gc.mnc081.mcc240
+    geored:
+      local:
+        ip: 172.17.192.3
+      remote:
+        ip: 172.17.200.3
+  pcrf:
+    diameter:
+      host: n280-eccd1-ccpc1-pcrf
+#      port: 3868
+
+replicaCount:
+  eric-pcf-dms-server: 4
+  eric-stm-diameter: 2
+
+hpaReplica:
+  eric-pcf-session-management-policy-control: {min: 2, max: 5}
+  eric-ccpc-data-access: {min: 5, max: 14}
+  eric-pcf-egress-proxy: {min: 2, max: 5}
+  eric-pcrf-ipcan-session-management: {min: 2, max: 4}
+  eric-pcf-egress-proxy-ccpc: {min: 2, max: 4}
+  eric-pcf-rx-policy-control: {min: 2, max: 60}
+  eric-pcf-egress-proxy-bsf: {min: 2, max: 40}
+  eric-pcf-end-user-notifier: {min: 2, max: 4}
+  eric-pcf-ue-policy-control: {min: 2, max: 60}
+  eric-pcf-charging: {min: 2, max: 70}
+  eric-pcf-egress-proxy-chf: {min: 2, max: 40}
+  eric-ccpc-provisioning: {min: 2, max: 110}
+  eric-pcf-access-mobility-policy-control: {min: 2, max: 4}
+
+pvcSize:
+  eric-pcf-dms-server: 38

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+HSS-IMS day-1 parameters
+Notice that it is a configuration template in XML format compliant with
+NF YANG model.
+-->
+<hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <capabilities>
+        <capability>
+            urn:ietf:params:netconf:base:1.0
+        </capability>
+    </capabilities>
+</hello>]]>]]><?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<rpc xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" message-id="0">
+    <edit-config>
+        <target>
+            <running />
+        </target>
+        <config xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+            <hssims xmlns="urn:rdns:com:ericsson:oammodel:ericsson-hssims">
+              <ims-as>
+                <as>
+                  <as-id>cx.malt.{{ locality }}.5gc.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org</as-id>
+                  <as-name>sip:cx@ims.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org</as-name>
+                  <as-realm>5gc.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org</as-realm>
+                </as>
+                <as>
+                  <as-id>ims.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org</as-id>
+                  <as-name>sip:application@ims.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org</as-name>
+                  <as-realm>ims.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org</as-realm>
+                </as>
+                <as>
+                  <as-id>ericsson.se</as-id>
+                  <as-name>sip:cx@ericsson.se</as-name>
+                  <as-realm>ericsson.se</as-realm>
+                </as>
+              </ims-as>
+              <sh-diameter>
+                <server>
+                  <realm>5gc.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org</realm>
+                  <host>ccsm1-hss-epc-http-sig.site1-cluster1.5gc.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org</host>
+                </server>
+                <timeout-incoming-request>9000</timeout-incoming-request>
+                <timeout-outgoing-request>2000</timeout-outgoing-request>
+                <enable-trace>false</enable-trace>
+                <request-reattempts>1</request-reattempts>
+                <reattempt-delay-time>2000</reattempt-delay-time>
+              </sh-diameter>
+              <network-domain>
+                <network-domain-id>ims.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org</network-domain-id>
+                <is-home>true</is-home>
+              </network-domain>
+              <service-type>
+                <service-type-id>profile1</service-type-id>
+                <service-profile>
+                  <service-profile-id>profile1</service-profile-id>
+                  <default-application-server>test</default-application-server>
+                  <default-as-handling>session_continued</default-as-handling>
+                </service-profile>
+              </service-type>
+              <service-type>
+                <service-type-id>mtas</service-type-id>
+                <service-profile>
+                  <service-profile-id>mtas</service-profile-id>
+                  <default-application-server>test</default-application-server>
+                  <default-as-handling>session_continued</default-as-handling>
+                </service-profile>
+              </service-type>
+              <service-type>
+                <service-type-id>mtasunreg</service-type-id>
+                <service-profile>
+                  <service-profile-id>mtasunreg</service-profile-id>
+                  <default-application-server>test</default-application-server>
+                  <default-as-handling>session_terminated</default-as-handling>
+                </service-profile>
+              </service-type>
+              <cx-diameter>
+                <server>
+                  <realm>ericsson.se</realm>
+                  {% if systemProfile == 'small' %}
+                  <host>esm.ericsson.se</host>
+                  {% else %}
+                  <host>ccsm.ericsson.se</host>
+                  {% endif %}
+                </server>
+                <timeout-incoming-request>9000</timeout-incoming-request>
+                <timeout-outgoing-request>2000</timeout-outgoing-request>
+                <enable-trace>false</enable-trace>
+                <request-reattempts>1</request-reattempts>
+                <reattempt-delay-time>2000</reattempt-delay-time>
+              </cx-diameter>
+            </hssims>
+        </config>
+    </edit-config>
+</rpc><close-session />
+

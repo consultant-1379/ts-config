@@ -1,0 +1,487 @@
+global:
+  internalIPFamily: IPv4
+  externalIPv4:
+    enabled: true
+
+  timezone: {{ timezone }}
+  ericsson:
+    licensing:
+      licenseDomains:
+        - productType: PACKET_CORE_CONTROLLER
+          customerId: {{ license.customerId }}
+          swltId: {{ license.swltId }}
+  licensing:
+    sites:
+      - hostname: {{ nels.host }}
+
+  {% if caas == 'OpenShift' %}
+  openshift: true
+  security:
+    createPolicyRole: true
+    policyName: restricted-pod-security-policy
+    policyNameForAdp: adp-pod-security-policy
+  {% endif %}
+
+  sm:
+    pgw:
+      enabled: true
+    sgw:
+      enabled: true
+    smf:
+      enabled: true
+
+snmp-alarm-provider-secret-creation:
+  enabled: false
+
+eric-pc-routing-engine:
+  interfaces:
+    {% if caas  == 'CNIS' %}
+    type: ovs
+    ovs:
+    - bridge: br_data
+      vlan_mode: trunk
+      mtu: 9000
+      trunk:
+      {% for ni in pcc.vpngw.networkInstances %}
+        - minID: {{ ni.ipForward.vlan }} # {{ ni.name }}
+          maxID: {{ ni.ipForward.vlan }} # {{ ni.name }}
+      {% endfor %}
+        - minID: {{  pcc.vpngw.intraForward.vlan }} # vpngw_intraForward
+          maxID: {{  pcc.vpngw.intraForward.vlan }} # vpngw_intraForward
+    {% elif caas == 'OpenShift' %}
+    predefineNetworks:
+      - name: eric-pc-routing-engine-net0
+    type: predefine
+    {% else %}
+    type: macvlan
+    macvlan:
+      - master: {{ macvlanInterface }}
+    {% endif %}
+
+eric-pc-mm:
+  {% if caas == 'OpenShift' %}
+  security:
+    policyName: restricted-pod-security-policy
+  {% endif %}
+  global:
+    pcmm:
+      service:
+        useK8sNwSBI: true
+  {% if caas == 'OpenShift' %}
+    orchestratorProvisionedNAD: true
+  {% endif %}
+
+  eric-pc-mm-controller:
+    nodeSelector:
+      pcc-mm-pod: controller
+    {% if caas != 'OpenShift' %}
+    appArmorProfile:
+      type: localhost
+      localhostProfile: docker-pcc
+    {% endif %}
+
+  eric-pc-mm-forwarder:
+    nodeSelector:
+      pcc-mm-pod: non-controller
+    replicaCount: {{ replicaCount['eric-pc-mm-forwarder'] }}
+    ipv6: false
+    networks:
+    {% if caas  == 'CNIS' %}
+    - name: ext1
+      cniVersion: 0.3.1
+      type: ovs
+      bridge: br_data
+      trunk:
+     {% for ni in pcc.pcmm.ipNetwork %}
+        - minID: {{ ni.ipInt.vlan }} # {{ ni.name }}
+          maxID: {{ ni.ipInt.vlan }} # {{ ni.name }}
+      {% endfor %}
+      mtu: 9000
+    {% elif caas == 'OpenShift' %}
+    - name: pc-mm-ext
+      namespace: pcc
+    {% else %}
+    - ipam: {}
+      master: {{ macvlanInterface }}
+      mtu: 2090
+      name: ext1
+      type: macvlan
+    {% endif %}
+    {% if caas != 'OpenShift' %}
+    appArmorProfile:
+      type: localhost
+      localhostProfile: docker-pcc
+    {% endif %}
+
+  eric-pc-mm-mobility:
+    service:
+      useK8sNwSBI: true
+      sbi:
+        type: LoadBalancer
+        externalIPv4:
+          enabled: true
+          loadBalancerIP: {{ pcc.pcmm.namfLbIp }}
+    nodeSelector:
+      pcc-mm-pod: non-controller
+    replicaCount: {{ replicaCount['eric-pc-mm-mobility'] }}
+    {% if caas != 'OpenShift' %}
+    appArmorProfile:
+      type: localhost
+      localhostProfile: docker-pcc
+    {% endif %}
+
+  eric-pc-mm-sctp:
+    nodeSelector:
+      pcc-mm-pod: non-controller
+    replicaCount: {{ replicaCount['eric-pc-mm-sctp'] }}
+    {% if caas != 'OpenShift' %}
+    appArmorProfile:
+      type: localhost
+      localhostProfile: docker-pcc
+    {% endif %}
+
+  eric-pc-mm-br-agent:
+    nodeSelector:
+      pcc-mm-pod: non-controller
+
+eric-pc-sm:
+  {% if caas == 'OpenShift' %}
+  security:
+    policyName: restricted-pod-security-policy
+  {% endif %}
+  eric-pc-sm-diameter:
+    nodeSelector:
+      pcc-sm-pod: non-controller
+
+  eric-pc-sm-http-client:
+    nodeSelector:
+      pcc-sm-pod: non-controller
+    replicaCount: {{ replicaCount['eric-pc-sm-http-client'] }}
+
+  eric-pc-sm-ip-allocator:
+    nodeSelector:
+      pcc-sm-pod: non-controller
+
+    services:
+      x1:
+        type: ClusterIP
+      liX1:
+        type: ClusterIP
+  eric-pc-sm-controller:
+    nodeSelector:
+      pcc-sm-pod: controller
+
+  eric-pc-sm-notification-forwarder:
+    nodeSelector:
+      pcc-sm-pod: non-controller
+    services:
+      ipv4:
+        enabled: true
+      namfnotification-ipv4:
+        annotations:
+          metallb.universe.tf/address-pool: pcc{{ instance }}-smf-notification
+          metallb.universe.tf/allow-shared-ip: pcc{{ instance }}-smf-notification
+      nudmnotification-ipv4:
+        annotations:
+          metallb.universe.tf/address-pool: pcc{{ instance }}-smf-notification
+          metallb.universe.tf/allow-shared-ip: pcc{{ instance }}-smf-notification
+      npcfnotification-ipv4:
+        annotations:
+          metallb.universe.tf/address-pool: pcc{{ instance }}-smf-notification
+          metallb.universe.tf/allow-shared-ip: pcc{{ instance }}-smf-notification
+      nnrfnotification-ipv4:
+        annotations:
+          metallb.universe.tf/address-pool: pcc{{ instance }}-smf-notification
+          metallb.universe.tf/allow-shared-ip: pcc{{ instance }}-smf-notification
+      nchfnotification-ipv4:
+        annotations:
+          metallb.universe.tf/address-pool: pcc{{ instance }}-smf-notification
+          metallb.universe.tf/allow-shared-ip: pcc{{ instance }}-smf-notification
+      nsmfnotification-ipv4:
+        annotations:
+          metallb.universe.tf/address-pool: pcc{{ instance }}-smf-notification
+          metallb.universe.tf/allow-shared-ip: pcc{{ instance }}-smf-notification
+
+  eric-pc-sm-nsmf-forwarder:
+    nodeSelector:
+      pcc-sm-pod: non-controller
+    services:
+      ipv4:
+        enabled: true
+      nsmf-ipv4:
+        loadBalancerIP: {{ pcc.pcsm.nsmfLbIp }}
+    replicaCount: {{ replicaCount['eric-pc-sm-nsmf-forwarder'] }}
+
+  eric-pc-sm-smf-pgw-session:
+    replicaCount: {{ replicaCount['eric-pc-sm-smf-pgw-session'] }}
+    nodeSelector:
+      pcc-sm-pod: non-controller
+
+  eric-pc-sm-sgw-session:
+    replicaCount: {{ replicaCount['eric-pc-sm-sgw-session'] }}
+    nodeSelector:
+      pcc-sm-pod: non-controller
+
+  eric-pc-sm-br-agent:
+    nodeSelector:
+      pcc-sm-pod: non-controller
+
+  eric-pc-sm-target-database-master-rd:
+    nodeSelector:
+      pcc-sm-pod: non-controller
+
+  eric-pc-sm-target-database-replica-rd:
+    nodeSelector:
+      pcc-sm-pod: non-controller
+
+  eric-pc-sm-udp-forwarder:
+    nodeSelector:
+      pcc-sm-pod: non-controller
+    replicaCount: {{ replicaCount['eric-pc-sm-udp-forwarder'] }}
+
+    services:
+      ga:
+        type: ClusterIP
+      gns5s8:
+        type: ClusterIP
+      s4s11:
+        type: ClusterIP
+      s5s8:
+        type: ClusterIP
+      sxa:
+        type: ClusterIP
+      sxb:
+        type: ClusterIP
+eric-pc-vpn-gateway-forwarder:
+  replicaCount: {{ replicaCount['eric-pc-vpn-gateway-forwarder'] }}
+  {% if caas == 'CNIS' %}
+  resourceName: ovs-cni.network.kubevirt.io/br_data
+  resources:
+    dataPlane:
+      limits:
+        ovs-cni.network.kubevirt.io/br_data: 1
+      requests:
+        ovs-cni.network.kubevirt.io/br_data: 1
+  vpnGateway:
+    enabled: true
+    multiPod: intra
+  {% endif %}
+  interfaces:
+    {% if caas == 'CNIS' %}
+    - name: net0
+      type: ovs
+      bridge: br_data
+      trunk:
+      {% for ni in pcc.vpngw.networkInstances %}
+        - minVlan: {{ ni.ipForward.vlan }} # {{ ni.name }}
+          maxVlan: {{ ni.ipForward.vlan }} # {{ ni.name }}
+      {% endfor %}
+        - minVlan: {{  pcc.vpngw.intraForward.vlan }} # vpngw_intraForward
+          maxVlan: {{  pcc.vpngw.intraForward.vlan }} # vpngw_intraForward
+      l2Mtu: 9000
+    {% elif caas == 'OpenShift' %}
+    - name: common
+      type: macvlan
+      networkAttachmentDefinition: false
+    {% else %}
+    - name: net0
+      type: macvlan
+      hostInterface: {{ macvlanInterface }}
+    {% endif %}
+
+{% if caas == 'OpenShift' %}
+eric-pc-kvdb-rd-operator:
+  security:
+    policyName: restricted-pod-security-policy
+{% endif %}
+
+eric-pc-kvdb-rd-server:
+  {% if caas == 'OpenShift' %}
+  security:
+    policyName: restricted-pod-security-policy
+  {% endif %}
+  numberOfMaster: {{ replicaCount['eric-pc-kvdb-rd-server'] }}
+
+eric-pc-controller-ldap-admin-creds:
+  adminCredentials: null
+
+cnom-loadBalancer-service:
+  enabled: true
+  annotations:
+    metallb.universe.tf/address-pool: pcc{{ instance }}-oam
+    metallb.universe.tf/allow-shared-ip: pcc{{ instance }}-oam
+
+# Dimensioning from ADP pods in resources-max-size-pcc.yaml from csar pkg
+eric-pc-pm-init:
+  resources:
+    pmInit:
+      limits:
+        cpu: 50m
+
+# Dimensioning from ADP pods in resources-max-size-pcc.yaml from csar pkg
+eric-pm-resource-monitor:
+  resources:
+    pmrm:
+      requests:
+        memory: 128Mi
+
+
+eric-cloud-native-base:
+
+  eric-si-application-sys-info-handler:
+    # Dimensioning from ADP pods in resources-max-size-pcc.yaml from csar pkg
+    resources:
+      eric-si-application-sys-info-handler:
+        requests:
+          memory: 100Mi
+    asih:
+      applicationId: {{ nodeName }}
+
+  # Dimensioning from ADP pods in resources-max-size-pcc.yaml from csar pkg
+  eric-log-transformer:
+    jvmHeap: 4096m
+    replicaCount: 5
+    resources:
+      logtransformer:
+        limits:
+          cpu: '2'
+          memory: 6Gi
+        requests:
+          memory: 6Gi
+      metrics:
+        requests:
+          memory: 128Mi
+      tlsproxy:
+        requests:
+          memory: 128Mi
+
+  eric-odca-diagnostic-data-collector:
+    # Dimensioning from ADP pods in resources-max-size-pcc.yaml from csar pkg
+    resources:
+      diagnostic-data-collector:
+        requests:
+          memory: 1Gi
+          cpu: 1000m
+          ephemeral-storage: 5Gi
+        limits:
+          memory: 4Gi
+          cpu: 1500m
+          ephemeral-storage: 20Gi
+
+  eric-pm-server:
+    # Dimensioning from ADP pods in resources-max-size-pcc.yaml from csar pkg
+    persistentVolume:
+      size: 32Gi
+    resources:
+      eric-pm-exporter:
+        requests:
+          memory: 64Mi
+      eric-pm-server:
+        limits:
+          memory: 12000Mi
+        requests:
+          memory: 8000Mi
+
+  eric-sec-key-management:
+    # Dimensioning from ADP pods in resources-max-size-pcc.yaml from csar pkg
+    resources:
+      metrics:
+        requests:
+          memory: 50Mi
+
+  eric-cm-mediator:
+    # Dimensioning from ADP pods in resources-max-size-pcc.yaml from csar pkg
+    resources:
+      eric-cm-mediator:
+        limits:
+          memory: 1Gi
+        requests:
+          memory: 512Mi
+
+  eric-data-message-bus-kf:
+    # Dimensioning from ADP pods in resources-max-size-pcc.yaml from csar pkg
+    resources:
+      messagebuskf:
+        requests:
+          cpu: '2'
+          memory: 2Gi
+
+  eric-data-object-storage-mn:
+    resources:
+      # Dimensioning from ADP pods in resources-max-size-pcc.yaml from csar pkg
+      server:
+        limits:
+          cpu: 1100m
+          memory: 8Gi
+        requests:
+          cpu: 1100m
+          memory: 2Gi
+
+  eric-fh-snmp-alarm-provider:
+    # Dimensioning from ADP pods in resources-max-size-pcc.yaml from csar pkg
+    resources:
+      alarmprovider:
+        limits:
+          memory: 1024Mi
+    service:
+      externalIPv4:
+        enabled: true
+        annotations:
+          sharedVIPLabel: pcc{{ instance }}-oam
+          addressPoolName: pcc{{ instance }}-oam
+    sourceIdentifierType: 1
+    sourceIdentifier: "{{ snmp.sourceIdentifier }}"
+
+  {% macro searchEngine() %}{% include "search-engine.medium.yaml" %}{% endmacro %}
+  {{ searchEngine() | indent(2) }}
+
+  {% if caas == 'OpenShift' %}
+  eric-log-shipper:
+    logshipper:
+      privileged: true
+  {% endif %}
+
+eric-cloud-native-nf-additions:
+
+  eric-pm-bulk-reporter:
+    # Dimensioning from ADP pods in resources-max-size-pcc.yaml from csar pkg
+    resources:
+      bulkreporter:
+        requests:
+          memory: 200Mi
+    env:
+      nodeName: {{ nodeName }}
+
+  eric-cm-yang-provider:
+    # Dimensioning from ADP pods in resources-max-size-pcc.yaml from csar pkg
+    resources:
+      schemaSynchronizer:
+        requests:
+          memory: 128Mi
+      sshd:
+        requests:
+          memory: 256Mi
+      yangDbAdapter:
+        requests:
+          memory: 256Mi
+    service:
+      externalIPv4:
+        enabled: true
+        annotations:
+          sharedVIPLabel: pcc{{ instance }}-oam
+          addressPoolName: pcc{{ instance }}-oam
+      {% if caas == 'OpenShift' %}
+      allocateLoadBalancerNodePorts: true
+      {% endif %}
+
+  eric-data-sftp-server:
+    service:
+      externalIPv4:
+        enabled: true
+        annotations:
+          sharedVIPLabel: pcc{{ instance }}-oam
+          addressPoolName: pcc{{ instance }}-oam
+      {# ticket BZ 2075548. Target release: OS 4.13 #}
+      {% if caas == 'OpenShift' %}
+      allocateLoadBalancerNodePorts: true
+      {% endif %}

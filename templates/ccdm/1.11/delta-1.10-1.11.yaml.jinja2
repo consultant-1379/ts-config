@@ -1,0 +1,79 @@
+global:
+  licensing:
+    sites:
+      - hostname: {{ nels.host }}
+        {%- raw %}
+        #Remove the following comments to allow the IP and Priority configurations. IP will override the hostname configuration
+        #ip: {{ip_address}}
+        #priority: {{100}}
+        {% endraw %}
+  # Set this parameter to true in case of upgrade procedure is In-Service-Instance. Otherwise set to false
+  issu:
+    enabled: true
+  profiles:
+    large-system:
+      enabled: false
+
+eric-adp:
+  eric-cm-yang-provider:
+    nodeSelector:
+      eric-cm-yang-provider: {} #Deprecated
+  eric-log-shipper:
+    nodeSelector: {} #Deprecated
+  eric-probe-virtual-tap-broker:
+    timeorder:
+      enabled: false #default is false
+    replicaCount: 4
+  eric-sec-key-management:
+    nodeSelector:
+      kms: {} #Deprecated
+      bootstrapJob: {} #Deprecated
+      hooklauncher: {} #Deprecated
+  {%- raw %}
+  #eric-data-search-engine:
+    # Number of replicas for Search Engine.
+    #replicaCount:
+    # Number of replicas for eric-data-search-engine-data container. This parameter is applicable to CCDM Standard and CCDM Large system configurations ONLY. Please, do not include this parameter for CCDM Small system configurations.
+    # Value of this parameter is result of a dimensioning exercise.
+    #  data: {{search_engine_data_replicas}}
+    # Number of replicas for eric-data-search-engine-ingest/eric-data-search-engine-ingest-tls containers. This parameter is applicable to CCDM Large system configurations ONLY. Please, do not include this parameter for CCDM Small or Standard system configurations.
+    # Value of this parameter is result of a dimensioning exercise.
+    #  ingest: {{search_engine_ingest_replicas}}
+
+    # Index Management configuration for Search Engine in CCDM Standard and CCDM Large system configurations only (do not include this parameter for CCDM Small system configurations).
+    # Value of this parameter is result of a dimensioning exercise.
+
+    #index_management:
+    #  delete_indices_by_diskspace:
+    #  - index: adp-app-logs-*
+    #    size: {{size_adp_app_logs}}gb
+    #  - index: adp-app-debug-logs-*
+    #    size: {{size_adp_app_debug_logs}}gb
+
+  #eric-log-transformer:
+  # Number of replicas for eric-log-transformer. This parameter is applicable to CCDM Standard and CCDM Large system configurations ONLY. Please, do not include this parameter for CCDM Small system configurations.
+  # Value of this parameter is result of a dimensioning exercise.
+
+  #  replicaCount: {{log_transformer_replicas}}
+  {% endraw %}
+
+eric-udr:
+  eric-udr-notificationsubscription:
+    app:
+      periodicMaintenance:
+        # app.periodicMaintenance.cleanupSchedule -- Cron expression for execution of cleanup of deleted + expired entries. Daily at 01:00 AM by default. Fields: second minute hour day-of-the-month month day-of-the-week *=any ?=no specific value ,=value list separator
+        cleanupSchedule: "0 0 1 * * ?"
+        # app.periodicMaintenance.timeDeletedHoursBeforeEntryCleanup -- Time in hours that a notification subscription entry must have been deleted before it is eligible for permanent removal. 24 h by default
+        timeDeletedHoursBeforeEntryCleanup: 24
+  eric-udr-gudrestfe:
+    # In helm charts, the default value is "true", keep the value same as before, see section "REST-based Ud Interface Configuration" in CCDM CPI for detail.
+    istio:
+      virtualservice:
+        enabled: true
+
+eric-data-kvdb-ag:
+  podPriority:
+    locator:
+      priorityClassName: kvdbprioclass
+    server:
+      priorityClassName: kvdbprioclass

@@ -1,0 +1,703 @@
+###################################################################################################################################
+#
+# Note:
+#    1. Parametes with "PREFIX-" prefix belong to profiles and set automatically when the related profileName is enabled.
+#       In case user want to customize the parameters, please remove "PREFIX-" in parameter names with proper values. Please
+#       refer to Day-0 Parameter Description for details.
+#
+#    2. All parameters have default value, and some parameters, such as eric-adp-5g-udm.eric-log-transformer.egress.syslog.inclusions,
+#       have sample value in the comments. When user wants to overide the default value, need to remove the default value and
+#       fill in the value that conforming with the format on comments.
+#
+###################################################################################################################################
+global:
+  profiles:
+    small-system:
+      enabled: false
+    std-system:
+      enabled: true
+    cleartext:
+      enabled: false
+    mtls:
+      enabled: true
+    mtls-and-cleartext:
+      enabled: false
+  pullSecret: regcred
+  istio:
+    # Update the value according to kubernetes service ipaddress in default namespace
+    kubernetes_service_ipaddress: {{ kubernetes_service_ipaddress|default('10.96.0.1') }}
+    egress:
+      endpoints:
+        eric_nrf_sbi_traffic:
+          mode: MUTUAL
+          host: "*.3gppnetwork.org"
+          port: 443
+        eric_nrf_kvdb_sbi_traffic:
+          host: "*.kvdb.nrf.3gppnetwork.org"
+        eric_nrf_nbi_traffic:
+          mode: MUTUAL
+          host: "*.sic.com"
+          port: 443
+        eric_nssf_sbi_traffic:
+          mode: MUTUAL
+#          host: "*.3gppnetwork.org"
+          port: 443
+        eric_nssf_kvdb_sbi_traffic:
+          host: "*.kvdb.nssf.3gppnetwork.org"
+        eric_policy_studio_traffic:
+          entries:
+          - name: cluster1-nrf
+            host: ""
+            port: 443
+
+      PREFIX-enabled: true
+      maxProtocolVersion: TLSv1_3
+      minProtocolVersion: TLSv1_2
+    ingress:
+      maxProtocolVersion: TLSV1_3
+      minProtocolVersion: TLSV1_2
+      apiPrefix: ""
+      mode: MUTUAL
+      cipherSuites:
+        - ECDHE-ECDSA-AES128-GCM-SHA256
+        - ECDHE-RSA-AES128-GCM-SHA256
+        - ECDHE-ECDSA-AES256-GCM-SHA384
+        - ECDHE-RSA-AES256-GCM-SHA384
+    sidecar:
+      inject: true
+    PREFIX-tlsHandledByServiceMesh: true
+  nodeSelector: {}
+  # CLI prompt setting
+  applicationId: "{{ nodeName }}"
+  ericsson:
+    licensing:
+      licenseDomains:
+        - customerId: "{{ license.customerId }}"
+          productType: CCRC
+          swltId: {{ license.swltId }}
+  eric_nrf:
+    enabled: true
+  eric-nrf-extnotify:
+    enabled: false
+  eric-nrf-dns:
+    enabled: false
+  eric_nssf:
+    enabled: true
+  eric-dst:
+    enabled: false
+  eric-ps-policystudio:
+    enabled: false
+  service_routing_agent_enabled: false
+  tapagent:
+    pvtb:
+      enabled: false
+    PREFIX-egress_exclude_ips: "10.96.0.0/12,192.168.0.0/16"
+  license:
+    nrf:
+      sau_tps_ratio: "2"
+      miot_sau_tps_ratio: "2"
+      dn_sau_tps_ratio: "2"
+      dn_miot_sau_tps_ratio: "2"
+      used_bp_keys: "FAT1024199/1;FAT1024199/6"
+    nssf:
+      sau_tps_ratio: "0.2"
+      used_bp_keys: "FAT1024199/3;FAT1024199/4"
+  security:
+    policyBinding:
+      create: false
+  nrf:
+    features:
+      dnsEpcSupport:
+        enabled: true
+      dnsRecursionSupport:
+        enabled: true
+        dscp: 0
+        allowedNonStandardPorts: ""
+    istio:
+      PREFIX-traffic_ingressGatewayHTTPSPort: 443
+      PREFIX-traffic_ingressGatewayHTTPPort: 80
+    forwarding:
+      viaHeader: true
+      sendRedundant: true
+    dst:
+      enabled: false
+      propagator:
+        http:
+          #NOTE: Inject can be "w3c-trace-context", "b3-single" or "b3-multiple"
+          inject: "b3-multiple"
+  nssf:
+    istio:
+      PREFIX-traffic_ingressGatewayHTTPPort: 80
+      PREFIX-traffic_ingressGatewayHTTPSPort: 443
+    features:
+      notificationIndirectRouting:
+        enabled: false
+  registry:
+    url: armdocker.rnd.ericsson.se
+  ipStackMode: ipv4
+  timezone: {{ timezone }}
+eric-udm-mesh-integration:
+  eric-ingressgw-nrf-traffic:
+    externalTrafficPolicy: Local
+    service:
+      loadBalancerIP: ""
+      annotations:
+        sharedVIPLabel: "ccrc-nrf-traffic"
+        addressPoolName: "ccrc-nrf-sig"
+    resources:
+      istio-proxy:
+        requests:
+          PREFIX-cpu: 500m
+          PREFIX-memory: 256Mi
+        limits:
+          PREFIX-cpu: 2000m
+          PREFIX-memory: 1024Mi
+    PREFIX-ports:
+      - name: tls
+        port: 443
+        targetPort: 8443
+        tcpkeepalive:
+          interval: 10
+          probes: 6
+          time: 500
+      - name: geode-locators
+        port: 8091
+        protocol: TCP
+        targetPort: 8091
+      - name: geode-gw-rcvrs
+        port: 8092
+        protocol: TCP
+        targetPort: 8092
+    annotations: {}
+    # proxy.istio.io/config: '{"gatewayTopology" : { "numTrustedProxies": 0 } }'
+  eric-ingressgw-nssf-traffic:
+    externalTrafficPolicy: Local
+    service:
+      loadBalancerIP: ""
+      annotations:
+        sharedVIPLabel: "ccrc-nssf-traffic"
+        addressPoolName: "ccrc-nssf-sig"
+    resources:
+      istio-proxy:
+        requests:
+          PREFIX-cpu: 500m
+          PREFIX-memory: 256Mi
+        limits:
+          PREFIX-cpu: 2000m
+          PREFIX-memory: 1024Mi
+    PREFIX-ports:
+      - name: geode-locators
+        port: 8091
+        protocol: TCP
+        targetPort: 8091
+      - name: geode-gw-rcvrs
+        port: 8092
+        protocol: TCP
+        targetPort: 8092
+      - name: tls
+        port: 443
+        targetPort: 8443
+        tcpkeepalive:
+          interval: 10
+          probes: 6
+          time: 500
+    annotations: {}
+    # proxy.istio.io/config: '{"gatewayTopology" : { "numTrustedProxies": 0 } }'
+  eric-ingressgw-ccrc-nbi-traffic:
+    enabled: false
+    service:
+      loadBalancerIP: ""
+      annotations:
+        sharedVIPLabel: "ccrc-nbi-traffic"
+        addressPoolName: "ccrc-nbi-oam"
+    annotations: {}
+    # proxy.istio.io/config: '{"gatewayTopology" : { "numTrustedProxies": 0 } }'
+eric-nrf:
+  eric-nrf-dns:
+    service:
+      annotations:
+        metallb.universe.tf/allow-shared-ip: ccrc-dns-traffic
+        metallb.universe.tf/address-pool: ccrc-dns
+      externalTrafficPolicy: Local
+      loadBalancerIP: ""
+  eric-nrf-extnotify:
+    ingress:
+      fqdn: nrf.ericsson.com
+      mode: MUTUAL
+  eric-nrf-provision:
+    ingress:
+      fqdn: ""
+  eric-data-kvdb-ag-operator:
+    nodeSelector:
+      operator: {}
+  {% if nrfGeo %}
+  eric-data-kvdb-ag:
+    multiSite:
+      enabled: true
+      locator:
+        distributedSystemID: {{ kvdb.0.siteId }}
+        localHost: "{{ nrf.0.host }}.kvdb.nrf.3gppnetwork.org"
+      runtimeConfigMode:
+        enabled: true
+  {% else %}
+  eric-data-kvdb-ag:
+    multiSite:
+      enabled: false
+      locator:
+        distributedSystemID: 0
+        localHost: ""
+      runtimeConfigMode:
+        enabled: false
+  {% endif %}
+    nodeSelector:
+      locator: {}
+      server: {}
+      adminMgr: {}
+    persistence:
+      data:
+        persistentVolumeClaim:
+          storageClassName: "{{ storageClassName|default("network-block") }}"
+      backup:
+        persistentVolumeClaim:
+          storageClassName: "{{ storageClassName|default("network-block") }}"
+      gwsender:
+        persistentVolumeClaim:
+          storageClassName: "{{ storageClassName|default("network-block") }}"
+    affinity:
+      podAntiAffinity: hard
+    {% if nrfGeo %}
+    servicePorts:
+      kvdbAgLocator: 8091
+    istio:
+      virtualservice:
+        enabled: true
+    {% else %}
+    servicePorts:
+      kvdbAgLocator: 10334
+    istio:
+      virtualservice:
+        enabled: false
+    {% endif %}
+  eric-nrf-accesstoken:
+    accesstoken:
+      PREFIX-minReplicas: 2
+      PREFIX-replicaCount: 2
+      PREFIX-maxReplicas: 8
+  eric-nrf-management:
+    mgmt:
+      PREFIX-replicaCount: 2
+      PREFIX-maxReplicas: 6
+      PREFIX-minReplicas: 2
+  eric-nrf-discovery:
+    disc:
+      resources:
+        limits:
+          PREFIX-cpu: 2500m
+        requests:
+          PREFIX-cpu: 2500m
+      PREFIX-minReplicas: 2
+      PREFIX-replicaCount: 2
+      PREFIX-maxReplicas: 10
+  eric-nrf-management-notification:
+    notification:
+      PREFIX-replicaCount: 2
+      maxReplicas: 12
+      PREFIX-minReplicas: 2
+  eric-nrf-common:
+    dbproxy:
+      resources:
+        limits:
+          PREFIX-cpu: 3000m
+        requests:
+          PREFIX-cpu: 1400m
+eric-nssf:
+  eric-data-kvdb-ag-operator:
+    nodeSelector:
+      operator: {}
+  {% if nssfGeo %}
+  eric-data-kvdb-ag:
+    multiSite:
+      enabled: true
+      runtimeConfigMode:
+        enabled: true
+      locator:
+        localHost: "{{ nssf.0.host }}.kvdb.nssf.3gppnetwork.org"
+        distributedSystemID: {{ kvdb.0.siteId }}
+  {% else %}
+  eric-data-kvdb-ag:
+    multiSite:
+      enabled: false
+      runtimeConfigMode:
+        enabled: false
+      locator:
+        localHost: ""
+        distributedSystemID: 0
+  {% endif %}
+    nodeSelector:
+      locator: {}
+      server: {}
+      adminMgr: {}
+    persistence:
+      data:
+        persistentVolumeClaim:
+          storageClassName: "{{ storageClassName|default("network-block") }}"
+      backup:
+        persistentVolumeClaim:
+          storageClassName: "{{ storageClassName|default("network-block") }}"
+      gwsender:
+        persistentVolumeClaim:
+          storageClassName: "{{ storageClassName|default("network-block") }}"
+    affinity:
+      podAntiAffinity: hard
+    {% if nssfGeo %}
+    servicePorts:
+      kvdbAgLocator: 8091
+    istio:
+      virtualservice:
+        enabled: true
+    {% else %}
+    servicePorts:
+      kvdbAgLocator: 10334
+    istio:
+      virtualservice:
+        enabled: false
+    {% endif %}
+  eric-nssf-provisioning:
+    ingress:
+      fqdn: "nssf-prov.{{ vnflcm.namespace }}.{{ vnflcm.clusterName }}.{{ oamDomain }}"
+  eric-nssf-slice-selection-control:
+    sliceselectioncontrol:
+      PREFIX-maxReplicas: 5
+      PREFIX-replicaCount: 2
+      PREFIX-minReplicas: 2
+  eric-nssf-nssai-availability:
+    nssaiavailability:
+      maxReplicas: 3
+      PREFIX-replicaCount: 2
+      PREFIX-minReplicas: 2
+    notification:
+      maxReplicas: 3
+      PREFIX-replicaCount: 2
+      PREFIX-minReplicas: 2
+
+policyStudio:
+  ingress:
+    fqdn: ""
+
+eric-ps-policystudio:
+  eric-ps-backend:
+    mongo:
+      volumes:
+        backup:
+          storageClassName: ""
+        data:
+          storageClassName: ""
+        log:
+          storageClassName: ""
+    policyStudioBackend:
+      volumes:
+        log:
+          storageClassName: ""
+    istioEgressEnabled: false
+
+eric-adp-5g-udm:
+  eric-cm-mediator:
+    nodeSelector:
+    {% if caas == 'OpenShift' %}
+    # ADPPRG-107321
+    cmm:
+      restWorkerQueueLimit: 0
+    {% endif %}
+      eric-cm-mediator: {}
+      eric-cm-mediator-notifier: {}
+      eric-cm-key-init: {}
+  eric-pm-server:
+    rbac:
+      appMonitoring:
+      {% if caas == 'OpenShift' %}
+        enabled: false
+      {% else %}
+        enabled: true
+      {% endif %}
+        federation:
+          jobOverride: false
+          jobConfiguration: |
+            #- job_name: 'federate-3pp-caas'
+            #  scrape_interval: 15s
+            #  honor_labels: true
+            #  metrics_path: '/federate'
+            #  params:
+            #    'match[]':
+            #      - '{job="kubernetes-nodes",namespace="eric-ccrc"}'
+            #      - '{job="kubernetes-nodes-cadvisor",namespace="eric-ccrc"}'
+            #  static_configs:
+            #    - targets:
+            #      - 'eric-pm-server.monitoring:9090'
+    server:
+      persistentVolume:
+        storageClass: "{{ storageClassName|default("network-block") }}"
+    nodeSelector: {}
+    resources:
+      eric-pm-server:
+        limits:
+          PREFIX-memory: 15Gi
+        requests:
+          PREFIX-memory: 2048Mi
+  eric-pm-bulk-reporter:
+    nodeSelector: {}
+    env:
+      nodeName: "{{ nodeName }}"
+    persistentVolumeClaim:
+      storageClassName: "{{ storageClassName|default("network-block") }}"
+    service:
+      loadBalancerIP: ""
+      annotations:
+        sharedVIPLabel: ccrc-adp
+        addressPoolName: ccrc-oam
+  eric-data-search-engine:
+    nodeSelector:
+      data: {}
+      ingest: {}
+      bragent: {}
+      master: {}
+    persistence:
+      data:
+        persistentVolumeClaim:
+          storageClassName: "{{ storageClassName|default("network-block") }}"
+      master:
+        persistentVolumeClaim:
+          storageClassName: "{{ storageClassName|default("network-block") }}"
+    service:
+      network:
+        protocol:
+          IPv6: false
+  eric-data-search-engine-curator:
+    nodeSelector: {}
+  eric-data-document-database-pg:
+    nodeSelector: {}
+    persistentVolumeClaim:
+      storageClassName: "{{ storageClassName|default("network-block") }}"
+    postgresConfig:
+      max_connections: 300
+  eric-log-transformer:
+    nodeSelector: {}
+    networkPolicy:
+      egress: []
+      #  - cidr: 172.17.100.0/22
+      #    ports:
+      #    - protocol: TCP
+      #      port: 514
+      #    - protocol: UDP
+      #      port: 514
+    egress:
+      syslog:
+        enabled: false
+        tls:
+          enabled: true
+        remoteHosts: []
+        #  - host: hostname
+        #    port: 514
+        inclusions: []
+        #  - field: "[facility]"
+        #    value: "log audit"
+        #  - field: "[other]"
+        #    value: "other value"
+        exclusions: []
+        #  - logplane:
+        #    rules:
+        #      - field: "[field1]"
+        #        value: "value1"
+        #      - field: "[field2]"
+        #        value: "value2"
+        filter: "" #|
+  eric-data-coordinator-zk:
+    nodeSelector:
+      datacoordinatorzk: {}
+      brAgent: {}
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: "{{ storageClassName|default("network-block") }}"
+  eric-data-message-bus-kf:
+    nodeSelector: {}
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: "{{ storageClassName|default("network-block") }}"
+  eric-fh-snmp-alarm-provider:
+    nodeSelector: {}
+    service:
+      loadBalancerIP: ""
+      annotations:
+        sharedVIPLabel: "ccrc-adp"
+        addressPoolName: "ccrc-oam"
+    oamVIP:
+      enabled: false
+      vip: ""
+      destIp: ""
+    sourceIdentifierType: 1
+    sourceIdentifier: ""
+  eric-log-shipper:
+    nodeSelector: {}
+    {% if caas == 'OpenShift' %}
+    logshipper:
+      privileged: true
+    additionalVolumes: |
+      - name: crio-containers
+        hostPath:
+          path: /var/log/containers
+      - name: kubernetes-containers
+        hostPath:
+          path: /var/log/pods
+    additionalVolumeMounts: |
+      - name: crio-containers
+        mountPath: /var/log/containers
+        readOnly: true
+      - name: kubernetes-containers
+        mountPath: /var/log/pods
+        readOnly: true
+    {% endif %}
+  eric-cm-yang-provider:
+    nodeSelector: {}
+    ldap:
+      ipv6Enabled: false
+    persistentVolumeClaim:
+      storageClassName: "{{ storageClassName|default("network-block") }}"
+    service:
+      loadBalancerIP: ""
+      annotations:
+        sharedVIPLabel: "ccrc-adp"
+        addressPoolName: "ccrc-oam"
+  eric-cnom-document-database-mg:
+    nodeSelector: {}
+    persistence:
+      storageClass: "{{ storageClassName|default("network-block") }}"
+  eric-ctrl-bro:
+    nodeSelector: {}
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: "{{ storageClassName|default("network-block") }}"
+  eric-sec-ldap-server:
+    persistentVolumeClaim:
+      storageClassName: "{{ storageClassName|default("network-block") }}"
+    nodeSelector:
+      ldap: {}
+      ldapProxy: {}
+  eric-data-distributed-coordinator-ed:
+    nodeSelector:
+      brAgent: {}
+      dced: {}
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: "{{ storageClassName|default("network-block") }}"
+      brAgent:
+        backupVolume:
+          storageClassName: "{{ storageClassName|default("network-block") }}"
+  eric-fh-alarm-handler:
+    nodeSelector: {}
+  eric-tm-ingress-controller-cr:
+    service:
+      loadBalancerIP: ""
+      annotations:
+        sharedVIPLabel: "ccrc-adp"
+        addressPoolName: "ccrc-oam"
+    minimumProtocolVersion: "1.2"
+    nodeSelector:
+      contour: {}
+      envoy: {}
+    {% if caas == 'OpenShift' %}
+    # According ADP Service User Guide
+    resources:
+      contour:
+        limits:
+          cpu: "600m"
+          memory: "1200Mi"
+      envoy:
+        limits:
+          cpu: "2"
+          memory: 600Mi
+    {% endif %}
+  eric-sec-admin-user-management:
+    nodeSelector: {}
+    notices:
+      legal: IF YOU ARE NOT AN AUTHORIZED USER, PLEASE EXIT IMMEDIATELY
+      privacy: 'This system processes personal information. Handle personal information with care. Misuse, including unauthorized access, is grounds for legal action. Version: 1.0, Date: October 27, 2020.'
+      postLogin: ""
+  eric-sec-key-management:
+    nodeSelector: {}
+  eric-sec-sip-tls:
+    nodeSelector: {}
+  eric-cnom-server:
+    nodeSelector: {}
+    fqdn: cnom.{{ vnflcm.namespace }}.{{ vnflcm.clusterName }}.{{ oamDomain }}
+    legalNotice: |-
+      IF YOU ARE NOT AN AUTHORIZED USER, PLEASE EXIT IMMEDIATELY
+
+      This system processes personal information. Handle personal information with care. Misuse, including unauthorized access, is grounds for legal action. Version: 1.0, Date: October 27, 2020.
+  eric-odca-diagnostic-data-collector:
+    nodeSelector: {}
+  eric-lm-combined-server:
+    licenseConsumerHandler:
+      nodeSelector: {}
+    licenseServerClient:
+      nodeSelector: {}
+      licenseServer:
+        thrift:
+          host: "{{ nels.host }}"
+    licenseServerIpAddresses:
+      # licenseServerIpAddresses.ip1 - the first IP address of a license server in the hosts file
+      ip1: ""
+      # licenseServerIpAddresses.ip2 - the second IP address of a license server in the hosts file for Geographical Redundency
+      ip2: ""
+  eric-data-object-storage-mn:
+    affinity:
+      podAntiAffinity: "hard"
+    nodeSelector: {}
+    persistentVolumeClaim:
+      storageClassName: "{{ storageClassName|default("network-block") }}"
+  eric-sec-certm:
+    nodeSelector: {}
+  eric-si-application-sys-info-handler:
+    nodeSelector: {}
+  eric-dst-collector:
+    nodeSelector: {}
+  eric-dst-query:
+    ingress:
+      fqdn: dst.ericsson.com
+      tls:
+        mode: "MUTUAL"
+    nodeSelector: {}
+
+eric-nrfagent:
+  eric-nrf-register-agent:
+    PREFIX-minReplicas: 2
+    PREFIX-replicaCount: 2
+    PREFIX-maxReplicas: 3
+  eric-nrf-discovery-agent:
+    PREFIX-minReplicas: 2
+    PREFIX-replicaCount: 2
+    PREFIX-maxReplicas: 3
+  eric-nrf-accesstoken-agent:
+    PREFIX-minReplicas: 2
+    PREFIX-replicaCount: 2
+    PREFIX-maxReplicas: 3
+  eric-nrf-notify-agent:
+    PREFIX-minReplicas: 2
+    PREFIX-replicaCount: 2
+    PREFIX-maxReplicas: 3
+  eric-svc-routing-agent:
+    PREFIX-minReplicas: 2
+    PREFIX-replicaCount: 2
+    PREFIX-maxReplicas: 3
+
+eric-ccrc-common:
+  eric-probe-virtual-tap-broker:
+    PREFIX-replicaCount: 2
+    staticConfig:
+      consumers:
+        - name: consumer1
+          address: 10.5.5.65
+          domains:
+            ccrc-nrf: ["raw-http"]
+        - name: consumer2
+          address: 10.5.5.66
+          domains:
+            ccrc-nssf: ["raw-http"]

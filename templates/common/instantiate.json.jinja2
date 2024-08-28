@@ -1,0 +1,12 @@
+{
+{% if 'clusterName' in vnflcm %}
+  "clusterName": "{{ vnflcm.clusterName }}",
+{% endif %}
+  "additionalParams": {
+       "namespace": "{{ vnflcm.namespace }}",
+       "applicationTimeOut": "{{ vnflcm.InstantiateVnfRequest.applicationTimeOut | default("900") }}",
+       "skipJobVerification": "{{ vnflcm.InstantiateVnfRequest.skipJobVerification | default("false") }}",
+       "skipVerification": "{{ vnflcm.InstantiateVnfRequest.skipVerification | default("false") }}"
+      }
+}
+

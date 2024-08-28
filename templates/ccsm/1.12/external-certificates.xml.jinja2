@@ -1,0 +1,408 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <capabilities>
+        <capability>urn:ietf:params:netconf:base:1.0</capability>
+        <capability>urn:ietf:params:netconf:capability:writable-running:1.0</capability>
+        <capability>urn:ietf:params:netconf:capability:rollback-on-error:1.0</capability>
+    </capabilities>
+</hello>]]>]]>
+  <rpc message-id="11"
+     xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <edit-config>
+        <target>
+            <running/>
+        </target>
+        <config xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+            <truststore xmlns="urn:ietf:params:xml:ns:yang:ietf-truststore"
+                        xmlns:ts="urn:ietf:params:xml:ns:yang:ietf-truststore">
+                <certificates>
+                    <name>eric-ccsm-ausf-sbi-client-certs-cacert</name>
+                    <description>Trusted cert for eric-ccsm-ausf-sbi-client-certs-cacert ExternalCertificate</description>
+                </certificates>
+            </truststore>
+        </config>
+    </edit-config>
+  </rpc>]]>]]>
+  <rpc message-id="12"
+     xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <action xmlns="urn:ietf:params:xml:ns:yang:1"
+            xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <truststore xmlns="urn:ietf:params:xml:ns:yang:ietf-truststore">
+            <certificates>
+                <name>eric-ccsm-ausf-sbi-client-certs-cacert</name>
+                <install-certificate-pem xmlns="urn:rdns:com:ericsson:oammodel:ericsson-truststore-ext">
+                    <name>eric-ccsm-ausf-sbi-client-certs-cacert</name>
+                    <pem>{{ trustCAs.0 | file_b64encode }}</pem>
+                </install-certificate-pem>
+            </certificates>
+        </truststore>
+    </action>
+  </rpc>]]>]]>
+  <rpc message-id="13"
+     xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <edit-config>
+        <target>
+            <running/>
+        </target>
+        <config xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+            <truststore xmlns="urn:ietf:params:xml:ns:yang:ietf-truststore"
+                        xmlns:ts="urn:ietf:params:xml:ns:yang:ietf-truststore">
+                <certificates>
+                    <name>eric-ccsm-ausf-sbi-server-certs-cacert</name>
+                    <description>Trusted cert for eric-ccsm-ausf-sbi-server-certs-cacert ExternalCertificate</description>
+                </certificates>
+            </truststore>
+        </config>
+    </edit-config>
+  </rpc>]]>]]>
+  <rpc message-id="14"
+     xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <action xmlns="urn:ietf:params:xml:ns:yang:1"
+            xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <truststore xmlns="urn:ietf:params:xml:ns:yang:ietf-truststore">
+            <certificates>
+                <name>eric-ccsm-ausf-sbi-server-certs-cacert</name>
+                <install-certificate-pem xmlns="urn:rdns:com:ericsson:oammodel:ericsson-truststore-ext">
+                    <name>eric-ccsm-ausf-sbi-server-certs-cacert</name>
+                    <pem>{{ trustCAs.0 | file_b64encode }}</pem>
+                </install-certificate-pem>
+            </certificates>
+        </truststore>
+    </action>
+  </rpc>]]>]]>
+  <rpc message-id="21"
+     xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <action xmlns="urn:ietf:params:xml:ns:yang:1"
+            xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <keystore xmlns="urn:ietf:params:xml:ns:yang:ietf-keystore">
+            <asymmetric-keys>
+                <install-asymmetric-key-pkcs12 xmlns="urn:rdns:com:ericsson:oammodel:ericsson-keystore-ext">
+                    <name>eric-ccsm-ausf-sbi-client-asymetric-key</name>
+                    <certificate-name>eric-ccsm-ausf-sbi-client-certs</certificate-name>
+                    <p12-password>{{ certs['eric-ccsm-ausf-sbi-client-certs'].password }}</p12-password>
+                    <p12>{{ certs['eric-ccsm-ausf-sbi-client-certs'].p12 | file_b64encode }}</p12>
+                </install-asymmetric-key-pkcs12>
+            </asymmetric-keys>
+        </keystore>
+    </action>
+  </rpc>]]>]]>
+  <rpc message-id="22"
+     xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <action xmlns="urn:ietf:params:xml:ns:yang:1"
+            xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <keystore xmlns="urn:ietf:params:xml:ns:yang:ietf-keystore">
+            <asymmetric-keys>
+                <install-asymmetric-key-pkcs12 xmlns="urn:rdns:com:ericsson:oammodel:ericsson-keystore-ext">
+                    <name>eric-ccsm-ausf-sbi-server-asymetric-key</name>
+                    <certificate-name>eric-ccsm-ausf-sbi-server-certs</certificate-name>
+                    <p12-password>{{ certs['eric-ccsm-ausf-sbi-server-certs'].password }}</p12-password>
+                    <p12>{{ certs['eric-ccsm-ausf-sbi-server-certs'].p12 | file_b64encode }}</p12>
+                </install-asymmetric-key-pkcs12>
+            </asymmetric-keys>
+        </keystore>
+    </action>
+  </rpc>]]>]]>
+  <rpc message-id="31"
+     xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <edit-config>
+        <target>
+            <running/>
+        </target>
+        <config xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+            <truststore xmlns="urn:ietf:params:xml:ns:yang:ietf-truststore"
+                        xmlns:ts="urn:ietf:params:xml:ns:yang:ietf-truststore">
+                <certificates>
+                    <name>eric-ccsm-udm-sbi-client-certs-cacert</name>
+                    <description>Trusted cert for eric-ccsm-udm-sbi-client-certs-cacert ExternalCertificate</description>
+                </certificates>
+            </truststore>
+        </config>
+    </edit-config>
+  </rpc>]]>]]>
+  <rpc message-id="32"
+     xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <action xmlns="urn:ietf:params:xml:ns:yang:1"
+            xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <truststore xmlns="urn:ietf:params:xml:ns:yang:ietf-truststore">
+            <certificates>
+                <name>eric-ccsm-udm-sbi-client-certs-cacert</name>
+                <install-certificate-pem xmlns="urn:rdns:com:ericsson:oammodel:ericsson-truststore-ext">
+                    <name>eric-ccsm-udm-sbi-client-certs-cacert</name>
+                    <pem>{{ trustCAs.0 | file_b64encode }}</pem>
+                </install-certificate-pem>
+            </certificates>
+        </truststore>
+    </action>
+  </rpc>]]>]]>
+  <rpc message-id="33"
+     xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <edit-config>
+        <target>
+            <running/>
+        </target>
+        <config xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+            <truststore xmlns="urn:ietf:params:xml:ns:yang:ietf-truststore"
+                        xmlns:ts="urn:ietf:params:xml:ns:yang:ietf-truststore">
+                <certificates>
+                    <name>eric-ccsm-udm-sbi-server-certs-cacert</name>
+                    <description>Trusted cert for eric-ccsm-udm-sbi-server-certs-cacert ExternalCertificate</description>
+                </certificates>
+            </truststore>
+        </config>
+    </edit-config>
+  </rpc>]]>]]>
+  <rpc message-id="34"
+     xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <action xmlns="urn:ietf:params:xml:ns:yang:1"
+            xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <truststore xmlns="urn:ietf:params:xml:ns:yang:ietf-truststore">
+            <certificates>
+                <name>eric-ccsm-udm-sbi-server-certs-cacert</name>
+                <install-certificate-pem xmlns="urn:rdns:com:ericsson:oammodel:ericsson-truststore-ext">
+                    <name>eric-ccsm-udm-sbi-server-certs-cacert</name>
+                    <pem>{{ trustCAs.0 | file_b64encode }}</pem>
+                </install-certificate-pem>
+            </certificates>
+        </truststore>
+    </action>
+  </rpc>]]>]]>
+  <rpc message-id="41"
+     xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <action xmlns="urn:ietf:params:xml:ns:yang:1"
+            xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <keystore xmlns="urn:ietf:params:xml:ns:yang:ietf-keystore">
+            <asymmetric-keys>
+                <install-asymmetric-key-pkcs12 xmlns="urn:rdns:com:ericsson:oammodel:ericsson-keystore-ext">
+                    <name>eric-ccsm-udm-sbi-client-asymetric-key</name>
+                    <certificate-name>eric-ccsm-udm-sbi-client-certs</certificate-name>
+                    <p12-password>{{ certs['eric-ccsm-udm-sbi-client-certs'].password }}</p12-password>
+                    <p12>{{ certs['eric-ccsm-udm-sbi-client-certs'].p12 | file_b64encode }}</p12>
+                </install-asymmetric-key-pkcs12>
+            </asymmetric-keys>
+        </keystore>
+    </action>
+  </rpc>]]>]]>
+  <rpc message-id="42"
+     xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <action xmlns="urn:ietf:params:xml:ns:yang:1"
+            xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <keystore xmlns="urn:ietf:params:xml:ns:yang:ietf-keystore">
+            <asymmetric-keys>
+                <install-asymmetric-key-pkcs12 xmlns="urn:rdns:com:ericsson:oammodel:ericsson-keystore-ext">
+                    <name>eric-ccsm-udm-sbi-server-asymetric-key</name>
+                    <certificate-name>eric-ccsm-udm-sbi-server-certs</certificate-name>
+                    <p12-password>{{ certs['eric-ccsm-udm-sbi-server-certs'].password }}</p12-password>
+                    <p12>{{ certs['eric-ccsm-udm-sbi-server-certs'].p12 | file_b64encode }}</p12>
+                </install-asymmetric-key-pkcs12>
+            </asymmetric-keys>
+        </keystore>
+    </action>
+  </rpc>]]>]]>
+  <rpc message-id="51"
+     xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <edit-config>
+        <target>
+            <running/>
+        </target>
+        <config xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+            <truststore xmlns="urn:ietf:params:xml:ns:yang:ietf-truststore"
+                        xmlns:ts="urn:ietf:params:xml:ns:yang:ietf-truststore">
+                <certificates>
+                    <name>eric-ccsm-hss-sbi-client-certs-cacert</name>
+                    <description>Trusted cert for eric-ccsm-hss-sbi-client-certs-cacert ExternalCertificate</description>
+                </certificates>
+            </truststore>
+        </config>
+    </edit-config>
+  </rpc>]]>]]>
+  <rpc message-id="52"
+     xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <action xmlns="urn:ietf:params:xml:ns:yang:1"
+            xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <truststore xmlns="urn:ietf:params:xml:ns:yang:ietf-truststore">
+            <certificates>
+                <name>eric-ccsm-hss-sbi-client-certs-cacert</name>
+                <install-certificate-pem xmlns="urn:rdns:com:ericsson:oammodel:ericsson-truststore-ext">
+                    <name>eric-ccsm-hss-sbi-client-certs-cacert</name>
+                    <pem>{{ trustCAs.0 | file_b64encode }}</pem>
+                </install-certificate-pem>
+            </certificates>
+        </truststore>
+    </action>
+  </rpc>]]>]]>
+  <rpc message-id="53"
+     xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <edit-config>
+        <target>
+            <running/>
+        </target>
+        <config xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+            <truststore xmlns="urn:ietf:params:xml:ns:yang:ietf-truststore"
+                        xmlns:ts="urn:ietf:params:xml:ns:yang:ietf-truststore">
+                <certificates>
+                    <name>eric-ccsm-hss-sbi-server-certs-cacert</name>
+                    <description>Trusted cert for eric-ccsm-hss-sbi-server-certs-cacert ExternalCertificate</description>
+                </certificates>
+            </truststore>
+        </config>
+    </edit-config>
+  </rpc>]]>]]>
+  <rpc message-id="54"
+     xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <action xmlns="urn:ietf:params:xml:ns:yang:1"
+            xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <truststore xmlns="urn:ietf:params:xml:ns:yang:ietf-truststore">
+            <certificates>
+                <name>eric-ccsm-hss-sbi-server-certs-cacert</name>
+                <install-certificate-pem xmlns="urn:rdns:com:ericsson:oammodel:ericsson-truststore-ext">
+                    <name>eric-ccsm-hss-sbi-server-certs-cacert</name>
+                    <pem>{{ trustCAs.0 | file_b64encode }}</pem>
+                </install-certificate-pem>
+            </certificates>
+        </truststore>
+    </action>
+  </rpc>]]>]]>
+  <rpc message-id="61"
+     xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <action xmlns="urn:ietf:params:xml:ns:yang:1"
+            xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <keystore xmlns="urn:ietf:params:xml:ns:yang:ietf-keystore">
+            <asymmetric-keys>
+                <install-asymmetric-key-pkcs12 xmlns="urn:rdns:com:ericsson:oammodel:ericsson-keystore-ext">
+                    <name>eric-ccsm-hss-sbi-client-asymetric-key</name>
+                    <certificate-name>eric-ccsm-hss-sbi-client-certs</certificate-name>
+                    <p12-password>{{ certs['eric-ccsm-hss-sbi-client-certs'].password }}</p12-password>
+                    <p12>{{ certs['eric-ccsm-hss-sbi-client-certs'].p12 | file_b64encode }}</p12>
+                </install-asymmetric-key-pkcs12>
+            </asymmetric-keys>
+        </keystore>
+    </action>
+  </rpc>]]>]]>
+  <rpc message-id="62"
+     xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <action xmlns="urn:ietf:params:xml:ns:yang:1"
+            xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <keystore xmlns="urn:ietf:params:xml:ns:yang:ietf-keystore">
+            <asymmetric-keys>
+                <install-asymmetric-key-pkcs12 xmlns="urn:rdns:com:ericsson:oammodel:ericsson-keystore-ext">
+                    <name>eric-ccsm-hss-sbi-server-asymetric-key</name>
+                    <certificate-name>eric-ccsm-hss-sbi-server-certs</certificate-name>
+                    <p12-password>{{ certs['eric-ccsm-hss-sbi-server-certs'].password }}</p12-password>
+                    <p12>{{ certs['eric-ccsm-hss-sbi-server-certs'].p12 | file_b64encode }}</p12>
+                </install-asymmetric-key-pkcs12>
+            </asymmetric-keys>
+        </keystore>
+    </action>
+  </rpc>]]>]]>
+  <rpc message-id="71"
+     xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <edit-config>
+        <target>
+            <running/>
+        </target>
+        <config xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+            <truststore xmlns="urn:ietf:params:xml:ns:yang:ietf-truststore"
+                        xmlns:ts="urn:ietf:params:xml:ns:yang:ietf-truststore">
+                <certificates>
+                    <name>eric-ccsm-eir-sbi-client-certs-cacert</name>
+                    <description>Trusted cert for eric-ccsm-eir-sbi-client-certs-cacert ExternalCertificate</description>
+                </certificates>
+            </truststore>
+        </config>
+    </edit-config>
+  </rpc>]]>]]>
+  <rpc message-id="72"
+     xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <action xmlns="urn:ietf:params:xml:ns:yang:1"
+            xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <truststore xmlns="urn:ietf:params:xml:ns:yang:ietf-truststore">
+            <certificates>
+                <name>eric-ccsm-eir-sbi-client-certs-cacert</name>
+                <install-certificate-pem xmlns="urn:rdns:com:ericsson:oammodel:ericsson-truststore-ext">
+                    <name>eric-ccsm-eir-sbi-client-certs-cacert</name>
+                    <pem>{{ trustCAs.0 | file_b64encode }}</pem>
+                </install-certificate-pem>
+            </certificates>
+        </truststore>
+    </action>
+  </rpc>]]>]]>
+  <rpc message-id="73"
+     xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <edit-config>
+        <target>
+            <running/>
+        </target>
+        <config xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+            <truststore xmlns="urn:ietf:params:xml:ns:yang:ietf-truststore"
+                        xmlns:ts="urn:ietf:params:xml:ns:yang:ietf-truststore">
+                <certificates>
+                    <name>eric-ccsm-eir-sbi-server-certs-cacert</name>
+                    <description>Trusted cert for eric-ccsm-eir-sbi-server-certs-cacert ExternalCertificate</description>
+                </certificates>
+            </truststore>
+        </config>
+    </edit-config>
+  </rpc>]]>]]>
+  <rpc message-id="74"
+     xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <action xmlns="urn:ietf:params:xml:ns:yang:1"
+            xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <truststore xmlns="urn:ietf:params:xml:ns:yang:ietf-truststore">
+            <certificates>
+                <name>eric-ccsm-eir-sbi-server-certs-cacert</name>
+                <install-certificate-pem xmlns="urn:rdns:com:ericsson:oammodel:ericsson-truststore-ext">
+                    <name>eric-ccsm-eir-sbi-server-certs-cacert</name>
+                    <pem>{{ trustCAs.0 | file_b64encode }}</pem>
+                </install-certificate-pem>
+            </certificates>
+        </truststore>
+    </action>
+  </rpc>]]>]]>
+  <rpc message-id="81"
+     xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <action xmlns="urn:ietf:params:xml:ns:yang:1"
+            xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <keystore xmlns="urn:ietf:params:xml:ns:yang:ietf-keystore">
+            <asymmetric-keys>
+                <install-asymmetric-key-pkcs12 xmlns="urn:rdns:com:ericsson:oammodel:ericsson-keystore-ext">
+                    <name>eric-ccsm-eir-sbi-client-asymetric-key</name>
+                    <certificate-name>eric-ccsm-eir-sbi-client-certs</certificate-name>
+                    <p12-password>{{ certs['eric-ccsm-eir-sbi-client-certs'].password }}</p12-password>
+                    <p12>{{ certs['eric-ccsm-eir-sbi-client-certs'].p12 | file_b64encode }}</p12>
+                </install-asymmetric-key-pkcs12>
+            </asymmetric-keys>
+        </keystore>
+    </action>
+  </rpc>]]>]]>
+  <rpc message-id="82"
+     xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <action xmlns="urn:ietf:params:xml:ns:yang:1"
+            xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <keystore xmlns="urn:ietf:params:xml:ns:yang:ietf-keystore">
+            <asymmetric-keys>
+                <install-asymmetric-key-pkcs12 xmlns="urn:rdns:com:ericsson:oammodel:ericsson-keystore-ext">
+                    <name>eric-ccsm-eir-sbi-server-asymetric-key</name>
+                    <certificate-name>eric-ccsm-eir-sbi-server-certs</certificate-name>
+                    <p12-password>{{ certs['eric-ccsm-eir-sbi-server-certs'].password }}</p12-password>
+                    <p12>{{ certs['eric-ccsm-eir-sbi-server-certs'].p12 | file_b64encode }}</p12>
+                </install-asymmetric-key-pkcs12>
+            </asymmetric-keys>
+        </keystore>
+    </action>
+  </rpc>]]>]]>
+  <rpc message-id="91"
+     xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <action xmlns="urn:ietf:params:xml:ns:yang:1">
+        <keystore xmlns="urn:ietf:params:xml:ns:yang:ietf-keystore">
+            <asymmetric-keys>
+                <install-asymmetric-key-pkcs12 xmlns="urn:rdns:com:ericsson:oammodel:ericsson-keystore-ext">
+                    <name>iccr-external-tls-key</name>
+                    <certificate-name>iccr-external-tls-certificate</certificate-name>
+                    <p12-password>{{ certs['iccr-external-tls-certificate'].password }}</p12-password>
+                    <p12>{{ certs['iccr-external-tls-certificate'].p12 | file_b64encode }}</p12>
+                </install-asymmetric-key-pkcs12>
+            </asymmetric-keys>
+        </keystore>
+    </action>
+  </rpc>
+<close-session/>

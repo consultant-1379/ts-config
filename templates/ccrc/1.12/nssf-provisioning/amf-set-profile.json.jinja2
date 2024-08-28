@@ -1,0 +1,40 @@
+{
+   "amfSetName":"AmfSetId-002",
+   "amfSetAdminState":"UNLOCKED",
+   "amfSetId":"240-81-ff-002",
+   "servedPlmnIds":[
+      {
+         "mcc":"{{ mcc }}",
+         "mnc":"{{ mnc }}"
+      }
+   ],
+   {% if geored.amf.enabled == true and siteId == 1 %}
+   "amfNfInstances":[
+      {
+         "amfNfInstanceId":"{{ ccrc.nssf.provisioning.amf.instanceId[0] }}",
+         "amfNfInstanceState":"UNLOCKED"
+      },
+      {
+         "amfNfInstanceId":"{{ ccrc.nssf.provisioning.amf.instanceId[1] }}",
+         "amfNfInstanceState":"UNLOCKED"
+      }
+   {% elif geored.amf.enabled == true and siteId == 2 %}
+   "amfNfInstances":[
+      {
+         "amfNfInstanceId":"{{ ccrc.nssf.provisioning.amf.instanceId[1] }}",
+         "amfNfInstanceState":"UNLOCKED"
+      },
+      {
+         "amfNfInstanceId":"{{ ccrc.nssf.provisioning.amf.instanceId[0] }}",
+         "amfNfInstanceState":"UNLOCKED"
+      }
+   {% else %}
+   "amfNfInstances":[
+      {
+         "amfNfInstanceId":"{{ ccrc.nssf.provisioning.amf.instanceId[0] }}",
+         "amfNfInstanceState":"UNLOCKED"
+      }
+   {% endif %}
+   ],
+   "nrfProfileName":"nrf-slice-common-region-001"
+}

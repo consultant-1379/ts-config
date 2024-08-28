@@ -1,0 +1,977 @@
+tags:
+  eric-ccpc-sm-pcf-pcrf-data: true
+  {% if systemProfile == 'small' and voice.enabled == false %}
+  eric-ccpc-sm-pcf-pcrf-voice: false
+  {% else %}
+  eric-ccpc-sm-pcf-pcrf-voice: true
+  {% endif %}
+  eric-ccpc-am-pcf: false
+  eric-ccpc-ue-pcf: false
+  eric-ccpc-geored: false
+  eric-ccpc-n28: false
+  eric-ccpc-policy-studio: false
+  eric-ccpc-udr: true
+
+global:
+  nodeSelector: {}
+  databaseName: "eric-pcf-dms"
+  profiles:
+    std-system:
+      enabled: {{ 'true' if systemProfile == 'standard' else 'false' | string |lower }}
+    small-system:
+      enabled: {{ 'true' if systemProfile == 'small' else 'false' | string |lower }}
+    cleartext-traffic-gw:
+      enabled: false
+    cleartext-provisioning-gw:
+      enabled: false
+    cleartext-policy-studio-gw:
+      enabled: false
+    cleartext-geored:
+      enabled: false
+    mtls-traffic-gw:
+      enabled: true
+    mtls-provisioning-gw:
+      enabled: true
+    mtls-policy-studio-gw:
+      enabled: {{ 'true' if systemProfile == 'standard' else 'false' | string |lower }}
+    mtls-geored:
+      enabled: {{ 'true' if systemProfile == 'standard' else 'false' | string |lower }}
+    tls-policy-studio-gw:
+      enabled: false
+    tls-provisioning-gw:
+      enabled: false
+    pm-bulk-reporter-osmn-backend:
+      enabled: false
+  autoScaling:
+    enabled: true
+  licensing:
+    sites:
+    - hostname: "{{nels.host}}"
+  ericsson:
+    licensing:
+      licenseDomains:
+        - productType: 'CCPC'
+          customerId: '{{ license.customerId }}'
+          swltId: '{{ license.swltId }}'
+  security:
+    policyBinding:
+      create: false
+    policyReferenceMap:
+      default-restricted-security-policy: "default-restricted-security-policy"
+    tls:
+      enabled: true
+  logAnonymization: false
+  logDirSizeMiB: 250
+  pullSecret: regcred
+  registry:
+    url: armdocker.rnd.ericsson.se
+    imagePullPolicy: IfNotPresent
+  internalMtls:
+    enabled: "on"
+  timezone: {{ timezone }}
+  istio:
+    ingress:
+      gateways:
+        eric-ccpc-policy-studio-gw:
+          enabled: {{ 'true' if systemProfile == 'standard' else 'false' | string |lower }}
+        eric-pcf-intersite-gw:
+          enabled: false
+      oauth2:
+        eric-pcf-traffic:
+          enabled: false
+          permissive: true
+          selector: "eric-ingressgw-pcf-traffic"
+          keys:
+          - issuer: "nrf-a-id"
+            jwks: '{"keys":[
+                {
+                  "crv":"P-256",
+                  "kid":"key-c-id",
+                  "kty":"EC",
+                  "x":"wO3-TFT5fd-Xqx5f9eGLlJHmR9ZgEvRfEoBLXro97co",
+                  "y":"rETYnJ2jUfav7lFr8I0pQnnF_1nDXfnOWG3vv-gvKEc"
+                }
+              ]}'
+          rules:
+          - paths: ["/npcf-smpolicycontrol/v1*"]
+            methods: ["POST","PUT","PATCH","DELETE"]
+            audiences: ["pcf-a-id"]
+            subjects: ["smf-a-id"]
+            issuers: ["nrf-a-id"]
+            scopes: ["npcf-smpolicycontrol"]
+          - paths: ["/npcf-ue-policy-control/v1*"]
+            methods: ["POST","DELETE"]
+            audiences: ["pcf-a-id"]
+            subjects: ["amf-a-id"]
+            issuers: ["nrf-a-id"]
+            scopes: ["npcf-ue-policy-control"]
+          - paths: ["/npcf-am-policy-control/v1*"]
+            methods: ["POST","DELETE"]
+            audiences: ["pcf-a-id"]
+            subjects: ["amf-a-id"]
+            issuers: ["nrf-a-id"]
+            scopes: ["npcf-am-policy-control"]
+    egress:
+      endpoints:
+        eric-ccrc-sbi-traffic-mtls:
+          enabled: true
+          host: "*.{{ DOMAIN_3GPP_5GC }}" #FQDN for CCRC
+          ports:
+            - port: 443 # HTTPS target destination
+              name: https-port-for-mTLS-origination
+              mode: mTLS # Values allowed [ TLS, mTLS ]
+              protocol: HTTP2
+        eric-smf-sbi-traffic-mtls:
+          enabled: true
+          host: "*.{{ DOMAIN_3GPP_5GC }}"
+          ports:
+            - port: 6060 # HTTPS target destination
+              name: https-port-for-mTLS-origination
+              mode: mTLS # Values allowed [ TLS, mTLS ]
+              protocol: HTTP2
+        eric-amf-sbi-traffic-mtls:
+          enabled: true
+          {% if systemProfile == 'small' %}
+          host: "site{{ siteId }}-cluster{{ instance }}-pcc{{ instance }}.amf.5gc.mnc081.mcc240.3gppnetwork.org"
+          {% else %}
+          host: "*.amfset.{{ DOMAIN_3GPP_5GC }}"
+          {% endif %}
+          ports:
+            - port: 443 # HTTPS target destination
+              name: https-port-for-mTLS-origination
+              mode: mTLS # Values allowed [ TLS, mTLS ]
+              protocol: HTTP2
+        eric-scp-sbi-traffic-mtls:
+          enabled: true
+          {% if indirectCommunication.enabled == true %}
+          host: "{{ indirectCommunication.scp.0.host }}.{{ DOMAIN_3GPP_5GC }}" #FQDN for CCRC
+          {% else %}
+          host: "*.scpset.{{ DOMAIN_3GPP_5GC }}" #  Keep the default FQDN value in day0 file for SCP
+          {% endif %}
+          ports:
+            - port: 443 # HTTPS target destination
+              name: https-port-for-mTLS-origination
+              mode: mTLS # Values allowed [ TLS, mTLS ]
+              protocol: HTTP2
+        eric-ccpc-sbi-traffic-mtls:
+          enabled: true
+          {% if systemProfile == 'small' %}
+          host: "ccpc{{ instance }}-5g-traffic.site{{ siteId }}-cluster{{ instance }}.5gc.mnc081.mcc240.3gppnetwork.org" #FQDN for CCPC
+          {% else %}
+          host: "*.ccpcset.{{ DOMAIN_3GPP_5GC }}" #FQDN for CCPC
+          {% endif %}
+          ports:
+            - port: 443 # HTTPS target destination
+              name: https-port-for-mTLS-origination
+              mode: mTLS # Values allowed [ TLS, mTLS ]
+              protocol: HTTP2
+  enableCrashDumps: true # enable core dump generation
+  tapagent:
+    {% if caas == 'OpenShift' or systemProfile == 'small' %}
+    enabled: false
+    {% else %}
+    enabled: true
+    {% endif %}
+  database:
+    multiSite:
+      runtimeConfigMode:
+        enabled: false
+  diameter:
+    originHostForOutgoingRequests:
+      siteCreatingSession:
+        enabled: true
+  egressproxy:
+    istio:
+      udrSubRetransConfig:
+        attempts: 3
+#Define this parameters ONLY on dual stack clusters
+#  externalIPv4:
+#    enabled: true
+#  externalIPv6:
+#    enabled: false
+#  internalIPFamily: "IPv4"
+
+externalcertificate:
+  ingress:
+    trustedCertificateListName: eric-ccpc-sbi-server-certs-cacerts
+    asymmetricKeyCertificateName: eric-ccpc-sbi-server-key/eric-ccpc-sbi-server-certificate
+  egress:
+    trustedCertificateListName: eric-ccpc-sbi-client-certs-cacerts
+    asymmetricKeyCertificateName: eric-ccpc-sbi-client-key/eric-ccpc-sbi-client-certificate
+
+eric-udm-mesh-integration:
+  eric-mesh-controller:
+    pilot:
+      env:
+        PILOT_ENABLE_INBOUND_PASSTHROUGH: "true" #Set to false in dual stack clusters
+  eric-ingressgw-pcf-traffic:
+    externalTrafficPolicy: Local
+    service:
+      loadBalancerIP: "" #Used for setting the ingress-gateway VIP
+      annotations:
+        addressPoolName: ccpc{{ instance }}-5g-traffic
+        cloudProviderLB: {}
+      #Define these parameters ONLY on dual stack clusters
+      # externalIPv4:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-5g-traffic
+      #     sharedVIPLabel: ""
+      # externalIPv6:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-5g-traffic
+      #     sharedVIPLabel: ""
+    dscpDualStack: false
+# Uncomment to define DSCP in target port
+#    ports:
+#      https-mtls:
+#        dscp:
+#      http2-clear:
+#        dscp:
+  eric-ingressgw-ccpc-provisioning:
+    externalTrafficPolicy: Local
+    service:
+      loadBalancerIP: "" #Used for setting the ingress-gateway VIP
+      annotations:
+        addressPoolName: ccpc{{ instance }}-5g-prov
+        cloudProviderLB: {}
+      #Define these parameters ONLY on dual stack clusters
+      # externalIPv4:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-5g-prov
+      #     sharedVIPLabel: ""
+      # externalIPv6:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-5g-prov
+      #     sharedVIPLabel: ""
+    dscpDualStack: false
+# Uncomment to define DSCP in target port
+#    ports:
+#      https-mtls:
+#        dscp:
+#      https-tls:
+#        dscp:
+#      http2-clear:
+#        dscp:
+  eric-ingressgw-ccpc-policy-studio:
+    enabled: {{ 'true' if systemProfile == 'standard' else 'false' | string |lower }}
+    externalTrafficPolicy: Local
+    service:
+      annotations:
+        addressPoolName: ccpc-policy-studio
+        cloudProviderLB: {}
+      #Define these parameters ONLY on dual stack clusters
+      # externalIPv4:
+      #   annotations:
+      #     addressPoolName: ccpc-policy-studio
+      #     sharedVIPLabel: ""
+      # externalIPv6:
+      #   annotations:
+      #     addressPoolName: ccpc-policy-studio
+      #     sharedVIPLabel: ""
+    dscpDualStack: false
+# Uncomment to define DSCP in target port
+#    ports:
+#      https-mtls:
+#        dscp:
+#      https-tls:
+#        dscp:
+#      http2-clear:
+#        dscp:
+  eric-ingressgw-pcf-intersite:
+    enabled: false
+    externalTrafficPolicy: Local
+    service:
+      loadBalancerIP: "" #Used for setting the ingress-gateway VIP
+      annotations:
+        addressPoolName: ccpc{{ instance }}-5g-geored
+        cloudProviderLB: {}
+      #Define these parameters ONLY on dual stack clusters
+      # externalIPv4:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-5g-geored
+      #     sharedVIPLabel: ""
+      # externalIPv6:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-5g-geored
+      #     sharedVIPLabel: ""
+    dscpDualStack: false
+# Uncomment to define DSCP in target port
+#    ports:
+#      https-mtls:
+#        dscp:
+#      tls-kvdb-loc:
+#        dscp:
+#      tls-kvdb-recv:
+#        dscp:
+#      http2-clear:
+#        dscp:
+#      tcp-kvdb-loc:
+#        dscp:
+#      tcp-kvdb-recv:
+#        dscp:
+#servicemesh:
+#  namespace: {{ vnflcm.namespace }}
+
+eric-nrfagent:
+  global:
+    ipStackMode: "'ipv4'"
+    istio:
+      nrfagent_egressrule_enabled: false
+      egress:
+        enabled: true
+        nrfAgent_secretName: "eric-ccpc-sbi-client-certs"
+        caSecretNameSuffix: "-cacert"
+        certsPath: "/etc/istio/egress-certs/"
+        caCertsPath: "/etc/istio/egress-ca-certs/"
+        clientCertificate: "tls.crt"
+        privateKey: "tls.key"
+        caCertificates: "cacert"
+# Define the DSCP value
+#  egress:
+#    dscp: 0
+
+#adp: define sevice types and required IPs according to cluster specifics
+eric-adp-5g-udm:
+  eric-lm-combined-server:
+    licenseServerClient:
+      licenseServer:
+        thrift:
+          port: '{{ nels.port }}'
+    service:
+      endpoints:
+        licenseConsumerHandler:
+          restapi:
+            tls:
+              verifyClientCertificate: optional
+    egress:
+      licenseServer:
+        dscp: 0
+
+  eric-si-application-sys-info-handler:
+    asih:
+      applicationId: {{ nodeName }}
+
+#   applicationInfoService:
+#     port: '9099'
+
+  eric-pm-server:
+    server:
+      persistentVolume:
+        storageClass: {{ storageClassName }}
+    rbac:
+      appMonitoring:
+       {% if caas == 'OpenShift' %}
+        enabled: false
+        {% else %}
+        enabled: true
+        {% endif %}
+        federation:
+          jobOverride: true
+          jobConfiguration: |
+            - job_name: 'federate-victoria'
+              scrape_interval: 1m
+              honor_labels: true
+              metrics_path: '/select/0/prometheus/federate'
+              params:
+                'match[]':
+                  - '{job="kubernetes-nodes",namespace="{{ vnflcm.namespace }}"}'
+                  - '{job="kubernetes-nodes-cadvisor",namespace="{{ vnflcm.namespace }}"}'
+              static_configs:
+                - targets:
+                  - 'eric-victoria-metrics-cluster-vmselect.monitoring:8481'
+    externalRemoteWrite: []
+    config:
+      certm_tls:
+
+    {% if caas == 'OpenShift' or caas == 'NFVI-CCD' %}
+    resources:
+      eric-pm-exporter:
+        limits:
+          # ticket UDM5GP-58729/UDM5GP-76717, Increase limit.memory from 32Mi to 48Mi to avolid OOMKilled issue
+          memory: 48Mi
+    {% endif %}
+    {% if caas == 'NFVI-CCD' %}
+      eric-pm-server:
+        limits:
+          # UDM5GP-85391, Increase limits.memory from 15Gi to 20Gi to avoid OOMKilled isse.
+          memory: 20Gi
+    {% endif %}
+
+  eric-pm-bulk-reporter:
+    persistentVolumeClaim:
+      storageClassName: "{{ storageClassName }}"
+    service:
+      annotations:
+        sharedVIPLabel: ccpc-oam
+        addressPoolName: ccpc{{ instance }}-oam
+        cloudProviderLB: {}
+      loadBalancerIP: ""
+      pmBulksftpPort:
+        dscp: 0
+      #Define these parameters ONLY on dual stack clusters
+      # externalIPv4:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-oam
+      #     sharedVIPLabel: ccpc-oam
+      # externalIPv6:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-oam
+      #     sharedVIPLabel: ccpc-oam
+
+  eric-cm-yang-provider:
+    persistentVolumeClaim:
+      storageClassName: "{{ storageClassName }}"
+    service:
+      cmNbiPorts:
+        dscp: 0
+      annotations:
+        addressPoolName: ccpc{{ instance }}-oam
+        sharedVIPLabel: ccpc-oam
+        cloudProviderLB: {}
+      loadBalancerIP: ""
+      #Define these parameters ONLY on dual stack clusters
+      # externalIPv4:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-oam
+      #     sharedVIPLabel: ccpc-oam
+      # externalIPv6:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-oam
+      #     sharedVIPLabel: ccpc-oam
+    ldap:
+      ipv6Enabled: false
+    pmMetrics:
+      enabled: true
+      enableQueryMetricsCommands: true
+    externalTls:
+      netconf:
+        enabled: false
+
+  eric-data-document-database-pg:
+    persistentVolumeClaim:
+      storageClassName: "{{ storageClassName }}"
+      backup:
+        storageClassName: "{{ storageClassName }}"
+
+  eric-data-document-database-pg-ah:
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName }}
+
+  eric-data-document-database-pg-lm:
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName }}
+
+  eric-data-document-database-pg-iam:
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName }}
+
+  eric-sec-access-mgmt:
+    http:
+      hostValidation:
+        allowedHosts: {{ ccpc.provFqdn }}
+
+  eric-sec-ldap-server:
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName }}
+
+  eric-sec-certm:
+    egress:
+      caServer:
+        dscp: 0
+
+  eric-log-transformer:
+    egress:
+      syslog:
+        enabled: false
+        tls:
+          enabled: true
+        certificates:
+          asymmetricKeyCertificateName: log-syslog-client
+          trustedCertificateListName: log-syslog-client
+        remoteHosts: []
+        inclusions: []
+        exclusions: []
+        filter: ""
+      lumberjack:
+        enabled: false
+        remoteHosts: []
+
+  eric-data-search-engine:
+    persistence:
+      data:
+        persistentVolumeClaim:
+          storageClassName: "{{ storageClassName }}"
+      # For data-search-engine >= 6.0.0-29
+      master:
+        persistentVolumeClaim:
+          storageClassName: {{ storageClassName }}
+    service:
+      network:
+        protocol:
+          IPv6: false #If ipv6 is used, it must be set to true
+
+  eric-data-coordinator-zk:
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: "{{ storageClassName }}"
+    {% if caas == 'OpenShift' or caas == 'NFVI-CCD' %}
+    # UDM5GP-54517/UDM5GP-76246 Increase container metricsexporter memory from 32Mi to 64Mi to avoid OOM issue
+    resources:
+      metricsexporter:
+        limits:
+          memory: "64Mi"
+    {% endif %}
+
+  eric-data-distributed-coordinator-ed:
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: {{ storageClassName }}
+      brAgent:
+        backupVolume:
+          storageClassName: "{{ storageClassName }}"
+    {% if caas == 'OpenShift' or caas == 'NFVI-CCD' %}
+    # UDM5GP-76250/UDM5GP-87269, Increase container metricsexporter memory from 32Mi to 64Mi to avoid OOM issue
+    resources:
+      metricsexporter:
+        limits:
+          memory: "64Mi"
+    {% endif %}
+
+  eric-data-message-bus-kf:
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: "{{ storageClassName }}"
+
+  eric-cnom-server:
+    fqdn: {{ cnom.fqdn }}
+    legalNotice:
+
+  eric-fh-alarm-handler:
+    backend:
+      dbuser: customname
+
+  eric-fh-snmp-alarm-provider:
+    service:
+      annotations:
+        sharedVIPLabel: ccpc-oam
+        addressPoolName: ccpc{{ instance }}-oam
+        cloudProviderLB: {}
+      loadBalancerIP: ""
+      snmpPort:
+        dscp: 0
+      #Define these parameters ONLY on dual stack clusters
+      # externalIPv4:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-oam
+      #     sharedVIPLabel: ccpc-oam
+      # externalIPv6:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-oam
+      #     sharedVIPLabel: ccpc-oam
+    sourceIdentifierType: 1
+    sourceIdentifier: "{{ snmp.sourceIdentifier }}"
+
+  eric-ctrl-bro:
+   persistence:
+     persistentVolumeClaim:
+       size: 1Gi
+       storageClassName: {{ storageClassName }}
+
+  eric-tm-ingress-controller-cr:
+    service:
+      annotations:
+        sharedVIPLabel: ccpc-oam
+        addressPoolName: ccpc{{ instance }}-oam
+        cloudProviderLB: {}
+      loadBalancerIP: ""
+      #Define these parameters ONLY on dual stack clusters
+      # externalIPv4:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-oam
+      #     sharedVIPLabel: ccpc-oam
+      # externalIPv6:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-oam
+      #     sharedVIPLabel: ccpc-oam
+    resources:
+      contour:
+        limits:
+          memory: "500Mi"
+
+  eric-data-object-storage-mn:
+    affinity:
+      podAntiAffinity: "hard"
+    persistentVolumeClaim:
+      storageClassName: "{{ storageClassName }}"
+
+  eric-probe-virtual-tap-broker:
+    dtls:
+      enabled: false
+    {% if caas == 'OpenShift' %}
+  eric-log-shipper:
+    rbac:
+      automountServiceAccountToken: true
+      createClusterRole: true
+      createClusterRoleBinding: true
+    logshipper:
+      privileged: true
+      cfgData: ""
+      autodiscover:
+        enabled: true
+        namespace: ".RELEASE.NAMESPACE"
+        logplane: adp-app-logs
+        hints:
+          enabled: false
+        paths:
+          - /var/log/pods/${data.kubernetes.namespace}_${data.kubernetes.pod.name}_${data.kubernetes.pod.uid}/**/*.log
+        useContainerInput: true
+    additionalVolumes: |
+      - name: crio-containers
+        hostPath:
+          path: /var/log/containers
+      - name: kubernetes-containers
+        hostPath:
+          path: /var/log/pods
+    additionalVolumeMounts: |
+      - name: crio-containers
+        mountPath: /var/log/containers
+        readOnly: true
+      - name: kubernetes-containers
+        mountPath: /var/log/pods
+        readOnly: true
+    {% endif %}
+
+eric-stm-diameter:
+{% if systemProfile == 'small' %}
+  #IA74976, Increase the memory limit and request as per the recommendation from ADP design. Correct values are included in ccpc1.14
+  resources:
+    diameter:
+      limits:
+        memory: 4Gi
+      requests:
+        memory: 100Mi
+{% endif %}
+  service:
+    annotations:
+      cloudProviderLB: {}
+    tcp:
+      enable: true
+    externalIPv4:
+      enabled: true
+      annotations:
+        addressPoolNameDiameterOverTCP: "ccpc{{ instance }}-4g-traffic"
+        sharedVIPLabelDiameterOverTCP: ""
+    externalIPv6:
+      enabled: false
+      annotations:
+        addressPoolNameDiameterOverTCP: "ccpc{{ instance }}-4g-traffic"
+        sharedVIPLabelDiameterOverTCP: ""
+    certificates:
+      asymmetricKeyCertificateName: diameter-tls
+      trustedCertificateListName: diameter-tls
+  initialConfig:
+    dsl:
+      enableIPv6: false
+
+eric-slt-dsl:
+  initialConfig:
+    dsl:
+      enableIPv6: false
+
+datamodel:
+  redundantCopies: 1
+
+dms:
+  nameOverride: "eric-pcf-dms"
+  persistence:
+    backup:
+      persistentVolumeClaim:
+        enabled: true
+        storageClassName: {{ storageClassName }}
+        locator:
+          size: 64Mi
+        server:
+          size: 8Gi
+        adminMgr:
+          size: 1Gi
+    data:
+      persistentVolumeClaim:
+        enabled: true
+        storageClassName: {{ storageClassName }}
+        {% if systemProfile != 'small' %}
+        server:
+          size: {{ ((pvcSize['eric-pcf-dms-server']/1.07374)|round(0, 'ceil'))|int }}Gi # Default 30Gi
+        {% endif %}
+    gwsender:
+      persistentVolumeClaim:
+        enabled: false
+        storageClassName: {{ storageClassName }}
+        size: 1Gi
+  multiSite:
+    enabled: false
+    runtimeConfigMode:
+      enabled: false
+    locator:
+      localHost:
+  ipv6stackPreferred: false
+  replicaCount:
+    server: {{ replicaCount['eric-pcf-dms-server'] }}
+
+# Define the DSCP value
+#  egress:
+#    dscp: 0
+
+dms-operator:
+  ipv6stackPreferred: false
+
+da:
+  autoScaling:
+    minReplicas: {{ hpaReplica['eric-ccpc-data-access'].min }} # Default 5
+    maxReplicas: {{ hpaReplica['eric-ccpc-data-access'].max }} # Default 150
+
+eric-pcf-session-management-policy-control:
+  autoScaling:
+    minReplicas: {{ hpaReplica['eric-pcf-session-management-policy-control'].min }} # Default 2
+    maxReplicas: {{ hpaReplica['eric-pcf-session-management-policy-control'].max }} # Default 70
+# Define the DSCP value
+#  egress:
+#    dscp: 0
+
+eric-pcf-ue-policy-control:
+  autoScaling:
+    minReplicas: {{ hpaReplica['eric-pcf-ue-policy-control'].min }} # Default 2
+    maxReplicas: {{ hpaReplica['eric-pcf-ue-policy-control'].max }} # Default 60
+
+# Uncomment to define DSCP value
+#  egress:
+#    dscp:
+
+eric-pcrf-ipcan-session-management:
+  autoScaling:
+    minReplicas: {{ hpaReplica['eric-pcrf-ipcan-session-management'].min }} # Default 2
+    maxReplicas: {{ hpaReplica['eric-pcrf-ipcan-session-management'].max }} # Default 70
+  ipcansessionmanagement:
+    diameter:
+      dsd:
+        network_type: "ip"
+    {% if caas == 'NFVI-CCD' %}
+    # UDM5GP-86874, Increase the limits.memory from 500Mi to 1000Mi to avoid OOMKilled issue.
+    resources:
+      limits:
+        memory: 1000Mi
+    {% endif %}
+
+eric-pcf-access-mobility-policy-control:
+  autoScaling:
+    minReplicas: 2
+    maxReplicas: 4
+# Uncomment to define DSCP value
+#  egress:
+#    dscp:
+
+eric-pcf-charging:
+  autoScaling:
+    minReplicas: {{ hpaReplica['eric-pcf-charging'].min }} # Default 2
+    maxReplicas: {{ hpaReplica['eric-pcf-charging'].max }} # Default 70
+
+eric-ccpc-provisioning:
+  autoScaling:
+    minReplicas: {{ hpaReplica['eric-ccpc-provisioning'].min }} #2
+    maxReplicas: {{ hpaReplica['eric-ccpc-provisioning'].max }} #110
+
+eric-pcf-rx-policy-control:
+  autoScaling:
+    minReplicas: {{ hpaReplica['eric-pcf-rx-policy-control'].min }} # Default 2
+    maxReplicas: {{ hpaReplica['eric-pcf-rx-policy-control'].max }} # Default 60
+  rxpolicycontrol:
+    diameter:
+      dsd:
+        network_type: "ip"
+    rxpcConfiguration:
+      properties:
+        afStrWaitNetlocTimeout: 3000
+
+eric-pcf-peer-discoverer:
+  peerdiscoverer:
+    config:
+      data:
+        connectivityConfiguration:
+          tlsMode: 2
+          alpnProtocols: h2,http/1.1
+          timeout: 500
+          outlier:
+            consecutiveFailures: 3
+          healthCheck:
+            interval: 1000
+            unhealthyThreshold: 3
+            healthyThreshold: 1
+            resource: /nudr-dr/v2/policy-data/ues/imsi-100000/sm-data
+            acceptedCodes:
+              - 200,300
+              - 404,405
+            unhealthyThresholdCodes:
+              - 300,404
+              - 405,600
+            httpMethod: GET
+        targetNFSpecification:
+          maxRedundantNFs: 3
+
+eric-pcf-peer-discoverer-chf:
+  peerdiscoverer:
+    config:
+      dynamicSelection: true
+      data:
+        connectivityConfiguration:
+          tlsMode: 2
+          alpnProtocols: h2,http/1.1
+          timeout: 500
+          outlier:
+            consecutiveFailures: 3
+          healthCheck:
+            interval: 1000
+            unhealthyThreshold: 3
+            healthyThreshold: 1
+            resource: /nchf-spendinglimitcontrol/v1/subscriptions/imsi100000
+            acceptedCodes:
+              - 200,300
+              - 400,401
+              - 404,406
+            unhealthyThresholdCodes:
+              - 300,400
+              - 401,404
+              - 406,600
+            httpMethod: GET
+        targetNFSpecification:
+          maxRedundantNFs: 3
+
+eric-pcf-peer-discoverer-bsf:
+  peerdiscoverer:
+    config:
+      data:
+        connectivityConfiguration:
+          tlsMode: 2
+          alpnProtocols: h2,http/1.1
+          timeout: 500
+          outlier:
+            consecutiveFailures: 3
+          healthCheck:
+            interval: 1000
+            unhealthyThreshold: 3
+            healthyThreshold: 1
+            resource: /nbsf-management/v1/pcfBindings/pcf-dummy-bindingid
+            acceptedCodes:
+              - 200,300
+              - 400,401
+              - 404,406
+            unhealthyThresholdCodes:
+              - 300,400
+              - 401,404
+              - 406,600
+            httpMethod: GET
+        targetNFSpecification:
+          maxRedundantNFs: 3
+
+eric-pcf-peer-discoverer-ccpc:
+  peerdiscoverer:
+    config:
+      data:
+        connectivityConfiguration:
+          alpnProtocols: h2,http/1.1
+          timeout: 1720
+          outlier:
+            consecutiveFailures: 3
+        targetNFSpecification:
+          maxRedundantNFs: 3
+
+eric-pcf-egress-proxy:
+  autoScaling:
+    minReplicas: {{ hpaReplica['eric-pcf-egress-proxy'].min }} # Default 2
+    maxReplicas: {{ hpaReplica['eric-pcf-egress-proxy'].max }} # Default 60
+# Uncomment to define DSCP value
+#  egress:
+#    dscp:
+  egressproxy:
+    secure:
+      secret:
+        cert:
+          name: eric-ccpc-sbi-client-certs
+        cacert:
+          name: eric-ccpc-sbi-client-certs-cacert
+
+eric-pcf-egress-proxy-chf:
+  autoScaling:
+    minReplicas: {{ hpaReplica['eric-pcf-egress-proxy-chf'].min }} # Default 2
+    maxReplicas: {{ hpaReplica['eric-pcf-egress-proxy-chf'].max }} # Default 40
+# Uncomment to define DSCP value
+#  egress:
+#    dscp:
+  egressproxy:
+    secure:
+      secret:
+        cert:
+          name: eric-ccpc-sbi-client-certs
+        cacert:
+          name: eric-ccpc-sbi-client-certs-cacert
+  envoymanager:
+    config:
+      dynamicSelection: true
+
+eric-pcf-egress-proxy-bsf:
+  autoScaling:
+    minReplicas: {{ hpaReplica['eric-pcf-egress-proxy-bsf'].min }} # Default 2
+    maxReplicas: {{ hpaReplica['eric-pcf-egress-proxy-bsf'].max }} # Default 40
+# Uncomment to define DSCP value
+#  egress:
+#    dscp:
+  egressproxy:
+    secure:
+      secret:
+        cert:
+          name: eric-ccpc-sbi-client-certs
+        cacert:
+          name: eric-ccpc-sbi-client-certs-cacert
+
+eric-pcf-egress-proxy-ccpc:
+  autoScaling:
+    minReplicas: {{ hpaReplica['eric-pcf-egress-proxy-ccpc'].min }} # Default 2
+    maxReplicas: {{ hpaReplica['eric-pcf-egress-proxy-ccpc'].max }} # Default 30
+  egressproxy:
+    secure:
+      secret:
+        cert:
+          name: eric-ccpc-sbi-client-certs
+        cacert:
+          name: eric-ccpc-sbi-client-certs-cacert
+
+eric-pcf-geored-controller:
+  autoScaling:
+    minReplicas: 1
+    maxReplicas: 1
+
+eric-pcf-kvdb-supervisor:
+  persistence:
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName }}
+
+eric-pcf-end-user-notifier:
+  autoScaling:
+    minReplicas: {{ hpaReplica['eric-pcf-end-user-notifier'].min }} # Default 2
+    maxReplicas: {{ hpaReplica['eric-pcf-end-user-notifier'].max }} # Default 60
+# Define the DSCP value
+#  egress:
+#    dscp: 0
+
+eric-data-sftp-server:
+  service:
+    annotations:
+      sharedVIPLabel: ccpc-oam
+      addressPoolName: ccpc{{ instance }}-oam
+      #Define these parameters ONLY on dual stack clusters
+      # externalIPv4:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-oam
+      #     sharedVIPLabel: ccpc-oam
+      # externalIPv6:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance }}-oam
+      #     sharedVIPLabel: ccpc-oam

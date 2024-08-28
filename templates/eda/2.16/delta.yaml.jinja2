@@ -1,0 +1,16 @@
+global:
+  licensing:
+    sites:
+      - hostname: {{ nels.host }}
+
+eric-act-activation-engine:
+  initContainers:
+    eric-act-hss-validator:
+      imageName: hss-validator-image
+      tag: {{ eda["hssValidatorTag"] }}
+      args: ""
+      volumeMounts:
+      - name: shared-lib-ext
+        mountPath: /app/shared/lib/ext
+  config:
+    groupId: "eda-groupId"

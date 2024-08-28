@@ -1,0 +1,499 @@
+global:
+
+  dscpMarking:
+    dscpDualStack: false
+    ingressDscpRepliesSBI: 0
+    ingressDscpRepliesSoapIMSEPC: 0
+    egressDscpSBI: 0
+
+  licensing:
+    sites:
+    - hostname: "{{nels.host}}"
+      ip: ""
+      priority: 10
+
+  # Determines if enable the Sencondary Network Provider (SENP)
+  # Enable set it "true" / Disable set it "false"
+  secondaryNetwork:
+    enabled: false
+
+# To prevent changes to "ccsm-xxxx" after an upgrade with EVNFM 23.3.0. Refer to IA72704 for details.
+#eric-ccsm-service-mesh:
+#  eric-ingressgw-ausf-traffic:
+#    service:
+#      annotations:
+        #cloudProviderLB:
+          ##list of cloud provider annotations. Example AWS annotation
+          #service.beta.kubernetes.io/aws-load-balancer-type: "external"
+#  eric-ingressgw-udm-traffic:
+#    service:
+#      annotations:
+        #cloudProviderLB:
+          ##list of cloud provider annotations. Example AWS annotation
+          #service.beta.kubernetes.io/aws-load-balancer-type: "external"
+#  eric-ingressgw-eir-traffic:
+#    service:
+#      annotations:
+        #cloudProviderLB:
+          ##list of cloud provider annotations. Example AWS annotation
+          #service.beta.kubernetes.io/aws-load-balancer-type: "external"
+#  eric-ingressgw-epc-soap-traffic:
+#    service:
+#      annotations:
+        #cloudProviderLB:
+          ##list of cloud provider annotations. Example AWS annotation
+          #service.beta.kubernetes.io/aws-load-balancer-type: "external"
+# eric-ingressgw-hss-epc-traffic:
+#   service:
+#     annotations:
+        #cloudProviderLB:
+          ##list of cloud provider annotations. Example AWS annotation
+          #service.beta.kubernetes.io/aws-load-balancer-type: "external"
+# eric-ingressgw-ims-soap-traffic:
+#   service:
+#     annotations:
+        #cloudProviderLB:
+          ##list of cloud provider annotations. Example AWS annotation
+          #service.beta.kubernetes.io/aws-load-balancer-type: "external"
+# SENP nVIP subChart that belongs to service mesh helm chart
+eric-tm-senp-nvip:
+  config:
+    # Namespace of the SENP Infra (CLC SNIA) installation on the cluster
+    nsmNamespace: eric-clc-snia
+
+# Overwrite the AUSF Helm values here
+eric-ccsm-ausf:
+  eric-ausf-capacity:
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-ausf-cmjobloader:
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-ausf-engine:
+    autoscaling:
+      maxReplicas: {{ hpaReplica['eric-ausf-engine'].max }}
+
+eric-ccsm-autonrf:
+  tolerations: []
+  #  - key: node-role.kubernetes.io/control-plane
+  #    effect: NoSchedule
+  #    operator: Exists
+
+eric-ccsm-cmagent:
+  tolerations: []
+  #  - key: node-role.kubernetes.io/control-plane
+  #    effect: NoSchedule
+  #    operator: Exists
+
+eric-ccsm-cmreconciler:
+  tolerations: []
+  #  - key: node-role.kubernetes.io/control-plane
+  #    effect: NoSchedule
+  #    operator: Exists
+
+eric-ccsm-cmvalidator:
+  tolerations: []
+  #  - key: node-role.kubernetes.io/control-plane
+  #    effect: NoSchedule
+  #    operator: Exists
+
+# Overwrite the EIR Helm values here
+eric-ccsm-eir:
+  eric-eir-capacity:
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-eir-cmagent:
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-eir-infocollector:
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-eir-infocollectorunsucc:
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-eir-s13diameter:
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+
+
+# Overwrite the HSS-EPC Helm values here
+eric-ccsm-hssepc:
+  eric-data-key-value-database-rd:
+    tolerations:
+      kvdbOperator: []
+      #  - key: node-role.kubernetes.io/control-plane
+      #    effect: NoSchedule
+      #    operator: Exists
+  eric-hss-rdoperand:
+    tolerations:
+      node: []
+      #  - key: node-role.kubernetes.io/control-plane
+      #    effect: NoSchedule
+      #    operator: Exists
+  eric-hssepc-capacity:
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-hssepc-cmagent:
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-hssepc-cmvalidator:
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-hssepc-s6adiameter:
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-hssepc-swxdiameter:
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-hssepc-pcscfrestoration:
+    autoscaling:
+      minReplicas: 2
+      maxReplicas: {{ hpaReplica['eric-hssepc-pcscfrestoration'].max if systemProfile == 'small' else 20 }}
+  eric-hssepc-swxrtr:
+    autoscaling:
+      minReplicas: 2
+      maxReplicas: {{ hpaReplica['eric-hssepc-swxrtr'].max if systemProfile == 'small' else 20 }}
+  eric-hssepc-swxprovnotification:
+    autoscaling:
+      minReplicas: 2
+      maxReplicas: {{ hpaReplica['eric-hssepc-swxprovnotification'].max if systemProfile == 'small' else 20 }}
+
+# Overwrite the HSS-IMS Helm values here.
+eric-ccsm-hssims:
+  eric-hssims-capacity:
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-hssims-cmagent:
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-hssims-cmvalidator:
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-hssims-shdiameter:
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-hssims-cxdiameter:
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+
+eric-ccsm-lmagent:
+  tolerations: []
+  #  - key: node-role.kubernetes.io/control-plane
+  #    effect: NoSchedule
+  #    operator: Exists
+
+# Overwrite smsengine Helm values here
+eric-ccsm-smsengine:
+  tolerations: []
+  #  - key: node-role.kubernetes.io/control-plane
+  #    effect: NoSchedule
+  #    operator: Exists
+
+eric-ccsm-sracmagent:
+  tolerations: []
+  #  - key: node-role.kubernetes.io/control-plane
+  #    effect: NoSchedule
+  #    operator: Exists
+
+eric-stm-diameter:
+  replicaCount: 2
+  secondaryNetwork:
+    sctp:
+      enabled: false
+  configuration:
+    mh:
+      enabled: false
+
+eric-ccsm-mapproxy:
+  global:
+    # This global configuration applies to all eric-ccsm-mapproxy instances
+    map:
+      secondaryNetwork:
+        enabled: false
+      mh:
+        enabled: false
+  # Overwrite the Mapproxy Helm values here
+  eric-ccsm-mapproxy-1:
+    configuration:
+      secondaryNetwork:
+        # SCTP Endpoints IP addresses
+        eric-ccsm-mapproxy-1-vip-a: 10.10.10.10
+        eric-ccsm-mapproxy-1-vip-b: 10.10.10.20
+    nodeSelector:
+      Deployment: {}
+      #  set-of-workers: mapproxy_ccsm
+
+  eric-ccsm-mapproxy-2:
+    configuration:
+      secondaryNetwork:
+        # SCTP Endpoints IP addresses
+        eric-ccsm-mapproxy-2-vip-a: 10.10.20.10
+        eric-ccsm-mapproxy-2-vip-b: 10.10.20.20
+    nodeSelector:
+      Deployment: {}
+      #  set-of-workers: mapproxy_ccsm
+
+  eric-ccsm-mapproxy-3:
+    configuration:
+      secondaryNetwork:
+        # SCTP Endpoints IP addresses
+        eric-ccsm-mapproxy-3-vip-a: 10.10.30.10
+        eric-ccsm-mapproxy-3-vip-b: 10.10.30.20
+    nodeSelector:
+      Deployment: {}
+      #  set-of-workers: mapproxy_ccsm
+
+  eric-ccsm-mapproxy-4:
+    configuration:
+      secondaryNetwork:
+        # SCTP Endpoints IP addresses
+        eric-ccsm-mapproxy-4-vip-a: 10.10.40.10
+        eric-ccsm-mapproxy-4-vip-b: 10.10.40.20
+    nodeSelector:
+      Deployment: {}
+      #  set-of-workers: mapproxy_ccsm
+
+# Overwrite the ADP Generic Services Helm values here
+eric-ccsm-adp:
+  eric-data-message-bus-kf:
+    tolerations:
+      messagebuskf: []
+      #  - key: node-role.kubernetes.io/control-plane
+      #    effect: NoSchedule
+      #    operator: Exists
+  eric-probe-virtual-tap-broker:
+    # Indicate whether to switch on the PVTB NBI encryption by DTLS
+    dtls:
+      enabled: false
+  eric-lm-combined-server:
+    features:
+      alarmHandling:
+        enabled: true
+    egress:
+      licenseServer:
+        dscp: 0
+  eric-cm-yang-provider:
+    service:
+# To prevent changes to "ccsm-xxxx" after an upgrade with EVNFM 23.3.0. Refer to IA72704 for details.
+#      annotations:
+        #cloudProviderLB:
+          ##list of cloud provider annotations. Example AWS annotation
+          #service.beta.kubernetes.io/aws-load-balancer-type: "external"
+      cmNbiPorts:
+        dscp: 0
+  eric-ctrl-bro:
+    egress:
+      backupStorageSvr:
+        dscp: 0
+  eric-pm-bulk-reporter:
+    service:
+# To prevent changes to "ccsm-xxxx" after an upgrade with EVNFM 23.3.0. Refer to IA72704 for details.
+#      annotations:
+        #cloudProviderLB:
+          ##list of cloud provider annotations. Example AWS annotation
+          #service.beta.kubernetes.io/aws-load-balancer-type: "external"
+      pmBulksftpPort:
+        dscp: 0
+  eric-fh-snmp-alarm-provider:
+    service:
+# To prevent changes to "ccsm-xxxx" after an upgrade with EVNFM 23.3.0. Refer to IA72704 for details.
+#      annotations:
+        #cloudProviderLB:
+          ##list of cloud provider annotations. Example AWS annotation
+          #service.beta.kubernetes.io/aws-load-balancer-type: "external"
+      snmpPort:
+        dscp: 0
+  eric-lm-unique-object-reporter:
+    egress:
+      uorSvr:
+        dscp: 0
+  eric-si-application-sys-info-handler:
+    tolerations:
+      eric-si-application-sys-info-handler: []
+      #  - key: node-role.kubernetes.io/control-plane
+      #    effect: NoSchedule
+      #    operator: Exists
+
+# To prevent changes to "ccsm-xxxx" after an upgrade with EVNFM 23.3.0. Refer to IA72704 for details.
+ 
+  eric-tm-ingress-controller-cr:
+{% if systemProfile == 'standard' %}
+#    service:
+#      annotations:
+        #cloudProviderLB:
+          ##list of cloud provider annotations. Example AWS annotation
+          #service.beta.kubernetes.io/aws-load-balancer-type: "external"
+# Added to align the value with the ccsm1.12 default values
+# Also if not set the upgrade will fail as we have lower memory limit set in ccsm1.11
+# and now in 1.12 the default request value is 900Mi, UDM5GP-79749
+
+    resources:
+      contour:
+        limits:
+         cpu: 150m
+         memory: 500Mi
+      envoy:
+        limits:
+         cpu: "1"
+         memory: 900Mi
+{% endif %}
+{% if systemProfile == 'small' %}
+# According to ADP Service User Guide
+    resources:
+      contour:
+        limits:
+        memory: 500Mi
+      envoy:
+        limits:
+        memory: 900Mi
+{% endif %}
+eric-ccsm-datainjector:
+  dscpMarking:
+    egressDscpNoSBI: 0
+
+eric-ccsm-senpco:
+  # DAY0 Parameters
+  configuration:
+    common:
+      eric-ccsm-trench:
+        ip_family: "ipv4"
+
+      # Attractor A
+      eric-ccsm-attr-a:
+        replicas: 2
+        networkAttachment:
+          attach_name: br-data-1821
+          namespace: default
+        # more gateways can be added for each attractor in the array
+        # any additional gateway added must to be included below
+        # in the gateways section of the configuration with its
+        # day0 parameters.
+        gateways: [eric-ccsm-gw-1, eric-ccsm-gw-3]
+
+      # Attractor B
+      eric-ccsm-attr-b:
+        replicas: 2
+        networkAttachment:
+          attach_name: br-data-1822
+          namespace: default
+        # more gateways can be added for each attractor in the array
+        # any additional gateway added must to be included below
+        # in the gateways section of the configuration with its
+        # day0 parameters.
+        gateways: [eric-ccsm-gw-2, eric-ccsm-gw-4]
+
+      #gateways definition
+      gateways:
+        eric-ccsm-gw-1:
+            address: 10.143.248.98
+            localAsn: "8171"
+            remoteAsn: "4248830031"
+            holdTime: 3s
+        eric-ccsm-gw-2:
+            address: 10.143.248.99
+            localAsn: "8172"
+            remoteAsn: "4248830032"
+            holdTime: 3s
+        eric-ccsm-gw-3:
+            address: 10.143.249.98
+            localAsn: "8173"
+            remoteAsn: "4248830033"
+            holdTime: 3s
+        eric-ccsm-gw-4:
+            address: 10.143.249.99
+            localAsn: "8174"
+            remoteAsn: "4248830034"
+            holdTime: 3s
+
+    diameter:
+      enabled: false
+      # VIPs for SENP CO
+      eric-ccsm-dia-vip-a: 10.15.10.10/32
+      eric-ccsm-dia-vip-b: 10.15.10.20/32
+
+    mapproxy:
+      enabled: false
+      # VIPs for SENP CO
+      eric-ccsm-mapproxy-1-vip-a: 10.10.10.10/32
+      eric-ccsm-mapproxy-1-vip-b: 10.10.10.20/32
+      eric-ccsm-mapproxy-2-vip-a: 10.10.20.10/32
+      eric-ccsm-mapproxy-2-vip-b: 10.10.20.20/32
+      eric-ccsm-mapproxy-3-vip-a: 10.10.30.10/32
+      eric-ccsm-mapproxy-3-vip-b: 10.10.30.20/32
+      eric-ccsm-mapproxy-4-vip-a: 10.10.40.10/32
+      eric-ccsm-mapproxy-4-vip-b: 10.10.40.20/32
+
+# Overwrite the UDM Helm values here
+eric-ccsm-udm:
+  eric-udm-capacity:
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-udm-cmagent:
+    tolerations: []
+    #  - key: node-role.kubernetes.io/control-plane
+    #    effect: NoSchedule
+    #    operator: Exists
+  eric-udm-eeamfingressnotif:
+    autoscaling:
+      minReplicas: 2
+      maxReplicas: {{ hpaReplica['eric-udm-eeamfingressnotif'].max if systemProfile == 'small' else 20 }}
+  eric-udm-eeegressnotif-reach-for-sms:
+    autoscaling:
+      minReplicas: 2
+      maxReplicas: {{ hpaReplica['eric-udm-eeegressnotif-reach-for-sms'].max if systemProfile == 'small' else 20 }}
+  eric-udm-eeegressnotif-roaming-status:
+    autoscaling:
+      minReplicas: 2
+      maxReplicas: {{ hpaReplica['eric-udm-eeegressnotif-roaming-status'].max if systemProfile == 'small' else 20 }}
+  eric-udm-eeegressnotif-supi-pei-indiv:
+    autoscaling:
+      minReplicas: 2
+      maxReplicas: {{ hpaReplica['eric-udm-eeegressnotif-supi-pei-indiv'].max if systemProfile == 'small' else 20 }}
+  eric-udm-eeegressnotif-supi-pei-anyue:
+    autoscaling:
+      minReplicas: 2
+      maxReplicas: {{ hpaReplica['eric-udm-eeegressnotif-supi-pei-anyue'].max if systemProfile == 'small' else 20 }}
+  eric-udm-ueauth:
+    autoscaling:
+      maxReplicas: {{ hpaReplica['eric-udm-ueauth'].max }}
+
+eric-ccsm-nrfagent:
+  global:
+    nrfagent:
+      preferredNFType: "UDM"

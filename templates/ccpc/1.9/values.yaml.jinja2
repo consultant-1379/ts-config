@@ -1,0 +1,948 @@
+
+{% if systemProfile == 'small' %}
+tags:
+  eric-ccpc-sm-pcf-pcrf-data: true
+  eric-ccpc-sm-pcf-pcrf-voice: true
+  eric-ccpc-ue-pcf: false
+  eric-ccpc-geored: false
+  eric-ccpc-n28: false
+{% endif %}
+
+global:
+  nodeSelector: {}
+  databaseName: "eric-pcf-dms"
+  profiles:
+    std-system:
+      enabled: {{ 'true' if systemProfile == 'standard' else 'false' | string |lower }}
+    small-system:
+      enabled: {{ 'true' if systemProfile == 'small' else 'false' | string |lower }}
+    cleartext-traffic-gw:
+      enabled: false
+    cleartext-provisioning-gw:
+      enabled: false
+    cleartext-geored:
+      enabled: {{ pcfGeo }}
+    mtls-traffic-gw:
+      enabled: true
+    mtls-provisioning-gw:
+      enabled: true
+    mtls-geored:
+      enabled: false
+  autoScaling:
+    enabled: true
+  ericsson:
+    licensing:
+      licenseDomains:
+        - productType: 'CCPC'
+          customerId: '{{ license.customerId }}'
+          swltId: '{{ license.swltId }}'
+  security:
+    policyBinding:
+      create: false
+    policyReferenceMap:
+      default-restricted-security-policy: "default-restricted-security-policy"
+    tls:
+      enabled: true
+  internalMtls:
+    enabled: "on"
+  pullSecret: regcred
+  registry:
+    url: armdocker.rnd.ericsson.se
+    imagePullPolicy: IfNotPresent
+  timezone: {{ timezone }}
+  istio:
+    ingress:
+      gateways:
+        eric-pcf-traffic-gw:
+          enabled: true
+        eric-ccpc-provisioning-gw:
+          enabled: true
+        eric-pcf-intersite-gw:
+          enabled: false
+      oauth2:
+        eric-pcf-traffic:
+          enabled: false
+          permissive: true
+          selector: "eric-ingressgw-pcf-traffic"
+          keys:
+          - issuer: "nrf-a-id"
+            jwks: '{"keys":[
+                {
+                  "crv":"P-256",
+                  "kid":"key-c-id",
+                  "kty":"EC",
+                  "x":"wO3-TFT5fd-Xqx5f9eGLlJHmR9ZgEvRfEoBLXro97co",
+                  "y":"rETYnJ2jUfav7lFr8I0pQnnF_1nDXfnOWG3vv-gvKEc"
+                }
+              ]}'
+          rules:
+          - paths: ["/npcf-smpolicycontrol/v1*"]
+            methods: ["POST","PUT","PATCH","DELETE"]
+            audiences: ["pcf-a-id"]
+            subjects: ["smf-a-id"]
+            issuers: ["nrf-a-id"]
+            scopes: ["npcf-smpolicycontrol"]
+          - paths: ["/npcf-ue-policy-control/v1*"]
+            methods: ["POST","DELETE"]
+            audiences: ["pcf-a-id"]
+            subjects: ["amf-a-id"]
+            issuers: ["nrf-a-id"]
+            scopes: ["npcf-ue-policy-control"]
+    egress:
+      enabled: true
+      endpoints:
+        eric-ccrc-sbi-traffic-mtls:
+          enabled: true
+          host: "{{ nrf.0.host }}.5gc.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org" #FQDN for CCRC
+          ports:
+            - port: 443 # HTTPS target destination
+              name: https-port-for-mTLS-origination
+              mode: mTLS # Values allowed [ TLS, mTLS ]
+              protocol: HTTP2
+        eric-smf-sbi-traffic-mtls:
+          enabled: true
+          host: "*.5gc.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org"
+          ports:
+            - port: 6060 # HTTPS target destination
+              name: https-port-for-mTLS-origination
+              mode: mTLS # Values allowed [ TLS, mTLS ]
+              protocol: HTTP2
+        eric-amf-sbi-traffic-mtls:
+          enabled: true
+          host: "*.amf.5gc.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org"
+          ports:
+            - port: 443 # HTTPS target destination
+              name: https-port-for-mTLS-origination
+              mode: mTLS # Values allowed [ TLS, mTLS ]
+              protocol: HTTP2
+
+  enableCrashDumps: true # enable core dump generation
+  tapagent:
+    {% if caas == 'OpenShift' or (caas == 'CNIS' and systemProfile == 'small') %}
+    enabled: false
+    {% else %}
+    enabled: true
+    {% endif %}
+  database:
+    multiSite:
+      runtimeConfigMode:
+        enabled: false
+  diameter:
+    originHostForOutgoingRequests:
+      siteCreatingSession:
+        enabled: true
+#Define this parameters ONLY on dual stack clusters
+#  externalIPv4:
+#    enabled: true
+#  externalIPv6:
+#    enabled: false
+#  internalIPFamily: "IPv4"
+
+externalcertificate:
+  ingress:
+    trustedCertificateListName: eric-ccpc-sbi-server-certs-cacerts
+    asymmetricKeyCertificateName: eric-ccpc-sbi-server-key/eric-ccpc-sbi-server-certificate
+  egress:
+    trustedCertificateListName: eric-ccpc-sbi-client-certs-cacerts
+    asymmetricKeyCertificateName: eric-ccpc-sbi-client-key/eric-ccpc-sbi-client-certificate
+
+eric-udm-mesh-integration:
+  enabled: true
+  eric-mesh-controller:
+    replicaCount: {{ replicaCount['eric-mesh-controller'] | default(2) }}
+    minReplicas: {{ minReplica['eric-mesh-controller'] | default(2) }}
+    maxReplicas: {{ maxReplica['eric-mesh-controller'] | default(10) }}
+  eric-ingressgw-pcf-traffic:
+    enabled: true
+    externalTrafficPolicy: {{ externalTrafficPolicy|default("Cluster") }}
+    service:
+      loadBalancerIP: "" #Used for setting the ingress-gateway VIP
+      annotations:
+        addressPoolName: ccpc{{ instance | default("") }}-5g-traffic
+      #Define these parameters ONLY on dual stack clusters
+      # externalIPv4:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance | default("") }}-5g-traffic
+      #     sharedVIPLabel: ""
+      # externalIPv6:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance | default("") }}-5g-traffic
+      #     sharedVIPLabel: ""
+  eric-ingressgw-ccpc-provisioning:
+    enabled: true
+    externalTrafficPolicy: {{ externalTrafficPolicy|default("Cluster") }}
+    service:
+      loadBalancerIP: "" #Used for setting the ingress-gateway VIP
+      annotations:
+        addressPoolName: ccpc{{ instance | default("") }}-5g-prov
+      #Define these parameters ONLY on dual stack clusters
+      # externalIPv4:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance | default("") }}-5g-prov
+      #     sharedVIPLabel: ""
+      # externalIPv6:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance | default("") }}-5g-prov
+      #     sharedVIPLabel: ""
+  eric-ingressgw-pcf-intersite:
+    enabled: false
+    externalTrafficPolicy: {{ externalTrafficPolicy|default("Cluster") }}
+    service:
+      loadBalancerIP: "" #Used for setting the ingress-gateway VIP
+      annotations:
+        addressPoolName: ccpc{{ instance | default("") }}-5g-geored
+      #Define these parameters ONLY on dual stack clusters
+      # externalIPv4:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance | default("") }}-5g-geored
+      #     sharedVIPLabel: ""
+      # externalIPv6:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance | default("") }}-5g-geored
+      #     sharedVIPLabel: ""
+
+servicemesh:
+  namespace: eric-ccpc
+
+eric-nrfagent:
+  global:
+    ipStackMode: "'ipv4'"
+    istio:
+      nrfagent_egressrule_enabled: false
+      egress:
+        enabled: true
+        nrfAgent_secretName: "eric-ccpc-sbi-client-certs"
+        caSecretNameSuffix: "-cacert"
+        certsPath: "/etc/istio/egress-certs/"
+        caCertsPath: "/etc/istio/egress-ca-certs/"
+        clientCertificate: "tls.crt"
+        privateKey: "tls.key"
+        caCertificates: "cacert"
+    scheduler:
+      nodeSelector: {}
+
+#adp: define sevice types and required IPs according to cluster specifics
+eric-adp-5g-udm:
+  eric-lm-combined-server:
+    licenseServerClient:
+      licenseServer:
+        thrift:
+          host: '{{ nels.host }}'
+          port: '{{ nels.port }}'
+    licenseConsumerHandler:
+      service:
+        endpoints:
+          externalHttps:
+            tls:
+              verifyClientCertificate: optional
+
+  eric-si-application-sys-info-handler:
+    nodeSelector: {}
+    asih:
+      applicationId: {{ nodeName }}
+
+  eric-pm-server:
+    server:
+      serviceAccountName: eric-adp-5g-udm-pm-server
+      persistentVolume:
+        storageClass: {{ storageClassName|default("network-block") }}
+    rbac:
+      appMonitoring:
+        {% if caas == 'OpenShift' %}
+        # ticket PCVTC-3386
+        {% endif %}
+        enabled: {{ appMonitoring|default("true") }}
+        {% if caas == 'CNIS' %}
+        federation:
+          jobOverride: true
+          jobConfiguration: |
+            - job_name: 'federate-victoria'
+              scrape_interval: 1m
+              honor_labels: true
+              metrics_path: '/select/0/prometheus/federate'
+              params:
+                'match[]':
+                  - '{job="kubernetes-nodes",namespace="{{ vnflcm.namespace }}"}'
+                  - '{job="kubernetes-nodes-cadvisor",namespace="{{ vnflcm.namespace }}"}'
+              static_configs:
+                - targets:
+                  - 'eric-victoria-metrics-cluster-vmselect.monitoring:8481'
+        {% else %}
+        federation:
+          jobOverride: false
+          jobConfiguration: |
+            #- job_name: 'federate-3pp-caas'
+            #  scrape_interval: 15s
+            #  honor_labels: true
+            #  metrics_path: '/federate'
+            #  params:
+            #    'match[]':
+            #      - '{job="kubernetes-nodes",namespace="eric-ccpc"}'
+            #      - '{job="kubernetes-nodes-cadvisori",namespace="eric-ccpc"}'
+            #  static_configs:
+            #    - targets:
+            #      - 'eric-pm-server.monitoring:9090'
+        {% endif %}
+    service:
+      endpoints:
+        reverseproxy:
+          tls:
+            enforced: "optional"
+    {% if caas == 'OpenShift' %}
+    resources:
+      eric-pm-exporter:
+        limits:
+          # ticket UDM5GP-58729/UDM5GP-76717
+          memory: 48Mi
+    {% endif %}
+
+  eric-pm-bulk-reporter:
+    nodeSelector: {}
+    userConfig:
+      ldap:
+        enabled: true
+    env:
+      nodeName: "{{nodeName|default("")}}"
+      nodeType: CCPC
+    persistentVolumeClaim:
+      storageClassName: "{{ storageClassName|default("network-block") }}"
+    service:
+      annotations:
+        sharedVIPLabel: ccpc-oam
+        addressPoolName: ccpc{{ instance | default("") }}-oam
+      loadBalancerIP: ""
+      type: LoadBalancer
+
+  eric-cm-yang-provider:
+    nodeSelector: {}
+    persistentVolumeClaim:
+      storageClassName: "{{ storageClassName|default("network-block") }}"
+    service:
+      annotations:
+        addressPoolName: ccpc{{ instance | default("") }}-oam
+        sharedVIPLabel: ccpc-oam
+      type: LoadBalancer
+      loadBalancerIP: ""
+    ldap:
+      enabled: true
+      ipv6Enabled: false
+    authorization:
+      enabled: true
+    keyManagement:
+      storeHostKeys: false
+    externaldb:
+      dbuser: customname
+    pmMetrics:
+      enabled: true
+      enableQueryMetricsCommands: true
+      httpsHost: eric-pm-server:9089
+
+  eric-cm-mediator:
+    nodeSelector: {}
+    cmkey:
+      enable: true
+    backend:
+      dbuser: customname
+
+  eric-data-document-database-pg:
+    nodeSelector:
+      postgres: {}
+      brAgent: {}
+      cleanuphook: {}
+    persistentVolumeClaim:
+      storageClassName: "{{ storageClassName|default("network-block") }}"
+      backup:
+        storageClassName: "{{ storageClassName|default("network-block") }}"
+
+  eric-data-document-database-pg-ah:
+    enabled: true
+    nodeSelector:
+      postgres: {}
+      brAgent: {}
+      cleanuphook: {}
+    postgresDatabase: adp_gs_ah
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName|default("network-block") }}
+
+  eric-data-document-database-pg-lm:
+    enabled: true
+    nodeSelector:
+      postgres: {}
+      brAgent: {}
+      cleanuphook: {}
+    postgresDatabase: adp_gs_lm
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName|default("network-block") }}
+
+  eric-data-document-database-pg-iam:
+    nodeSelector:
+      postgres: {}
+      brAgent: {}
+      cleanuphook: {}
+    postgresDatabase: adp_gs_iam
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName|default("network-block") }}
+
+  eric-sec-access-mgmt:
+    http:
+      hostValidation:
+        {% if caas == 'CNIS' and systemProfile == 'small' %}
+        allowedHosts: {{ vnflcm.namespace }}-5g-prov.{{ small.domainName }}.sero.gic.ericsson.se
+        {% elif caas == 'CNIS' and systemProfile == 'standard' %}
+        allowedHosts: prov.{{ vnflcm.namespace }}-oam.{{ vnflcm.clusterName }}.{{ oamDomain }}
+        {% else %}
+        allowedHosts: prov.{{ vnflcm.namespace }}.{{ vnflcm.clusterName }}.{{ oamDomain }}
+        {% endif %}
+    nodeSelector: {}
+
+  eric-sec-ldap-server:
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName|default("network-block") }}
+
+    nodeSelector:
+      ldap: {}
+      ldapAgent: {}
+      ldapProxy: {}
+
+  eric-sec-key-management:
+    nodeSelector: {}
+
+  eric-sec-sip-tls:
+    nodeSelector: {}
+
+  eric-log-transformer:
+    egress:
+      syslog:
+        enabled: false
+        tls:
+          enabled: true
+        certificates:
+          asymmetricKeyCertificateName: log-syslog-client
+          trustedCertificateListName: log-syslog-client
+        remoteHosts: []
+        inclusions: []
+        exclusions: []
+
+  eric-data-search-engine:
+    nodeSelector:
+      data: {}
+      ingest: {}
+      master: {}
+      bragent: {}
+    persistence:
+      data:
+        persistentVolumeClaim:
+          storageClassName: "{{ storageClassName|default("network-block") }}"
+      # For data-search-engine >= 6.0.0-29
+      master:
+        persistentVolumeClaim:
+          storageClassName: {{ storageClassName|default("network-block") }}
+    service:
+      network:
+        protocol:
+          IPv6: false #If ipv6 is used, it must be set to true
+
+  eric-data-search-engine-curator:
+    nodeSelector: {}
+
+  eric-data-coordinator-zk:
+    nodeSelector:
+      brAgent: {}
+      datacoordinatorzk: {}
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: "{{ storageClassName|default("network-block") }}"
+    {% if caas == 'OpenShift' %}
+    # UDM5GP-54517/UDM5GP-76246
+    resources:
+      metricsexporter:
+        limits:
+          memory: "64Mi"
+    {% endif %}
+
+  eric-data-distributed-coordinator-ed:
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: {{ storageClassName|default("network-block") }}
+      brAgent:
+        backupVolume:
+          storageClassName: "{{ storageClassName|default("network-block") }}"
+    {% if caas == 'OpenShift' %}
+    # UDM5GP-76250
+    resources:
+      metricsexporter:
+        limits:
+          memory: "64Mi"
+    {% endif %}
+
+
+  eric-data-message-bus-kf:
+    nodeSelector: {}
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: "{{ storageClassName|default("network-block") }}"
+
+  eric-cnom-document-database-mg:
+    nodeSelector: {}
+    persistence:
+      storageClass: "{{ storageClassName|default("network-block") }}"
+    serviceAccountName: default
+
+  eric-cnom-server:
+    nodeSelector: {}
+    {% if caas == 'CNIS' %}
+    fqdn: cnom.{{ vnflcm.namespace }}-oam.{{ vnflcm.clusterName }}.{{ oamDomain }}
+    {% else %}
+    fqdn: cnom.{{ vnflcm.namespace }}.{{ vnflcm.clusterName }}.{{ oamDomain }}
+    {% endif %}
+    dashboards:
+      configMap: eric-ccpc-cnom-dashboards
+    externalTls:
+      enabled: true
+
+  eric-fh-alarm-handler:
+    nodeSelector: {}
+    backend:
+      dbname: adp_gs_ah
+      dbuser: customname
+
+  eric-fh-snmp-alarm-provider:
+    nodeSelector: {}
+    service:
+      annotations:
+        sharedVIPLabel: ccpc-oam
+        addressPoolName: ccpc{{ instance | default("") }}-oam
+      type: LoadBalancer
+      loadBalancerIP: ""
+      #Define these parameters ONLY on dual stack clusters
+      # externalIPv4:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance | default("") }}-oam
+      #     sharedVIPLabel: ccpc-oam
+      # externalIPv6:
+      #   annotations:
+      #     addressPoolName: ccpc{{ instance | default("") }}-oam
+      #     sharedVIPLabel: ccpc-oam
+    sourceIdentifierType: 1
+    sourceIdentifier: 127.0.0.1
+
+  eric-ctrl-bro:
+   nodeSelector: {}
+   persistence:
+     persistentVolumeClaim:
+       size: 1Gi
+       storageClassName: {{ storageClassName|default("network-block") }}
+
+  eric-tm-ingress-controller-cr:
+    service:
+      annotations:
+        sharedVIPLabel: ccpc-oam
+        addressPoolName: ccpc{{ instance | default("") }}-oam
+      type: LoadBalancer
+      loadBalancerIP: ""
+    nodeSelector:
+      envoy: {}
+    resources:
+    {% if caas == 'OpenShift' or 'CNIS' %}
+    # According ADP Service User Guide
+      contour:
+        limits:
+          cpu: 150m
+          memory: "1000Mi"
+      envoy:
+        limits:
+          cpu: "2"
+          memory: "600Mi"
+    {% else %}
+      contour:
+        limits:
+          memory: "500Mi"
+    {% endif %}
+
+  eric-odca-diagnostic-data-collector:
+    env:
+      enableFileCollector: true
+    objectStorage:
+      enabled: true
+
+  eric-data-object-storage-mn:
+    affinity:
+      podAntiAffinity: "hard"
+    credentials:
+      kubernetesSecretName: eric-data-object-storage-mn-creds
+    persistentVolumeClaim:
+      storageClassName: "{{ storageClassName|default("network-block") }}"
+
+  eric-log-shipper:
+    {% if caas == 'OpenShift' %}
+    rbac:
+      automountServiceAccountToken: true
+      createClusterRole: true
+      createClusterRoleBinding: true
+    logshipper:
+      privileged: true
+      cfgData: ""
+      autodiscover:
+        enabled: true
+        namespace: ".RELEASE.NAMESPACE"
+        logplane: adp-app-logs
+        hints:
+          enabled: false
+        paths:
+          - /var/log/pods/${data.kubernetes.namespace}_${data.kubernetes.pod.name}_${data.kubernetes.pod.uid}/**/*.log
+        useContainerInput: true
+    additionalVolumes: |
+      - name: crio-containers
+        hostPath:
+          path: /var/log/containers
+      - name: kubernetes-containers
+        hostPath:
+          path: /var/log/pods
+    additionalVolumeMounts: |
+      - name: crio-containers
+        mountPath: /var/log/containers
+        readOnly: true
+      - name: kubernetes-containers
+        mountPath: /var/log/pods
+        readOnly: true
+    {% endif %}
+
+eric-stm-diameter:
+  replicaCount: {{ replicaCount['eric-stm-diameter'] | default(2) }}
+  service:
+    externalIPv4:
+      enabled: true
+      annotations:
+        addressPoolNameDiameterOverTCP: "ccpc{{ instance | default("") }}-4g-traffic"
+        sharedVIPLabelDiameterOverTCP: ""
+    externalIPv6:
+      enabled: false
+      annotations:
+        addressPoolNameDiameterOverTCP: "ccpc{{ instance | default("") }}-4g-traffic"
+        sharedVIPLabelDiameterOverTCP: ""
+  initialConfig:
+    dsl:
+      enableIPv6: false
+    sctp:
+      enable: false
+
+eric-slt-dsl:
+  replicaCount: {{ replicaCount['eric-slt-dsl'] | default(2) }}
+  initialConfig:
+    dsl:
+      enableIPv6: false
+
+dms:
+  nameOverride: "eric-pcf-dms"
+  persistence:
+    backup:
+      persistentVolumeClaim:
+        enabled: true
+        storageClassName: {{ storageClassName|default("network-block") }}
+        locator:
+          size: 64Mi
+        server:
+          size: 8Gi
+        adminMgr:
+          size: 1Gi
+    data:
+      persistentVolumeClaim:
+        enabled: true
+        storageClassName: {{ storageClassName|default("network-block") }}
+    gwsender:
+      persistentVolumeClaim:
+        enabled: false
+        storageClassName: {{ storageClassName|default("network-block") }}
+        size: 1Gi
+  nodeSelector:
+    locator:
+    server:
+    adminMgr:
+  brAgent:
+    backupTypeList:
+      - "eric-ccpc-provisioned-data-backup"
+  multiSite:
+    enabled: false
+    runtimeConfigMode:
+      enabled: false
+    locator:
+      localHost:
+  {% if systemProfile == 'small' %}
+  # WA for UDM5GP-73253
+  jvmHeap:
+    database:
+      server: 12000m
+  {% endif %}
+
+dms-operator:
+  nodeSelector:
+    operator: {}
+
+eric-pcf-license-handler:
+  licensehandler:
+    nodeSelector: {}
+    licenses:
+      data:
+        smpc_bp:
+          enabled: true
+        smpc_miot_bp:
+          enabled: true
+        smpc_data_vp:
+          enabled: true
+        smpc_miot_data_vp:
+          enabled: true
+        smpc_voice_vp:
+          enabled: true
+        smpc_voice_miot_vp:
+          enabled: true
+
+eric-pcf-nrf-registration:
+  nodeSelector: {}
+
+da:
+  nodeSelector: {}
+  autoScaling:
+    minReplicas: {{ minReplica['eric-ccpc-data-access'] | default(5) }}
+    maxReplicas: {{ maxReplica['eric-ccpc-data-access'] | default(66) }}
+  dataaccess:
+    replicaCount: {{ replicaCount['eric-ccpc-data-access'] | default(5) }}
+
+eric-pcf-session-management-policy-control:
+  nodeSelector: {}
+  autoScaling:
+    minReplicas: {{ minReplica['eric-pcf-session-management-policy-control'] | default(2) }}
+    maxReplicas: {{ maxReplica['eric-pcf-session-management-policy-control'] | default(38) }}
+  sessionmanagementpolicycontrol:
+    replicaCount: {{ replicaCount['eric-pcf-session-management-policy-control'] | default(2) }}
+    smpcConfiguration:
+      properties:
+        checkForSessionAlive: true
+    {% if caas == 'OpenShift' %}
+    # UDM5GP-58730/UDM5GP-76300
+    resources:
+      limits:
+        memory: 1Gi
+    {% endif %}
+
+eric-pcf-ue-policy-control:
+  nodeSelector: {}
+
+eric-pcrf-ipcan-session-management:
+  nodeSelector: {}
+  autoScaling:
+    minReplicas: {{ minReplica['eric-pcrf-ipcan-session-management'] | default(2) }}
+    maxReplicas: {{ maxReplica['eric-pcrf-ipcan-session-management'] | default(14) }}
+  ipcansessionmanagement:
+    replicaCount: {{ replicaCount['eric-pcrf-ipcan-session-management'] | default(2) }}
+    diameter:
+      dsd:
+        network_type: "ip"
+    ipsmConfiguration:
+      properties:
+        checkForSessionAlive: true
+
+eric-pcf-charging:
+  nodeSelector: {}
+  {% if systemProfile == 'small' %}
+  autoScaling:
+    minReplicas: 2
+    maxReplicas: 2
+  {% endif %}
+
+eric-pcf-rx-policy-control:
+  {% if systemProfile == 'small' %}
+  autoScaling:
+    minReplicas: 2
+    maxReplicas: 4
+  {% endif %}
+  rxpolicycontrol:
+    diameter:
+      dsd:
+        network_type: "ip"
+    nodeSelector: {}
+
+prov:
+  nodeSelector: {}
+
+eric-pcf-peer-discoverer:
+  peerdiscoverer:
+    nodeSelector: {}
+    config:
+      data:
+        connectivityConfiguration:
+          tlsMode: 2
+          alpnProtocols: h2,http/1.1
+          timeout: 500
+          outlier:
+            consecutiveFailures: 3
+          healthCheck:
+            interval: 1000
+            unhealthyThreshold: 3
+            healthyThreshold: 1
+            resource: /nudr-dr/v2/policy-data/ues/imsi-100000/sm-data
+            acceptedCodes:
+              - 200,503
+              - 504,600
+        targetNFSpecification:
+          maxRedundantNFs: 3
+
+eric-pcf-peer-discoverer-chf:
+  peerdiscoverer:
+    nodeSelector: {}
+    config:
+      data:
+        connectivityConfiguration:
+          tlsMode: 2
+          alpnProtocols: h2,http/1.1
+          timeout: 500
+          outlier:
+            consecutiveFailures: 3
+          healthCheck:
+            interval: 1000
+            unhealthyThreshold: 3
+            healthyThreshold: 1
+            resource: /nchf-spendinglimitcontrol/v1/subscriptions/imsi100000
+            acceptedCodes:
+              - 200,503
+              - 504,600
+        targetNFSpecification:
+          maxRedundantNFs: 3
+
+eric-pcf-peer-discoverer-bsf:
+  peerdiscoverer:
+    nodeSelector: {}
+    config:
+      data:
+        connectivityConfiguration:
+          tlsMode: 2
+          alpnProtocols: h2,http/1.1
+          timeout: 500
+          outlier:
+            consecutiveFailures: 3
+          healthCheck:
+            interval: 1000
+            unhealthyThreshold: 3
+            healthyThreshold: 1
+            resource: /nbsf-management/v1/pcfBindings/pcf-dummy-bindingid
+            acceptedCodes:
+              - 200,503
+              - 504,600
+        targetNFSpecification:
+          maxRedundantNFs: 3
+
+eric-pcf-peer-discoverer-ccpc:
+  peerdiscoverer:
+    nodeSelector: {}
+    config:
+      data:
+        connectivityConfiguration:
+          alpnProtocols: h2,http/1.1
+          timeout: 1720
+          outlier:
+            consecutiveFailures: 3
+        targetNFSpecification:
+          maxRedundantNFs: 3
+
+eric-pcf-egress-proxy:
+  nodeSelector: {}
+  autoScaling:
+    minReplicas: {{ minReplica['eric-pcf-egress-proxy'] | default(2) }}
+    maxReplicas: {{ maxReplica['eric-pcf-egress-proxy'] | default(18) }}
+  egressproxy:
+    replicaCount: {{ replicaCount['eric-pcf-egress-proxy'] | default(2) }}
+    secure:
+      secret:
+        cert:
+          name: eric-ccpc-sbi-client-certs
+        cacert:
+          name: eric-ccpc-sbi-client-certs-cacert
+  {% if caas == 'OpenShift' or 'CNIS'%}
+    # UDM5GP-77809
+    resources:
+      limits:
+        memory: 400Mi
+  # UDM5GP-77809
+  envoymanager:
+    resources:
+      limits:
+        memory: 176Mi
+  {% endif %}
+
+eric-pcf-egress-proxy-chf:
+  egressproxy:
+    nodeSelector: {}
+    secure:
+      secret:
+        cert:
+          name: eric-ccpc-sbi-client-certs
+        cacert:
+          name: eric-ccpc-sbi-client-certs-cacert
+  {% if systemProfile == 'small' %}
+  autoScaling:
+    minReplicas: 2
+    maxReplicas: 2
+  {% endif %}
+
+eric-pcf-egress-proxy-bsf:
+  egressproxy:
+    nodeSelector: {}
+    secure:
+      secret:
+        cert:
+          name: eric-ccpc-sbi-client-certs
+        cacert:
+          name: eric-ccpc-sbi-client-certs-cacert
+  {% if systemProfile == 'small' %}
+  autoScaling:
+    minReplicas: 2
+    maxReplicas: 2
+  {% endif %}
+
+eric-pcf-egress-proxy-ccpc:
+  egressproxy:
+    nodeSelector: {}
+    secure:
+      secret:
+        cert:
+          name: eric-ccpc-sbi-client-certs
+        cacert:
+          name: eric-ccpc-sbi-client-certs-cacert
+  {% if caas == 'OpenShift' or 'CNIS' %}
+    # UDM5GP-76258 update resources of egressproxy and envoymanager
+    resources:
+      limits:
+        memory: 200Mi
+      requests:
+        memory: 170Mi
+  # UDM5GP-76258 update resources of egressproxy and envoymanager
+  envoymanager:
+    resources:
+      requests:
+        cpu: 47m
+        memory: 76Mi
+      limits:
+        memory: 91Mi
+  {% endif %}
+  {% if systemProfile == 'small' %}
+  autoScaling:
+    minReplicas: 2
+    maxReplicas: 10
+  {% endif %}
+
+eric-pcf-geored-controller:
+  nodeSelector: {}
+
+eric-pcf-kvdb-supervisor:
+  nodeSelector: {}
+  persistence:
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName|default("network-block") }}
+
+eric-pcf-end-user-notifier:
+  nodeSelector: {}
+  {% if systemProfile == 'small' %}
+  autoScaling:
+    minReplicas: 2
+    maxReplicas: 10
+  {% endif %}
+

@@ -1,0 +1,10 @@
+config
+{% for user in users.day1 %}
+system authentication user {{ user.username }}
+ password             {{ user.password }}
+ groups               [{% for group in user.groups %} {{ group }} {% endfor %}]
+!
+{% endfor %}
+commit
+end
+

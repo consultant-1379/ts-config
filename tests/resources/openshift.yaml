@@ -1,0 +1,15 @@
+# Optional. The CNAT binary path. Default is "/lab/pccc_utils/scripts/cnat" (CNAT released path).
+#cnatBinaryPath:
+# Mandatory. Use command "git clone --brach <branch> ssh://gerrit.ericsson.se:29418/<projectName>" to get inputs and outputs
+repoProjectName: pc/vepc/cloud-configs
+
+# List all the cases for every CNF. The cases in every CNF are in list format.
+#pcc:
+  # Mandatory. case valid CNF version
+#- version:
+  # Optional. Default is 'master' branch.
+  #branch:
+  # Optional. Default is to get the latest. Please make sure the value is a valid commit ID.
+  #commitId:
+  # Mandatory. The test input file.
+  #cfggen:

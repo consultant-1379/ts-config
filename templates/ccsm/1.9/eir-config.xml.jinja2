@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  Notice that it is a configuration template in XML format
+  compliant with NF YANG model.  This XML template provides
+  a configuration skeleton that shall be modified before
+  loading into the yang service.  Some parts of the document
+  must be deleted or added depending on the network configuration
+  where the VNF will be deployed.
+-->
+  <hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+  <capabilities>
+    <capability>urn:ietf:params:netconf:base:1.0</capability>
+  </capabilities>
+  </hello>]]>]]>
+  <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  <rpc xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" message-id="0">
+  <edit-config>
+    <target><running/></target>
+    <config xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">
+      <eir xmlns="urn:rdns:com:ericsson:oammodel:ericsson-eir">
+        <eic>
+          <soc-timer-interval>100000</soc-timer-interval>
+          <query-tac-ranges>false</query-tac-ranges>
+          <query-imei-svn>true</query-imei-svn>
+          <query-imsi-list>false</query-imsi-list>
+          <query-msisdn>false</query-msisdn>
+        </eic>
+        <nf-profile>
+          <instance-id>{{ eirInstanceId }}</instance-id>
+          <requested-status>registered</requested-status>
+          <fqdn>{{ eir.host }}.5gc.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org</fqdn>
+          <priority>1</priority>
+          <locality>{{ locality }}</locality>
+          <service>
+            <instance-id>n5g-eir-eic</instance-id>
+            <name>n5g-eir-eic</name>
+            <scheme>https</scheme>
+            <requested-status>registered</requested-status>
+            <fqdn>{{ eir.host }}.5gc.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org</fqdn>
+            <capacity>100</capacity>
+            <allowed-nf-type>udr</allowed-nf-type>
+            <allowed-nf-type>amf</allowed-nf-type>
+            <ip-endpoint>
+              <id>1</id>
+              <!--<ipv4-address>{EIR_IPv4}</ipv4-address>-->
+              <transport>tcp</transport>
+              <port>{{ eir.port }}</port>
+            </ip-endpoint>
+          </service>
+        </nf-profile>
+      </eir>
+    </config>
+  </edit-config>
+  </rpc>
+  <close-session/>

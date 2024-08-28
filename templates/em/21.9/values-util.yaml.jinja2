@@ -1,0 +1,280 @@
+# As default registry path, the global registry path will be used.
+global:
+  registry:
+    # Docker registry URL
+    url: armdocker.rnd.ericsson.se
+    # Secret must be manually created in the namespace, no default value. Only required if Docker registry required authentication
+    #pullSecret: eric-em-example-secret
+  # Set timezone in pod.
+  timezone: {{ timezone }}
+  security:
+    tls:
+      enabled: true
+
+eric-bss-em-rbac:
+  enabled: false
+  # User or Group should be pre created and should be able to authenticate successfully with K8S API Server
+  # Provided User or Group name will not be validated.
+  # Multiple User or Groups can be provided via list based on different profiles.
+  # HELM chart will create roles, rolebindings, clusterroles and clusterrole bindings for the user or group
+  # Role will be binded to Name Space in which HELM chart will be deployed
+  # Each profile already contains pre defined set of API Groups, resources and verbs.
+    
+  # Deployment profile is used to deploy/upgrade EM and ADP HELM charts. The user or group will get maximum required privileges. Created Cluster roles will have read/write access.
+  deployment:
+    userName:
+         -
+    groupName:
+         -
+  # Edit profile can be used to edit K8S objects in a Name Space. Cluster Roles are not created.
+  edit:
+    userName:
+         -
+    groupName:
+         -
+  # View profile can be used to view K8S objects in a Name Space. Cluster Roles are not created.
+  view:
+    userName:
+         -
+    groupName:
+         -
+  # Security profile can be used to edit secrets, configmaps in a Name Space. Cluster Roles are not created.
+  security:
+    userName:
+         -
+    groupName:
+         -
+  # Custom Resources can be used to add additional API Groups and Resources in the existing pre defined set of objects in above mentioned profiles.
+  # When customResources.enable is true, it is mandatory to provide user name or group name in the profile.
+  # Since edit, view and security are Name Space level profiles, resourceNamespaceBound should be true.
+  # For deployment and admin profile, resourceNamespaceBound can be either true or false
+  # The name provided in apiGroups and resources will not be validated and will be directly added in selected profile.
+  
+  customResources:
+      enable: false
+      rules:
+       - resourceNamespaceBound: true
+         apiGroups: ''
+         resources: ''
+  
+  # Additional roles can be used to combine already existing role or cluster role with the user or group in above mentioned profiles.
+  # profileName can be deployment, admin, edit, view and security
+  # Provided clusterrole or role will not be validated and will be added in the profile provided in profileName
+  # Since edit, view and security are Name Space level profiles, clusterrole name should not be provided
+  # For deployment and admin profile, both clusterrole and role can be provided
+  
+  additionalRoles:
+   - profileName:
+     clusterrole:
+      -
+     role:
+      -
+  
+  # Placeholder to define custom/additional annotations on all resources
+  annotations: {}
+  
+  # Placeholder to define custom/additional labels on all resources
+  labels: {}
+
+eric-bss-em-sftp:
+  enabled: {{ 'false' if systemProfile == 'small' else 'true' }}
+  # To run container startup scripts in debugging mode set debug value to true.
+  debug: false
+  
+  service:
+    # Type of SFTP service. Possible Values are: ClusterIP, NodePort, LoadBalancer. For production, Only LoadBalancer is recommended.
+    type: LoadBalancer
+    # To enable preservation of the client IP set externalTrafficPolicy to Local else use Cluster.
+    externalTrafficPolicy: Cluster
+    # In case of ECFE is configured in ECCD cluster, below parameter allows to assign a user defined IP from the pre configured range of free IPs.
+    loadBalancerIP:
+    annotations:
+      # sharedVIPLabel value used with the annotation key to indicate the VIP address is being shared among services that are using the same label (only if externalTrafficPolicy is Cluster). The service manifest will use this value for the annotation key provided by ECM FE for sharing VIP. The value will be empty if sharing VIP is not required.
+      sharedVIPLabel:
+      # To get VIP address from a specific address pool configured using ECM FE service.
+      # The pool name must be configured in the ECM FE configuration.
+      # The value will be empty if do not want to specify address pool for VIP.
+      addressPoolName:
+  
+    # additionalAnnotations, additionalLabels: These can be specified as required by user incase any other annotations and labels are required to be associated with the service.
+    additionalAnnotations: {}
+    additionalLabels: {}
+  
+  # Custom/Additional pod annotations & labels can be added under annotations.
+  pod:
+    annotations: {}
+      # sftplogharvest: "true"
+    labels: {}
+      # label-parameter: label-value
+  
+  # PVC(s) should exist or created before deployment of SFTP server to persist SFTP host keys. This will be mounted on /ssh_keys
+  pvc:
+    # Provide either existingClaimName (PVC) or fill all the parameter values under dynamic for PVC creation during deployment.
+    storage:
+      # To use pre-created/pre-existing PVC provide name of the PVC.
+      claimName:
+      # To create new PVC dynamically during deployment.
+      dynamic:
+        # Name of the storageclass to be used. If left blank then "default" storageclass will be used
+        storageClassName: 
+        # For NFS, supported access mode are "ReadWriteOnce" and "ReadWriteMany"(recommended)
+        # For Block storage, access mode must be "ReadWriteOnce" only
+        accessMode: "ReadWriteMany"
+        # Volume size in integer format with units as Ki(kibibyte), Mi(mibibyte), Gi(gibibyte), Ti(tebibyte), Pi(pebibyte), Ei(exbibyte), and so on.
+        size: 
+        # To instructs Helm, whether to keep or delete the PVC during uninstallation. If set to false or left blank then PVC will be deleted during helm uninstallation
+        retain: true
+  
+  # Required for mapping existing PVCs of application component(s) to be mounted inside SFTP container for upgrade procedure. This variable allows to define one or many additional PVCs and respective mount paths. Entries should be unique and also should be different from pvc provided for storage.
+  pvclist:
+     #- claimName: pvc1
+     #  mountPath: /pvc1/mount/path/
+     #  enableMonitoring: true
+     #- claimName: pvc2
+     #  mountPath: /pvc2/mount/path/
+     #  enableMonitoring: true
+  
+  # Provide below details to deploy SFTP server. Blowfish encrypted password must be obtained from Ericsson Mediation Encryption Utility.
+  sftp:
+    port: "22"
+    allowedMACs: "hmac-sha2-256,hmac-sha2-512,hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com"
+    allowedCiphers: "aes256-ctr,aes192-ctr,aes128-ctr,aes128-gcm@openssh.com,aes256-gcm@openssh.com,chacha20-poly1305@openssh.com"
+    allowedKeyExchangeAlgorithms: "curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521"
+    allowedHostKeyAlgorithms: "ecdsa-sha2-nistp256-cert-v01@openssh.com,ecdsa-sha2-nistp384-cert-v01@openssh.com,ecdsa-sha2-nistp521-cert-v01@openssh.com,ssh-ed25519-cert-v01@openssh.com,rsa-sha2-512-cert-v01@openssh.com,rsa-sha2-256-cert-v01@openssh.com,ssh-ed25519,rsa-sha2-512,rsa-sha2-256,ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521"
+    MaxStartups: "1000:30:10000"
+    verboseLogs: "true"
+    incorrectLoginAttempt: "4"
+    additionalSftpConfigurations: {}
+    users:
+    - userName:
+      encryptedPassword:
+      daysToPasswordExpire: "30"
+      keySecret:
+      cmdDenied:
+  
+  resources:
+    ha-agent:
+      requests:
+        # Guaranteed CPU/Memory for ha-agent container.
+        cpu: "50m"
+        memory: "72Mi"
+      limits:
+        # Maximum CPU that ha-agent container can use.
+        cpu: "100m"
+        # Maximum Memory that ha-agent container can use.
+        memory: "256Mi"
+    sftp:
+      requests:
+        # Guaranteed CPU/Memory for sftp container.
+        cpu: "100m"
+        memory: "512Mi"
+      limits:
+        # Maximum CPU that sftp container can use.
+        cpu: "100m"
+        # Maximum Memory that sftp container can use.
+        memory: "512Mi"
+  
+  # Provide time period in seconds for monitoring and POD eviction during failure condition
+  faultTolerance:
+    monitorInterval: 20
+    evictionTime:
+       nodeNotReady: 20
+       storageFailure: 60
+  
+  # Pod/Node Affinity or Anti-Affinity can be configured as per user
+  # requirement in addition to commented examples
+  affinity: {}
+  ## Note: Only one entry for nodeAffinity, podAffinity and podAntiAffinity is allowed. To add
+  ## multiple conditions append the additional rules/entry under respective matchExpressions
+  #
+  ## Example to run sftp on desired node having <node_label_key>=<label_value> label
+  ## Note : matchField under nodeSelectorTerms is not supported
+  #  nodeAffinity:
+  #    requiredDuringSchedulingIgnoredDuringExecution:
+  #      nodeSelectorTerms:
+  #      - matchExpressions:
+  #        - key: <node_label_key>
+  #          operator: In
+  #          values:
+  #          - <label_value>
+  
+  # Placeholder to define POD tolerations for taint(s) applied on Node
+  tolerations: []
+  
+  # Placeholder to define POD topologySpreadConstraints for Rack level redundancy
+  topologySpreadConstraints: []
+  
+  # Placeholder to define custom/additional annotations on all resources
+  annotations: {}
+  
+  # Placeholder to define custom/additional labels on all resources
+  labels: {}
+  
+  # Logs to retain for how many number of days
+  logRetentionDays: 7
+
+eric-bss-em-utility:
+  enabled: true  
+  # To run container startup scripts in debugging mode set debug to true.
+  debug: false
+  
+  resources:
+    limits:
+      # Maximum CPU that container can use.
+      cpu: "500m"
+      # Maximum Memory that container can use.
+      memory: "272Mi"
+    requests:
+      # Minimum CPU that container will require
+      cpu: "100m"
+      # Minimum Memory that container will require
+      memory: "256Mi"
+  
+  # Pod/Node Affinity or Anti-Affinity can be configured as per user requirement
+  # Commented examples are provided for reference purpose only
+  affinity: {}
+  ## Note: Only one entry for nodeAffinity, podAffinity and podAntiAffinity is allowed. To add
+  ## multiple conditions append the additional rules/entry under respective matchExpressions
+  #
+  ## Example to run Utility POD on desired node having <node_label_key>=<label_value> label
+  ## Note : matchField under nodeSelectorTerms is not supported
+  #  nodeAffinity:
+  #    requiredDuringSchedulingIgnoredDuringExecution:
+  #      nodeSelectorTerms:
+  #      - matchExpressions:
+  #        - key: <node_label_key>
+  #          operator: In
+  #          values:
+  #          - <label_value>
+  
+  # Placeholder to define POD tolerations for taint(s) applied on Node
+  tolerations: []
+
+  # Parameters for Backup and Restore Utility
+  bro:
+    serviceName: eric-ctrl-bro
+    restPort: 7001
+    restTlsPort: 7002
+
+  # Parameters for Certificate Manager Utility
+  certm:
+    serviceName: eric-sec-certm
+    restPort: 5003
+
+  # ICP Manager update Parameters
+  icp_update_manager:
+    enabled: false
+    old_mgr_release_name:
+    new_mgr_release_name:
+    new_mgr_db_pvc:
+
+  #ICP File Server post update parameters
+  post_update_fileserver:
+    enabled: false
+    fe_release_name:
+  
+  # Placeholder to define custom/additional annotations on all resources
+  annotations: {}
+
+  # Placeholder to define custom/additional labels on all resources
+  labels: {}

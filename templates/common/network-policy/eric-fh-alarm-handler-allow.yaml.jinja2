@@ -1,0 +1,21 @@
+## The configuration is used for accessing fh-alarm-handler to get alarms (only for internal test usage)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+  generation: 1
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  name: allow-eric-fh-alarm-handler  # change xxx-allow to allow-xxx to align with fivegcsafe
+  namespace: {{ vnflcm.namespace }}
+  selfLink: /apis/networking.k8s.io/v1/namespaces/{{ vnflcm.namespace }}/networkpolicies/allow-eric-fh-alarm-handler
+spec:
+  egress:
+  - {}
+  ingress:
+  - {}
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: eric-fh-alarm-handler
+  policyTypes:
+  - Ingress

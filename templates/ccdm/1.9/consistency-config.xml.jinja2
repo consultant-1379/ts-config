@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <capabilities>
+        <capability>urn:ietf:params:netconf:base:1.0</capability>
+    </capabilities>
+</hello>
+]]>]]>
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<rpc xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" message-id="1">
+    <edit-config>
+        <target>
+            <running/>
+        </target>
+        <config xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+            <udr xmlns="urn:rdns:com:ericsson:oammodel:ericsson-udr">
+                <consistency-check>
+                    <sftp-server>
+                        <name>sftpServerForConsistency</name>
+                        <endpoints>
+                            <endpoint>
+                                <name>sftpServerForConsistency</name>
+                                <remote-address>{{ sftpServer.host }}</remote-address>
+                                <remote-port>22</remote-port>
+                                <remote-path>{{ ccdm.consistency.remotePath }}</remote-path>
+                                <client-identity>
+                                    <username>{{ sftpServer.username }}</username>
+                                    <password>{{ sftpServer.password }}</password>
+                                </client-identity>
+                                <server-authentication>
+                                    <ssh-host-keys>
+                                        <local-definition>
+                                            <host-key>{{ sftpServer.hostKey }}</host-key>
+                                        </local-definition>
+                                    </ssh-host-keys>
+                                </server-authentication>
+                            </endpoint>
+                        </endpoints>
+                    </sftp-server>
+                </consistency-check>
+            </udr>
+        </config>
+    </edit-config>
+</rpc>
+

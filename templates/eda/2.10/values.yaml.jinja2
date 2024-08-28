@@ -1,0 +1,174 @@
+# general settings
+global:
+  timezone: {{ timezone }}
+  domainName: {{ eda.domainName }}
+  clusterName: {{ eda.clusterName }}
+  ericsson:
+    licensing:
+      licenseDomains:
+        - productType: EDA
+          customerId: {{ license.customerId }}
+          swltId: {{ license.swltId }}
+  activation:
+    service:
+      prov:
+        annotations:
+          metallb.universe.tf/allow-shared-ip: eda-oam
+          metallb.universe.tf/address-pool: eda-oam
+      oam:
+        annotations:
+          metallb.universe.tf/allow-shared-ip: eda-oam
+          metallb.universe.tf/address-pool: eda-oam
+  {% if caas == 'OpenShift' %}
+  security:
+    policyBinding:
+      create: true
+    policyReferenceMap:
+      default-restricted-security-policy: default-restricted-security-policy
+      plc-59d0cf1dcc793a78b6ce30bfbe6553: plc-59d0cf1dcc793a78b6ce30bfbe6553
+  fsGroup:
+    namespace: true
+  {% endif %}
+  kubeApi:
+    port: 6443
+#ingress:
+#  oam:
+#    secret: eda-oam-tlscrt
+#  prov:
+#    secret: eda-prov-tlscrt
+
+eric-tm-ingress-controller-cr:
+  service:
+    annotations:
+      sharedVIPLabel: eda-oam
+      addressPoolName: eda-oam
+  {% if caas == 'OpenShift' %}
+  # According ADP Service User Guide
+  resources:
+    contour:
+      limits:
+        cpu: 4100m
+        memory: 600M
+    envoy:
+      limits:
+        cpu: 4200m
+        memory: 600M
+  {% endif %}
+
+eric-data-wide-column-database-cd:
+  persistence:
+    dataVolume:
+      persistentVolumeClaim:
+        storageClassName: {{ storageClassName|default("network-block") }}
+        size: {{  persistentVolumeClaim["eric-data-wide-column-database-cd"]|default("103G")  }}
+eric-act-activation-engine:
+  statefulset:
+    storageClass: {{ storageClassName|default("network-block") }}
+  initContainers:
+    eric-act-hss-validator:
+      imageName: hss-validator-image
+      tag: 1.35.5.09
+
+eric-cnom-document-database-mg:
+  persistence:
+    storageClass: {{ storageClassName|default("network-block") }}
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName|default("network-block") }}
+
+eric-cloud-native-base:
+  eric-si-application-sys-info-handler:
+    asih:
+      applicationId: {{ nodeName }}
+  eric-fh-snmp-alarm-provider:
+    service:
+      annotations:
+        sharedVIPLabel: eda-oam
+        addressPoolName: eda-oam
+  eric-data-message-bus-kf:
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: {{ storageClassName|default("network-block") }}
+        size: 2Gi
+  eric-data-document-database-pg:
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName|default("network-block") }}
+    {% if caas == 'OpenShift' %}
+    # HZ84348
+    resources:
+      logshipper:
+        limits:
+          memory: 200Mi
+    {% endif %}
+  eric-data-search-engine:
+    autoSetRequiredWorkerNodeSysctl: false
+    persistence:
+      data:
+        persistentVolumeClaim:
+          storageClassName: {{ storageClassName|default("network-block") }}
+      master:
+        persistentVolumeClaim:
+          storageClassName: {{ storageClassName|default("network-block") }}
+  eric-data-coordinator-zk:
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: {{ storageClassName|default("network-block") }}
+  eric-data-distributed-coordinator-ed:
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: {{ storageClassName|default("network-block") }}
+  eric-ctrl-bro:
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: {{ storageClassName|default("network-block") }}
+  eric-pm-server:
+    server:
+      persistentVolume:
+        storageClass: {{ storageClassName|default("network-block") }}
+    {% if caas == 'OpenShift' %}
+    resources:
+      eric-pm-configmap-reload:
+        limits:
+          # HZ82770
+          memory: "48Mi"
+      eric-pm-exporter:
+        limits:
+          # HZ84116
+          memory: "60Mi"
+    {% endif %}
+  eric-lm-combined-server:
+    {% if caas == 'OpenShift' %}
+    resources:
+      logshipper:
+        limits:
+          # HZ84258
+          memory: "200Mi"
+    {% endif %}
+    licenseServerClient:
+      licenseServer:
+        thrift:
+          host: {{ nels.host }}
+          port: {{ nels.port }}
+
+eric-act-aaa:
+  misc:
+    replicaCount: 2
+eric-act-inbound-async:
+  misc:
+    replicaCount: 2
+eric-act-inbound-interfaces:
+  misc:
+    replicaCount: 2
+eric-act-inbound-mml:
+  misc:
+    replicaCount: 2
+eric-act-proclog-cassandra-stasher:
+  misc:
+    proclog_stasher:
+      replicaCount: 2
+eric-act-rest-provisioning:
+  misc:
+    replicaCount: 2
+eric-act-tomcat:
+  misc:
+    replicaCount: 2
+

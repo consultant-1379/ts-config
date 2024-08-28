@@ -1,0 +1,597 @@
+# Default values for eric-bss-em-manager.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# As default registry path, the global registry path will be used.
+global:
+  registry:
+    # Docker registry URL
+    url: armdocker.rnd.ericsson.se
+    # Secret must be manually created in the namespace, no default value. Only required if Docker registry required authentication
+    #pullSecret: eric-em-example-secret
+  # Set timezone in pod.
+  timezone: {{ timezone }}
+  #security:
+  #  tls:
+  #    enabled: true
+
+productInfo:
+  # R-State of the product. R State should match helm chart version (3.1.0 -> R2A)
+  # To automate it when packaging the helm chart rstate can be generated
+  # and below value replaced with correct R-State
+  rstate: R25N
+
+imageCredentials:
+  # repoPath include the image path relative to the registry url, excluding image name
+  repoPath: proj-em-ci-internal
+  # Image pull policy. One of Always, Never, IfNotPresent.
+  pullPolicy: IfNotPresent
+  registry: {}
+    # Docker registry where docker image is uploaded e.g. docker-registry:5000. It overrides global registry url.
+    #url: armdocker.companyA.se
+    # Secret must be manually created in the namespace, no default value. Only required if Docker registry required authentication.
+    #pullSecret: eric-bss-em-manager-pullsecret
+
+images:
+  ha-agent:
+    name: eric-bss-em-ha-monitor
+    tag: 22.7.0-441
+  manager:
+    name: eric-bss-em-manager
+    tag: 22.7.0-444
+  db:
+    name: eric-bss-em-postgresql
+    tag: 22.7.0-344
+  conup-manager:
+    name: eric-bss-em-conup
+    tag: 22.7.0-430
+  sftp:
+    name: eric-bss-em-sftp
+    tag: 22.7.0-439
+  brAgent:
+    name: eric-bss-em-br-agent
+    tag: 22.7.0-443
+
+# To run container startup scripts and tomcat in debugging mode set debug to true.
+debug: false
+
+# Blowfish encrypted DB password must be obtained from Ericsson Mediation Encryption Utility.
+encryptedDbPassword: 093df4090e8504f74b2d80185457ae64
+
+service:
+  # Service type for Manager. Possible Values are: ClusterIP, NodePort, LoadBalancer. For production, Only LoadBalancer is recommended.
+  type: LoadBalancer
+  # In case of ECFE is configured in ECCD cluster, below parameter allows to assign a user defined IP from the pre configured range of free IPs
+  loadBalancerIP:
+  # Below options are only applicable for the services that are deployed in private cloud using ADP ECFE service and not applicable in other deployments.
+  annotations:
+    # sharedVIPLabel value used with the annotation key to indicate the VIP address is being shared among services that are using the same label. 
+    # The service manifest will use this value for the annotation key provided by ECM FE for sharing VIP. The value will be empty if sharing VIP is not required.
+    sharedVIPLabel: "em{{ instance }}-oam"
+    # To get VIP address from a specific address pool configured using ECM FE service.
+    # The pool name must be configured in the ECM FE configuration.
+    # The value will be empty if do not want to specify address pool for VIP.
+    addressPoolName: "em{{ instance }}-oam"
+    
+  # additionalAnnotations, additionalLabels: These can be specified as required by user incase any other annotations and labels are required to be associated with the service.
+  additionalAnnotations: {}
+  additionalLabels: {}
+    
+# Custom/Additional pod annotations & labels can be added under annotations.
+pod:
+  annotations: {}
+    # managerlogharvest: "true"
+  labels: {}
+    # label-parameter: label-value 
+
+# Termination Grace Period for Pod
+terminationGracePeriodSeconds: 30
+
+# PVCs to be used for Manager and database. PVC can be pre-created/pre-existing or can be created during deployment
+pvc:
+  # Provide either existingClaimName (PVC) or fill all the parameter values under dynamic for PVC creation during deployment.
+  mediationStorage:
+    # To use pre-created/pre-existing PVC provide name of the PVC.
+    existingClaimName:
+    # To create new PVC dynamically during deployment.
+    dynamic:
+      # Name of the storageclass to be used. If left blank then "default" storageclass will be used
+      storageClassName: {{ storageClassName }}
+      # For NFS, supported access mode are "ReadWriteOnce" and "ReadWriteMany"(recommended)
+      # For Block storage, access mode must be "ReadWriteOnce" only
+      accessMode: "ReadWriteOnce" 
+      # Volume size in integer format with units as Ki(kibibyte), Mi(mibibyte), Gi(gibibyte)
+      size: '50Gi'
+      # To instructs Helm, whether to keep or delete the PVC during uninstallation. If set to false or left blank then PVC will be deleted during helm uninstallation
+      retain: true
+  mediationDb:
+    existingClaimName: 
+    dynamic:
+      storageClassName: {{ storageClassName }}
+      accessMode: "ReadWriteOnce"
+      size: '50Gi'
+      retain: true
+
+# Only required if additional PVCs to be mounted inside containers (except db container) at respective mount path.
+# This variable allows to define one or many additional PVCs and respective mount paths. Entries should be unique.
+# PVCs can be pre-created/pre-existing or can be created during deployment
+additionalPvc: []
+  #- mountPath: /pvc1_mount_path/
+  #  existingClaimName:
+  #  dynamic:
+  #    storageClassName:
+  #    accessMode:
+  #    size:
+  #    retain:
+  #  enableMonitoring: true
+  #- mountPath: /pvc2_mount_path/
+  #  existingClaimName:
+  #  dynamic:
+  #    storageClassName:
+  #    accessMode:
+  #    size:
+  #    retain:
+  #  enableMonitoring: true
+
+resources:
+  ha-agent:
+    requests:
+      # Guaranteed CPU/Memory for ha-agent container.
+      cpu: "50m"
+      memory: "72Mi"
+    limits:
+      # Maximum CPU that ha-agent container can use.
+      cpu: "100m"
+      # Maximum Memory that ha-agent container can use.
+      memory: "256Mi"
+  manager:
+    # Guaranteed CPU/Memory for manager container.
+    requests:
+      cpu: {{ '50m' if systemProfile == 'small' else '2' }}
+      memory: "4Gi"
+    limits:
+      # Maximum CPU that manager container can use.
+      cpu: {{ '500m' if systemProfile == 'small' else '2' }}
+      # Maximum Memory that manager container can use.
+      memory: "4Gi"
+  db:
+    # Guaranteed CPU/Memory for mgrdb container.
+    requests:
+      cpu: {{ '500m' if systemProfile == 'small' else '1' }}
+      memory: "1Gi"
+    limits:
+      # Maximum CPU that mgrdb container can use
+      cpu: "1"
+      # Maximum Memory that mgrdb container can use
+      memory: "1Gi"
+  initdb:
+    # Guaranteed CPU/Memory for init-db container.
+    requests:
+      cpu: {{ '200m' if systemProfile == 'small' else '1' }}
+      memory: "1Gi"
+    limits:
+      # Maximum CPU that init-db container can use
+      cpu: "1"
+      # Maximum Memory that init-db container can use
+      memory: "1Gi"
+  conupmanager:
+    # Guaranteed CPU/Memory for conup-manager container.
+    requests:
+      cpu: {{ '200m' if systemProfile == 'small' else '2' }}
+      memory: "4Gi"
+    limits:
+      # Maximum CPU that conup-manager container can use
+      cpu: {{ '1' if systemProfile == 'small' else '2' }}
+      # Maximum Memory that conup-manager container can use
+      memory: "4Gi"
+  sftp:
+    # Guaranteed CPU/Memory for sftp container.
+    requests:
+      cpu: {{ '500m' if systemProfile == 'small' else '1' }}
+      memory: "1Gi"
+    limits:
+      # Maximum CPU that sftp container can use.
+      cpu: "1"
+      # Maximum Memory that sftp container can use.
+      memory: "1Gi"
+  brAgent:
+    requests:
+      # Guaranteed CPU/Memory for bragent container.
+      cpu: "100m"
+      memory: "100Mi"
+    limits:
+      # Maximum CPU that bragent container can use.
+      cpu: "500m"
+      # Maximum Memory that bragent container can use.
+      memory: "500Mi"
+  customCron:
+    requests:
+      # Minimum CPU/Memory for customCron container.
+      cpu: "100m"
+      memory: "100Mi"
+    limits:
+      # Maximum CPU that customCron container can use.
+      cpu: "500m"
+      # Maximum Memory that customCron container can use.
+      memory: "500Mi"     
+
+# Provide time period in seconds for monitoring and POD eviction during failure condition
+faultTolerance:
+  monitorInterval: 20
+  evictionTime:
+     nodeNotReady: 60
+     storageFailure: 60
+
+# Pod/Node Affinity or Anti-Affinity can be configured as per user requirement
+# Commented examples are provided for reference purpose only
+affinity:
+  manager: {}
+  ## Note: Only one entry for nodeAffinity, podAffinity and podAntiAffinity is allowed. To add 
+  ## multiple conditions append the additional rules/entry under respective matchExpressions
+  #
+  ## Example to run Manager POD on desired node having <node_label_key>=<label_value> label
+  ## Note : matchField under nodeSelectorTerms is not supported
+  #  nodeAffinity:
+  #    requiredDuringSchedulingIgnoredDuringExecution:
+  #      nodeSelectorTerms:
+  #      - matchExpressions:
+  #        - key: <node_label_key>
+  #          operator: In
+  #          values:
+  #          - <label_value>
+
+  customCron: {}
+  ## Note: Only one entry for nodeAffinity, podAffinity and podAntiAffinity is allowed. To add 
+  ## multiple conditions append the additional rules/entry under respective matchExpressions
+  #
+  ## Example to run cron job on desired node having <node_label_key>=<label_value> label
+  ## Note : matchField under nodeSelectorTerms is not supported
+  #  nodeAffinity:
+  #    requiredDuringSchedulingIgnoredDuringExecution:
+  #      nodeSelectorTerms:
+  #      - matchExpressions:
+  #        - key: <node_label_key>
+  #          operator: In
+  #          values:
+  #          - <label_value>
+  #
+  ## Sample example to restrict scheduling of cron jobs and manager on same node using podAffinity
+  #  podAffinity:
+  #    requiredDuringSchedulingIgnoredDuringExecution:
+  #    - labelSelector:
+  #        matchExpressions:
+  #        - key: "app.kubernetes.io/instance"
+  #          operator: In
+  #          values:
+  #          - "<Helm_release_name>"
+  #      topologyKey: "kubernetes.io/hostname"
+  #
+  ## Sample example to configure cron jobs running on different nodes using podAntiAffinity
+  #  podAntiAffinity:
+  #    requiredDuringSchedulingIgnoredDuringExecution:
+  #    - labelSelector:
+  #        matchExpressions:
+  #        - key: "app.kubernetes.io/instance"
+  #          operator: In
+  #          values:
+  #          - "<Helm_release_name>-customcron"
+  #      topologyKey: "kubernetes.io/hostname"
+
+# Placeholder to define POD tolerations for taint(s) applied on Node
+tolerations: []
+
+# Placeholder to define POD topologySpreadConstraints for Rack level redundancy
+topologySpreadConstraints: []
+
+# Placeholder to define custom/additional annotations on all resources
+annotations: {}
+
+# Placeholder to define custom/additional labels on all resources
+labels: {}
+
+# Provide below details to deploy SFTP server. Blowfish encrypted sftp.users.encryptedPassword must be obtained from Ericsson Mediation Encryption Utility.
+sftp:
+  deploy: false
+  allowedMACs: "hmac-sha2-256,hmac-sha2-512,hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com"
+  allowedCiphers: "aes256-ctr,aes192-ctr,aes128-ctr,aes128-gcm@openssh.com,aes256-gcm@openssh.com,chacha20-poly1305@openssh.com"
+  allowedKeyExchangeAlgorithms: "curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521"
+  allowedHostKeyAlgorithms: "ecdsa-sha2-nistp256-cert-v01@openssh.com,ecdsa-sha2-nistp384-cert-v01@openssh.com,ecdsa-sha2-nistp521-cert-v01@openssh.com,ssh-ed25519-cert-v01@openssh.com,rsa-sha2-512-cert-v01@openssh.com,rsa-sha2-256-cert-v01@openssh.com,ssh-ed25519,rsa-sha2-512,rsa-sha2-256,ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521"
+  MaxStartups: "1000:30:10000"
+  verboseLogs: "true"
+  incorrectLoginAttempt: "4"
+  additionalSftpConfigurations: {}
+  users:
+  - userName: 
+    encryptedPassword: 
+    daysToPasswordExpire: "30"
+    keySecret: 
+    cmdDenied:
+    secondary_groups:
+
+managerConfig:
+  db:
+    initialSize: "2"
+    maxActive: "50"
+    maxIdle: "10"
+    minIdle: "0"
+    timeout: "300"
+    maxWait: "20000"
+  license:
+    server_address: eric-lm-combined-server
+    server_port: "8080"
+    server_tls_port: "18326"
+    handler_hour: "0"
+    handler_minute: "0"
+  pmServer:
+    address: eric-pm-server
+    port: 9090
+    tls:
+      port: 9089
+      certTtl: 31536000
+  hibernate:
+    show_sql: "false"
+  mm:
+    alarmLogRetentionTime: "90"
+    userLogRetentionTime: "365"
+    throughputRetentionTime: "1"
+    configuration_provision_limited: "false"
+  drviewer:
+  # - servicename: 
+    # externalIP: 
+    # port: 
+    # database: 
+    # SecretName: 
+
+  # - servicename: 
+    # externalIP: 
+    # port: 
+    # database: 
+    # SecretName: 
+  drviewerTLS:
+    enabled: true
+    trustedCertificateName: 
+    client:
+      verifyClientCertificate: true
+      keyName: 
+      certificateName: 
+  drrf:
+    servicename:
+    database: 
+    port: 
+    SecretName:
+    externalIP:
+    tls:
+      enabled: true
+      trustedCertificateName: 
+      client:
+        verifyClientCertificate: true
+        keyName: 
+        certificateName: 
+  txf:
+    enabled: "false"
+    server_name: 
+    server_service:
+  #This parameter should be true for enabling Alarm Handling in EM Manager
+  snmp:
+    enabled: "false"
+    fi:
+      address: "eric-fh-alarm-handler"
+      port: "6005"
+      tlsPort: "6006"
+  aal:
+    enabled: "false"
+    timeinterval: "60"
+    alarmHandler:
+      address: "eric-fh-alarm-handler"
+      port: "5005"
+      tlsPort: "5006"
+      serviceNames: "eric-sec-certm,eric-sec-sip-tls"
+  # Alarm Handler ConfigMap Name
+  ahconfigmapname: "eric-fh-alarm-handler-faultmappings"
+  # alarm_autoAck_enabled should be set to true for enabling Alarm AutoAcknowledgement. Default Value is false.
+  alarm_autoAck_enabled: "false"
+  max_alarm_limit: "200"
+  # user_authentication_mode can be ldap/native or can be left blank
+  user_authentication_mode:
+  # Write Security event logs (User event log and alarm log) to respective files
+  writeSecurityEventLogToFile: "false"
+  # Blowfish encrypted ldap.encryptedPassword must be obtained from Ericsson Mediation Encryption Utility.
+  ldap:
+    host:
+    port: "636"
+    ssl_enabled:
+    ssl_skip_verify:
+    certm:
+      trustStoreName: 
+    authenticationType:
+    baseDn:
+    user:
+    encryptedPassword:
+    version:
+    pool_initialSize: "2"
+    pool_maxSize: "10"
+    connection_timeout: "10000"
+    read_timeout: "10000"
+    user_id:
+    user_department:
+    user_mobile:
+    user_mail:
+    user_displayname:
+  reporting:
+    ip: 
+    http_port: "8080"
+    https_port: "8443"
+  customreport:
+    ip: 
+    http_port: "8080"
+    https_port: "8443"
+  # Blowfish encrypted performanceMonitorUI.encryptedPassword must be obtained from Ericsson Mediation Encryption Utility.
+  performanceMonitorUI:
+    ip: eric-bss-em-pm-ui
+    # Either http_port or https_port value should be filled and keep the value of other parameter null (empty). It is applicable only if pm-ui is deployed.
+    http_port:
+    https_port:
+    admin_user:
+    encryptedPassword:
+  # Blowfish encrypted smtp.encryptedPassword must be obtained from Ericsson Mediation Encryption Utility.
+  cnom:
+    url:
+    # url - https://<FQDN>
+    #<FQDN> - FQDN for external IP of ICCR LoadBalancer service.
+  smtp:
+    host:
+    auth:
+    encryptedPassword:
+    port:
+    mail_from:
+    starttls:
+  # Blowfish encrypted smsc.bind_encryptedPassword must be obtained from Ericsson Mediation Encryption Utility.
+  smsc:
+    host:
+    port:
+    bind_systemid:
+    bind_encryptedPassword:
+    source_mobile_number: 0000
+    source_mobile_number_ton: 2
+    source_moblie_number_npi: 1
+    reconnection_time: 60
+    enquire_link_time: 30
+    response_timeout: 35
+    unacknowledged_requests_limit: 1000
+    recipient_mobile_number_ton: 2
+    recipient_mobile_number_npi: 1
+    fragmentation_type: UDH
+    fragment_size: 140
+    data_coding:
+    is_seven_bit: false
+  runtimeestimate:
+    availablecpu_threshold: "0"
+    availablememory_threshold: "25"
+    auto_scaleup: "false"
+    auto_scaleout: "false"
+    scalein_stopped: "false"
+    auto_scalein_deployer_enabled: "false"
+    auto_scaleout_deployer_enabled: "false"
+    # Provide comma-separated users for auto scale operations. Example "mmsuper,admin1,admin2"
+    auto_scale_users: "mmsuper"
+    # Provide comma-separated users for evnfm scale operations, valid only for evnfm scale workflow. Example "mmsuper,admin1,admin2"
+    evnfm_scale_users: "mmsuper"
+  captcha:
+    duration: "60000"
+    size_limit: "1000"
+    attempts_show: "2"
+    user_refresh_duration: "600000"
+  bldm:
+    reauth: "true"
+    min_memory: {{ '128m' if systemProfile == 'small' else '512m' }}
+    max_memory: {{ '1024m' if systemProfile == 'small' else '3072m' }}
+  cluster:
+    name: "site1"
+  # Provide local deployer details which is created within same namespace where this manager component is going to be installed.
+  deployer:
+    sslEnabled: "true"
+    trustedCertificateName: 
+    servicename: 
+    port: "8082"
+  # Provide external deployer details. Multiple external deployer from multiple K8s clusters can be added in an array
+  # Below parameters are optional. Only required if External Deployer need to expose with manager.
+  # i) Deployer deployed within same cluster with different namespaces, treated as external deployer. Mandatory Parameters are sslEnabled and serviceName. If manager and deployer are running in different name spaces of same cluster,serviceName of deployer shall be given as <serviceName of deployer>.<namespace>.
+  # ii) Deployer deployed in different k8s cluster, treated as external deployer. Mandatory Parameters are sslEnabled, loadBalancerIp and port.
+  
+  externalDeployer:
+  #- sslEnabled: 
+  #  trustedCertificateName:
+  #  serviceName:
+  #  loadBalancerIp:
+  #  port:
+
+  #- sslEnabled:
+  #  trustedCertificateName:
+  #  serviceName:
+  #  loadBalancerIp:
+  #  port:
+
+  client_session_timeout: "30"
+  tps_hourlyLogging_enabled: "false"
+  search:
+    batchLimit: "5"
+    resultLimit: "10000"
+  pmFileFormatFlag: "N"
+  tomcatMemoryPercentage: "80"
+  # tomcatMaxThreads: "100"
+  sessiontimeout:
+    gui_session_timeout: "600000"
+    cli_session_timeout: "600000"
+    server_session_timeout: "30000"
+    tracer_session_timeout: "15000"
+    web_session_timeout: "600000"
+    nodemanager_session_timeout: "15000"
+
+# PM Scrape Settings
+pmScrape:
+  enable: true
+  port: "9250"
+  refreshInterval: "60"
+  tls:
+    certTtl: 31536000
+
+# To fetch SSL certificates from Certificate Manager provide Key and Certificate name
+certm:
+  enable: false
+  autoreload: true
+  keyName: 
+  certificateName: 
+
+certmTrustStores:
+#  - trustStoreName:
+
+# Configuration parameters for postgresql database.
+pgConfig:
+  huge_pages: off
+  # max_wal_size: 2GB
+  # max_connections: 250
+
+# Backup and Restore Agent sidecar container
+brAgent:
+  enabled: false
+  brTimeout: 120
+  existingClaimName:
+  dynamic:
+    storageClassName: {{ storageClassName }}
+    accessMode: "ReadWriteOnce" 
+    size:
+    retain: true
+  broServiceName: eric-ctrl-bro
+  broGrpcServicePort: 3000
+  restPort: 7001
+  # Enable this feature to group multiple backups together.
+  #backupScope:
+
+# CustomCron Object
+customCron:
+  enabled: false
+  cronEntries:
+    - scriptConfigMap:
+      # Default image for CustomCronJob is "eric-bss-em-customcron:22.7.0-439".
+      image: "eric-bss-em-customcron:22.7.0-439"
+      frequency:
+      additionalCronPvc:
+        - existingClaimName:
+          mountPath:
+
+# Logs to retain for how many number of days 
+logRetentionDays: 7
+
+# Section to enable custom GPR message and legaltext in manager
+customGpr:
+  # set to true if custom GPR message need to be set
+  isCustomGprMessage: false
+  gprContent: |
+      GPRMessage = This system is for the use of authorized users only.  Individuals using this Mediation system without authority, or in excess of their authority, are subject to having all of their activities on this system monitored and recorded by system personnel. In the course of monitoring individuals improperly using this system, or in the course of system maintenance, the activities of authorized users may also be monitored. Anyone using this system expressly consents to such monitoring and is advised that if such monitoring reveals possible evidence of criminal activity, system personnel may provide the evidence of such monitoring to law enforcement officials. LOG OFF IMMEDIATELY if you do not agree to the terms and conditions stated in this warning.
+
+# set to true if custom legal notice need to be set
+  isCustomLegalNotice: false
+  legalContent: |
+          This system is provided for authorized and official use only. If you are not an authorized user, you should stop immediately any activity you are performing on this system. This system processes sensitive personal data. The misuse of such data may generate considerable harm to data subjects. The use of this system may therefore be monitored and recorded for administrative and security reasons. Anyone accessing this system expressly consents to such monitoring and is advised that if monitoring reveals possible evidence of criminal activity, evidence for such activity shall be provided to law enforcement officials for appropriate action.
+
+

@@ -1,0 +1,54 @@
+## The file is to remove the unused PCF service in TS 5GC with cnat, please confirm if using the modification in your track.
+#
+#        {
+#          "requesterNfType": "UDR",
+#          "targetNfType": "PCF",
+#          "targetServiceNames": [
+#            "npcf-smpolicycontrol",
+#            "npcf-am-policy-control"
+#          ]
+#        },
+
+# To apply it, add config in cfggen.yaml and command in vnf.yaml
+# Example:
+
+## cfggen.yaml
+
+#- template: ccdm/1.9/udr-nrf-agent-targetnfprofiles.yaml.jinja2
+#  target: udr-nrf-agent-targetnfprofiles.yaml
+
+## vnf.yaml
+
+#  post-day1-k8s-config:
+#    - name: Remove PCF service in udr-nrf-agent-targetnfprofiles
+#      cmd: |-
+#        patch configmap udr-nrf-agent-targetnfprofiles --patch-file=udr-nrf-agent-targetnfprofiles.yaml
+
+data:
+  udr-nrf-agent-targetnfprofiles-ccdm.json: |-
+    {
+      "targetNfProfiles": [
+        {
+          "requesterNfType": "UDR",
+          "targetNfType": "UDM",
+          "targetServiceNames": [
+            "nudm-uecm"
+          ]
+        },
+        {
+          "requesterNfType": "UDR",
+          "targetNfType": "5G_EIR",
+          "targetServiceNames": [
+            "n5g-eir-eic"
+          ]
+        },
+        {
+          "requesterNfType": "UDR",
+          "targetNfType": "HSS",
+          "targetServiceNames": [
+            "nhss-uecm"
+          ]
+        }
+      ]
+    }
+

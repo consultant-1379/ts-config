@@ -1,0 +1,995 @@
+global:
+  timezone: {{ timezone }}
+  applicationId: {{ nodeName }}
+  ericsson:
+    licensing:
+      licenseDomains:
+        - productType: PACKET_CORE_CONTROLLER
+          customerId: {{ license.customerId }}
+          swltId: {{ license.swltId }}
+  {% if caas == 'OpenShift' %}
+  openshift: true
+  security:
+    createPolicyRole: true
+    policyName: restricted-pod-security-policy
+    policyNameForAdp: adp-pod-security-policy
+  {% endif %}
+
+  sm:
+    pgw:
+      enabled: true
+    sgw:
+      enabled: true
+    smf:
+      enabled: true
+    {% if smfGwcGeo is defined and smfGwcGeo == true %}
+    geored:
+      enabled: true
+    {% endif %}
+
+snmp-alarm-provider-secret-creation:
+  enabled: false
+
+eric-pc-routing-engine:
+  resources:
+    eric-pc-routing-engine:
+      limits:
+        cpu: '1'
+        memory: 500Mi
+      requests:
+        cpu: 100m
+        memory: 100Mi
+  interfaces:
+    {% if caas  == 'CNIS' %}
+    type: ovs
+    ovs:
+    - bridge: br_data
+      vlan_mode: trunk
+      mtu: 9000
+      trunk:
+      {% for ni in pcc.vpngw.networkInstances %}
+        - minID: {{ ni.ipForward.vlan }} # {{ ni.name }}
+          maxID: {{ ni.ipForward.vlan }} # {{ ni.name }}
+      {% endfor %}
+        - minID: {{  pcc.vpngw.intraForward.vlan }} # vpngw_intraForward
+          maxID: {{  pcc.vpngw.intraForward.vlan }} # vpngw_intraForward
+    {% elif caas == 'OpenShift' %}
+    predefineNetworks:
+      - name: eric-pc-routing-engine-net0
+    type: predefine
+    {% else %}
+    type: macvlan
+    macvlan:
+      - master: {{ macvlanInterface | default('eth4') }}
+    {% endif %}
+  {% if smfGwcGeo is defined and smfGwcGeo == true %}
+  geored:
+    localInterface: "cre:geored_gsa"
+    localPort: 65001
+  {% endif %}
+
+eric-pc-mm:
+  eric-pc-mm-controller:
+    resources:
+      controller:
+        limits:
+          cpu: '4'
+          memory: 10Gi
+        requests:
+          cpu: '2'
+          memory: 10Gi
+    service:
+      useK8sNwSBI: true
+      sbi:
+        loadBalancerIP: {{ pcc.pcmm.namfLbIp }}
+    nodeSelector:
+      pcc-mm-pod: controller
+    {% if caas != 'OpenShift' %}
+    securityContext:
+      appArmorProfile: docker-pcc
+    {% endif %}
+    configMap: |-
+      {% macro mmconfig() %}{% include "pc-mm-config.sh.jinja2" %}{% endmacro %}
+      {{ mmconfig() | indent(6) }}
+
+  eric-pc-mm-forwarder:
+    resources:
+      forwarder:
+        limits:
+          cpu: '1'
+          memory: 1024Mi
+        requests:
+          cpu: 300m
+          memory: 1024Mi
+    nodeSelector:
+      pcc-mm-pod: non-controller
+    replicaCount: {{ replicaCount['eric-pc-mm-forwarder'] | default(8) }}
+    ipv6: false
+    networks:
+    {% if caas == 'CNIS' %}
+    - name: ext1
+      cniVersion: 0.3.1
+      type: ovs
+      bridge: br_data
+      trunk:
+     {% for ni in pcc.pcmm.ipNetwork %}
+        - minID: {{ ni.ipInt.vlan }} # {{ ni.name }}
+          maxID: {{ ni.ipInt.vlan }} # {{ ni.name }}
+      {% endfor %}
+      mtu: 9000
+    {% elif caas == 'OpenShift' %}
+    - name: pc-mm-ext
+      namespace: pcc
+    {% else %}
+    - ipam: {}
+      master: {{ macvlanInterface | default('eth4') }}
+      mtu: 2090
+      name: ext1
+      type: macvlan
+    {% endif %}
+    {% if caas != 'OpenShift' %}
+    securityContext:
+      appArmorProfile: docker-pcc
+    {% endif %}
+
+  eric-pc-mm-mobility:
+    resources:
+      mobility:
+        limits:
+          cpu: '3'
+          memory: 6Gi
+        requests:
+          cpu: '3'
+          memory: 6Gi
+    service:
+      useK8sNwSBI: true
+      sbi:
+        loadBalancerIP: {{ pcc.pcmm.namfLbIp }}
+    nodeSelector:
+      pcc-mm-pod: non-controller
+    replicaCount: {{ replicaCount['eric-pc-mm-mobility'] | default(19) }}
+    {% if caas != 'OpenShift' %}
+    securityContext:
+      appArmorProfile: docker-pcc
+    {% endif %}
+
+  eric-pc-mm-sctp:
+    resources:
+      sctp:
+        limits:
+          cpu: '2'
+          memory: 1Gi
+        requests:
+          cpu: '1'
+          memory: 1Gi
+    nodeSelector:
+      pcc-mm-pod: non-controller
+    replicaCount: {{ replicaCount['eric-pc-mm-sctp'] | default(8) }}
+    {% if caas != 'OpenShift' %}
+    securityContext:
+      appArmorProfile: docker-pcc
+    {% endif %}
+
+  eric-pc-mm-br-agent:
+    nodeSelector:
+      pcc-mm-pod: non-controller
+
+  eric-pc-mm-controller-supervisor:
+    nodeSelector:
+      pcc-mm-pod: non-controller
+
+  eric-pc-networking-cm-agent:
+    resources:
+      eric-pc-networking-cm-agent:
+        limits:
+          cpu: '1'
+          memory: 256Mi
+        requests:
+          cpu: 100m
+          memory: 64Mi
+
+  eric-pc-routing-aggregator:
+    resources:
+      routingAggregator:
+        limits:
+          cpu: '2'
+          memory: 4Gi
+        requests:
+          cpu: 500m
+          memory: 1Gi 
+
+  eric-pc-routing-engine-api:
+    resources:
+      eric-pc-routing-engine-api:
+        limits:
+          cpu: 500m
+          memory: 500Mi
+        requests:
+          cpu: 100m
+          memory: 100Mi
+
+eric-pc-sm:
+  eric-pc-sm-br-agent:
+    resources:
+      bragent:
+        limits:
+          cpu: '1'
+          memory: 200Mi
+        requests:
+          cpu: 100m
+          memory: 200Mi
+    nodeSelector:
+      pcc-sm-pod: non-controller
+
+  eric-pc-sm-diameter:
+    resources:
+      diameter:
+        limits:
+          cpu: '1'
+          memory: 2Gi
+        requests:
+          cpu: 400m
+          memory: 2Gi
+    nodeSelector:
+      pcc-sm-pod: non-controller
+
+  eric-pc-sm-http-client:
+    resources:
+      httpclient:
+        limits:
+          cpu: '1'
+          memory: 2Gi
+        requests:
+          cpu: 500m
+          memory: 2Gi
+    nodeSelector:
+      pcc-sm-pod: non-controller
+    replicaCount: {{ replicaCount['eric-pc-sm-http-client'] | default(3) }}
+
+  eric-pc-sm-ip-allocator:
+    resources:
+      ipallocator:
+        limits:
+          cpu: '1'
+          memory: 2Gi
+        requests:
+          cpu: 100m
+          memory: 2Gi
+    nodeSelector:
+      pcc-sm-pod: non-controller
+
+  eric-pc-sm-controller:
+    resources:
+      controller:
+        limits:
+          cpu: '1'
+          memory: 1Gi
+        requests:
+          cpu: '1'
+          memory: 1Gi
+    nodeSelector:
+      pcc-sm-pod: controller
+
+  eric-pc-sm-notification-forwarder:
+    nodeSelector:
+      pcc-sm-pod: non-controller
+    annotations:
+      metallb.universe.tf/address-pool: pcc{{ instance | default("") }}-smf-notification
+      metallb.universe.tf/allow-shared-ip: pcc{{ instance | default("") }}-smf-notification
+    resources:
+      notifforwarder:
+        limits:
+          cpu: '1'
+          memory: 2Gi
+        requests:
+          cpu: 200m
+          memory: 2Gi
+
+  eric-pc-sm-nsmf-forwarder:
+    resources:
+      nsmfforwarder:
+        limits:
+          cpu: '1'
+          memory: 2Gi
+        requests:
+          cpu: 500m
+          memory: 2Gi
+    nodeSelector:
+      pcc-sm-pod: non-controller
+    services:
+      nsmf:
+        loadBalancerIP: {{ pcc.pcsm.nsmfLbIp }}
+    replicaCount: {{ replicaCount['eric-pc-sm-nsmf-forwarder'] | default(6) }}
+
+  {% if smfGwcGeo is defined and smfGwcGeo == true %}
+  eric-pc-sm-geo-red-forwarder:
+    annotations:
+      metallb.universe.tf/address-pool: pcc{{ instance | default("") }}-pcsm-gsa
+      metallb.universe.tf/allow-shared-ip: pcc{{ instance | default("") }}-pcsm-gsa
+    services:
+      geored:
+        port: 50097
+    replicaCount: {{ replicaCount['eric-pc-sm-geo-red-forwarder'] | default(6) }}
+  {% endif %}
+  eric-pc-sm-smf-pgw-session:
+    replicaCount: {{ replicaCount['eric-pc-sm-smf-pgw-session'] | default(12) }}
+    resources:
+      smf:
+        limits:
+          cpu: 1200m
+        requests:
+          cpu: 800m
+    nodeSelector:
+      pcc-sm-pod: non-controller
+
+  eric-pc-sm-sgw-session:
+    replicaCount: {{ replicaCount['eric-pc-sm-sgw-session'] | default(5) }}
+    resources:
+      sgw:
+        limits:
+          cpu: '1'
+        requests:
+          cpu: 500m
+    nodeSelector:
+      pcc-sm-pod: non-controller
+
+  eric-pc-sm-target-database-master-rd:
+    resources:
+      redis:
+        limits:
+          cpu: 1000m
+          memory: 500Mi
+        requests:
+          cpu: 300m
+          memory: 500Mi
+    nodeSelector:
+      pcc-sm-pod: non-controller
+
+  eric-pc-sm-target-database-replica-rd:
+    resources:
+      redis:
+        limits:
+          cpu: 1000m
+          memory: 500Mi
+        requests:
+          cpu: 400m
+          memory: 500Mi
+    nodeSelector:
+      pcc-sm-pod: non-controller
+
+  eric-pc-sm-udp-forwarder:
+    resources:
+      udpforwarder:
+        limits:
+          cpu: '1'
+          memory: 2Gi
+        requests:
+          cpu: 400m
+          memory: 2Gi
+    nodeSelector:
+      pcc-sm-pod: non-controller
+    replicaCount: {{ replicaCount['eric-pc-sm-udp-forwarder'] | default(3) }}
+
+eric-pc-up-partitioner:
+  replicaCount: 2
+  resources:
+    partitioner:
+      limits:
+        cpu: '1'
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 40Mi
+
+eric-pc-up-timer-wheel:
+  replicaCount: 2
+  resources:
+    timerWheel:
+      limits:
+        cpu: '1'
+        memory: 256Mi
+      requests:
+        cpu: 200m
+        memory: 64Mi
+
+eric-pc-vpn-gateway-forwarder:
+  replicaCount: {{ replicaCount['eric-pc-vpn-gateway-forwarder'] | default(4) }}
+  {% if caas == 'CNIS' %}
+  resourceName: ovs-cni.network.kubevirt.io/br_data
+  resources:
+    dataPlane:
+      limits:
+        ovs-cni.network.kubevirt.io/br_data: 1
+        cpu: 1100m
+        memory: 2Gi
+      requests:
+        ovs-cni.network.kubevirt.io/br_data: 1
+        cpu: 500m
+        memory: 2Gi
+  vpnGateway:
+    enabled: true
+    multiPod: intra
+  interfaces:
+    - name: net0
+      type: ovs
+      bridge: br_data
+      trunk:
+      {% for ni in pcc.vpngw.networkInstances %}
+        - minVlan: {{ ni.ipForward.vlan }} # {{ ni.name }}
+          maxVlan: {{ ni.ipForward.vlan }} # {{ ni.name }}
+      {% endfor %}
+        - minVlan: {{  pcc.vpngw.intraForward.vlan }} # vpngw_intraForward
+          maxVlan: {{  pcc.vpngw.intraForward.vlan }} # vpngw_intraForward
+      l2Mtu: 9000
+      {% endif %}
+
+eric-pc-kvdb-rd-server:
+  numberOfMaster: {{ replicaCount['eric-pc-kvdb-rd-server'] | default(16) }}
+  replicationFactor: 1
+  resources:
+    metricExporter:
+      limits:
+        cpu: 50m
+        memory: 52Mi
+      requests:
+        cpu: 50m
+        memory: 52Mi
+    node:
+      limits:
+        cpu: 1500m
+        memory: 5Gi
+      requests:
+        cpu: 600m
+        memory: 5Gi
+
+eric-pc-controller-ldap-admin-creds:
+  adminCredentials:
+    adminuser: {{ users.day0.username }}
+    adminpasswd: "$6$OmAG0w2mSn6CG6H3$LJk.tfWWx1VkeHipN4TckABj.jrCA6Pjt5KarYKOFSpO8v1OWeKhEv3MPAsN9QaMz11dfZksdgIboWx7eY3.n0"
+
+cnom-loadBalancer-service:
+  enabled: true
+  annotations:
+    metallb.universe.tf/address-pool: pcc{{ instance | default("") }}-oam
+    metallb.universe.tf/allow-shared-ip: pcc{{ instance | default("") }}-oam
+
+
+eric-pm-resource-monitor:
+  resources:
+    pmrm:
+      limits:
+        cpu: 1
+        memory: 256Mi
+      requests:
+        cpu: 200m
+        memory: 64Mi
+
+eric-cloud-native-base:
+
+  eric-si-application-sys-info-handler:
+    asih:
+      applicationId: {{ nodeName }}
+
+  eric-cm-mediator:
+    replicaCount: 2
+    resources:
+      eric-cm-mediator:
+        limits:
+          cpu: '1'
+          memory: 1Gi
+        requests:
+          cpu: 550m
+          memory: 750Mi
+      eric-cm-mediator-notifier:
+        limits:
+          cpu: '1'
+          memory: 512Mi
+        requests:
+          cpu: 300m
+          memory: 256Mi
+   
+  eric-cm-mediator-db-pg:
+    highAvailability:
+      replicaCount: 2
+    resources:
+      bra:
+        limits:
+          cpu: 1500m
+          memory: 2560Mi
+        requests:
+          cpu: 500m
+          memory: 1280Mi
+      metrics:
+        limits:
+          cpu: 200m
+        requests:
+          cpu: 100m
+      postgres:
+        limits:
+          cpu: '1'
+        requests:
+          cpu: 200m
+
+  eric-ctrl-bro:
+    bro:
+      replicas: 1
+    resources:
+      backupAndRestore:
+        limits:
+          cpu: '1'
+          memory: 4Gi
+        requests:
+          cpu: 400m
+          memory: 2Gi
+
+  eric-data-coordinator-zk:
+    heap: 512m
+    replicaCount: 3
+    resources:
+      datacoordinatorzk:
+        limits:
+          cpu: '2'
+          memory: 4Gi
+        requests:
+          cpu: 300m
+          memory: 1Gi
+
+  eric-data-distributed-coordinator-ed:
+    pods:
+      dced:
+        replicaCount: 3
+    resources:
+      dced:
+        limits:
+          cpu: '1'
+          memory: 1Gi
+        requests:
+          cpu: 400m
+          memory: 400Mi
+
+  eric-data-message-bus-kf:
+    replicaCount: 3
+    resources:
+      jmxexporter:
+        limits:
+          cpu: '1'
+        requests:
+          cpu: 300m
+      messagebuskf:
+        limits:
+          cpu: '2'
+          memory: 7168Mi
+        requests:
+          cpu: 700m
+          memory: 3072Mi
+
+  eric-data-object-storage-mn:
+    resources:
+      logshipper:
+        limits:
+          cpu: 100m
+        requests:
+          cpu: 50m
+      mgt:
+        limits:
+          cpu: '1'
+          memory: 512Mi
+        requests:
+          cpu: 250m
+          memory: 256Mi
+      server:
+        limits:
+          cpu: 1100m
+          memory: 3Gi
+        requests:
+          cpu: 500m
+          memory: 1Gi
+    nodeSelector:
+      pcc-sm-pod: non-controller
+
+  eric-data-search-engine:
+    jvmHeap:
+      data: 1088m
+      ingest: 1088m
+      master: 576m
+    replicaCount:
+      data: 2
+      ingest: 2
+      master: 3
+    resources:
+      data:
+        limits:
+          cpu: '1'
+          memory: 5120Mi
+        requests:
+          cpu: 600m
+          memory: 2176Mi
+      ingest:
+        limits:
+          cpu: '1'
+          memory: 2304Mi
+        requests:
+          cpu: 500m
+          memory: 2176Mi
+      master:
+        limits:
+          cpu: '1'
+          memory: 1280Mi
+        requests:
+          cpu: 560m
+          memory: 1152Mi
+      metrics:
+        limits:
+          cpu: 100m
+        requests:
+          cpu: 25m
+      tlsproxy:
+        limits:
+          cpu: 100m
+        requests:
+          cpu: 25m
+  {% macro searchEngine() %}{% include "search-engine.small.yaml" %}{% endmacro %}
+  {{ searchEngine() | indent(2) }}
+
+  eric-fh-alarm-handler:
+    replicaCount: 2
+    resources:
+      alarmhandler:
+        limits:
+          cpu: '1'
+          memory: 1536Mi
+        requests:
+          cpu: 300m
+          memory: 384Mi
+
+  eric-fh-alarm-handler-db-pg:
+    highAvailability:
+      replicaCount: 2
+    resources:
+      bra:
+        limits:
+          cpu: 1500m
+          memory: 2560Mi
+        requests:
+          cpu: 500m
+          memory: 1280Mi
+      metrics:
+        limits:
+          cpu: 200m
+        requests:
+          cpu: 100m
+      postgres:
+        limits:
+          cpu: '1'
+          memory: 2816Mi
+        requests:
+          cpu: 200m
+          memory: 384Mi
+
+  eric-fh-snmp-alarm-provider:
+    resources:
+      alarmprovider:
+        limits:
+          cpu: '1'
+          memory: 1536Mi
+        requests:
+          cpu: 100m
+          memory: 820Mi
+    service:
+      replicas: 1
+
+      annotations:
+        sharedVIPLabel: pcc{{ instance | default("") }}-oam
+        addressPoolName: pcc{{ instance | default("") }}-oam
+      secretName: snmp-alarm-provider-config
+    oamVIP:
+      enabled: false
+
+  eric-lm-combined-server:
+    licenseConsumerHandler:
+      replicaCount: 2
+    licenseServerClient:
+      replicaCount: 1
+      licenseServer:
+        thrift:
+          host: {{ nels.host }}
+          port: {{ nels.port }}
+    resources:
+      eric-lm-license-consumer-handler:
+        limits:
+          cpu: '1'
+          memory: 1024Mi
+        requests:
+          cpu: 400m
+          memory: 1024Mi
+      eric-lm-license-server-client:
+        limits:
+          cpu: '1'
+          memory: 2Gi
+        requests:
+          cpu: 200m
+          memory: 1024Mi
+
+  eric-lm-combined-server-db-pg:
+    highAvailability:
+      replicaCount: 2
+    resources:
+      bra:
+        limits:
+          cpu: 1500m
+          memory: 2560Mi
+        requests:
+          cpu: 500m
+          memory: 1280Mi
+      metrics:
+        limits:
+          cpu: 200m
+        requests:
+          cpu: 100m
+      postgres:
+        limits:
+          cpu: '1'
+          memory: 2816Mi
+        requests:
+          cpu: 200m
+          memory: 384Mi
+
+  eric-log-shipper:
+    resources:
+      logshipper:
+        limits:
+          cpu: '1'
+          memory: 500Mi
+        requests:
+          cpu: 100m
+          memory: 100Mi
+
+
+  eric-log-transformer:
+    replicaCount: 2
+    resources:
+      logtransformer:
+        limits:
+          cpu: '2'
+        requests:
+          cpu: 400m 
+
+  eric-odca-diagnostic-data-collector:
+    manualService:
+      replicas: 1
+    resources:
+      diagnostic-data-collector:
+        limits:
+          cpu: '1'
+          memory: 1024Mi
+        requests:
+          cpu: 200m
+          memory: 100Mi
+      diagnostic-data-collector-manual:
+        limits:
+          cpu: '1'
+          memory: 1024Mi
+        requests:
+          cpu: 100m
+          memory: 100Mi
+    service:
+      replicas: 1
+
+  eric-pm-server:
+    resources:
+      eric-pm-reverseproxy:
+        limits:
+          cpu: '2'
+          memory: 134Mi
+        requests:
+          cpu: 200m
+          memory: 33Mi
+      eric-pm-server:
+        limits:
+          cpu: '3'
+          memory: 4160Mi
+        requests:
+          cpu: 600m
+          memory: 1024Mi
+    server:
+      replicaCount: 1
+      persistentVolume:
+        enabled: true
+    rbac:
+      appMonitoring:
+        enabled: true
+        configFileCreate: false
+
+  eric-sec-key-management:
+    replicaCount:
+      kms: 2
+    resources:
+      vault:
+        limits:
+          cpu: '1'
+          memory: 2400Mi
+        requests:
+          cpu: 250m
+          memory: 800Mi
+
+  eric-sec-sip-tls:
+    replicaCount: 1
+    resources:
+      sip-tls:
+        limits:
+          cpu: '3'
+          memory: 800Mi
+        requests:
+          cpu: 100m
+          memory: 400Mi
+      sip-tls-supervisor:
+        limits:
+          cpu: '3'
+        requests:
+          cpu: 100m
+     
+ 
+eric-cloud-native-nf-additions:
+
+  eric-pm-bulk-reporter:
+    resources:
+      alarmreporter:
+        limits:
+          cpu: '1'
+          memory: 200Mi
+        requests:
+          cpu: 100m
+          memory: 50Mi
+      bulkreporter:
+        limits:
+          cpu: '2'
+          memory: 200Mi
+        requests:
+          cpu: 100m
+          memory: 50Mi
+    env:
+      iscompressed: 'true'
+      nodeName: {{ nodeName }}
+
+  eric-cm-yang-provider:
+    service:
+      annotations:
+        sharedVIPLabel: pcc{{ instance | default("") }}-oam
+        addressPoolName: pcc{{ instance | default("") }}-oam 
+    resources:
+      cliExtensionCmds:
+        limits:
+          cpu: '5'
+        requests:
+          cpu: 50m
+      externalNotifSender:
+        limits:
+          cpu: '1'
+        requests:
+          cpu: 50m
+      notificationController:
+        limits:
+          cpu: '1'
+        requests:
+          cpu: 50m
+      objectStorageAdapter:
+        limits:
+          cpu: '1'
+        requests:
+          cpu: 50m
+      pmMetrics:
+        limits:
+          cpu: '1'
+        requests:
+          cpu: 50m
+      schemaSynchronizer:
+        limits:
+          cpu: '4'
+        requests:
+          cpu: 100m
+      sshd:
+        limits:
+          cpu: '1'
+        requests:
+          cpu: 50m
+      yangDbAdapter:
+        limits:
+          cpu: '2'
+        requests:
+          cpu: 100m
+      yangEngine:
+        limits:
+          cpu: '4'
+        requests:
+          cpu: 250m
+      yangLibExt:
+        limits:
+          cpu: '1'
+        requests:
+          cpu: 50m
+
+  eric-cnom-server:
+    service:
+      type: LoadBalancer
+    annotations:
+      metallb.universe.tf/address-pool: pcc{{ instance | default("") }}-oam
+      metallb.universe.tf/allow-shared-ip: pcc{{ instance | default("") }}-oam
+    replicaCount: 1
+    resources:
+      server:
+        limits:
+          cpu: 400m
+          memory: 400Mi
+        requests:
+          cpu: 150m
+          memory: 400Mi
+
+  eric-cnom-server-db-pg:
+    highAvailability:
+      replicaCount: 2
+    resources:
+      bra:
+        limits:
+          cpu: 1500m
+          memory: 2560Mi
+        requests:
+          cpu: 500m
+          memory: 1280Mi
+      metrics:
+        limits:
+          cpu: 200m
+        requests:
+          cpu: 100m
+      postgres:
+        limits:
+          cpu: '1'
+        requests:
+          cpu: 200m   
+
+  eric-data-sftp-server:
+    service:
+      annotations:
+        sharedVIPLabel: pcc{{ instance | default("") }}-oam
+        addressPoolName: pcc{{ instance | default("") }}-oam
+    replicaCount: 1
+    resources:
+      sftpServer:
+        limits:
+          cpu: '1'
+          memory: 1Gi
+        requests:
+          cpu: 300m
+          memory: 256Mi
+  
+  eric-sec-admin-user-management:
+    replicaCount: 1
+    resources:
+      aum:
+        limits:
+          cpu: '1'
+          memory: 512Mi
+        requests:
+          cpu: 250m
+          memory: 256Mi
+
+  eric-sec-ldap-server:
+    replicaCount: 2
+    resources:
+      ldap:
+        limits:
+          cpu: '1'
+          memory: 3060Mi
+        requests:
+          cpu: 300m
+          memory: 1024Mi
+      ldapagent:
+        requests:
+          cpu: 300m
+      ldapproxy:
+        limits:
+          cpu: '1'
+          memory: 4072Mi
+        requests:
+          cpu: 300m
+          memory: 1024Mi
+    

@@ -1,0 +1,109 @@
+autowizard false
+config
+bsf-function nf-instance bsf1
+ nf-instance-id {{ sc.bsf.instanceId }}
+ nrf-service nf-management nrf-group-ref [ nrf_registration ]
+ nf-profile bsf_profile1
+  service-address-ref bsf-node-1
+  nf-type             bsf
+  locality            {{ locality }}
+  nf-service nbsf-managementhttps
+   service-name        nbsf-management
+   scheme              https
+   service-priority    1
+   service-address-ref [ bsf-node-1 ]
+   allowed-plmn {{ mcc|mcc }} {{ mnc|mnc }}
+   exit
+  exit
+ exit
+ service-address bsf-node-1
+  fqdn     {{ sc.bsf.host }}.{{ DOMAIN_3GPP_5GC }}
+  tls-port 443
+ exit
+ nrf-group nrf_registration
+  nf-profile-ref bsf_profile1
+  nrf Primary
+   priority       1
+   fqdn           {{ nrf.0.host }}.{{ DOMAIN_3GPP_5GC }}
+   scheme         https
+   nf-profile-ref bsf_profile1
+   ip-endpoint nrf1_ep
+    port         {{ nrf.0.port }}
+    ipv4-address {{ nrf.0.ipv4 }}
+   exit
+  exit
+{% if geored.nrf.enabled %}
+  nrf Secondary
+   priority       2
+   fqdn           {{ nrf.1.host }}.{{ DOMAIN_3GPP_5GC }}
+   scheme         https
+   nf-profile-ref bsf_profile1
+   ip-endpoint nrf2_ep
+    port         {{ nrf.1.port }}
+    ipv4-address {{ nrf.1.ipv4 }}
+   exit
+  exit
+{% endif %}
+ exit
+ bsf-service serviceName1
+  diameter-routing
+  multiple-binding-resolution http-lookup resolution-type most-recent
+  multiple-binding-resolution diameter-lookup resolution-type most-recent
+ exit
+exit
+diameter service SC.bsf
+ local-endpoint-reference MyTransportEndpointServer
+  enabled        true
+  rank           1
+  local-endpoint MyTransportEndpointServer
+ exit
+exit
+diameter applications bsf_applications
+exit
+diameter vendor-specific-application-id vAppId
+exit
+diameter dictionary diameter_dictionary
+exit
+diameter peer-table dynamic-peer-acceptor MyDynamicPeerAcceptor
+ restrict-connections   true
+ required-connection-nr 1
+ enabled                true
+exit
+diameter transport node machine.source.client.realm.com
+ origin-realm      source.client.realm.com
+ origin-host       machine.source.client.realm.com
+ product-name      CDIATA
+ vendor-id         193
+ firmware-revision 1
+exit
+diameter transport host-address-resolver address
+ ip-family     any
+ linux-env-var POD_IP
+exit
+diameter transport local-endpoint MyTransportEndpointServer
+ enabled                                  true
+ dscp                                     59
+ instance-count                           1
+ node                                     machine.source.client.realm.com
+ terminate-connection-from-accepted-peers [ MyDynamicPeerAcceptor ]
+ transport-tcp port       3868
+ transport-tcp rank       1
+ transport-tcp backlog    1024
+ transport-tcp no-delay   true
+ transport-tcp tls-host-name-validation true
+exit
+diameter routing-table MyRoutingTable
+ service [ SC.bsf ]
+ routing-entry 200
+  enabled    true
+  expression msg.ingress
+  action     "route-to-service service=\"SC.bsf\" local-action=\"PROXY\""
+ exit
+ routing-entry 300
+  enabled    true
+  expression msg.egress
+  action     forward-message
+ exit
+exit
+commit
+

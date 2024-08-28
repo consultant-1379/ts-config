@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <capabilities>
+        <capability>
+            urn:ietf:params:netconf:base:1.0
+        </capability>
+    </capabilities>
+</hello>
+]]>]]>
+<?xml version="1.0" encoding="UTF-8"?>
+<rpc message-id="101" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <edit-config>
+        <target>
+            <running/>
+        </target>
+        <config>
+            <!--xmlns="urn:rdns:com:ericsson:oammodel:ericsson-servicerouting-agent" refers to Service Routing Agent namespace.-->
+            <servicerouting-agent xmlns="urn:rdns:com:ericsson:oammodel:ericsson-servicerouting-agent">
+                <!--Local configuration of SCPs that could be selected to connect.-->
+                {% if systemProfile != 'small' %}
+                <scp>
+                    <!--Each item of the list represents the connection point to a specific SCP.-->
+                    <scp-profile>
+                        <!--Unique ID represents the SCP.-->
+                        <id>scp01</id>
+                        <!--Status of SCP. The SCP could be selected only if scp-enabled is set to true.-->
+                        <scp-enabled>{{ indirectCommunication.enabled | string | lower }}</scp-enabled>
+                        <!--FQDN of the scp.-->
+                        <fqdn>{{ indirectCommunication.scp.0.host }}.{{ DOMAIN_3GPP_5GC }}</fqdn>
+                        <!--IPv4 address of the SCP.-->
+                        <!-- <ipv4-address>{SCP-IPV4-ADDRESS}</ipv4-address> -->
+                        <!--IPv6 address of the SCP.-->
+                        <!-- <ipv6-address>{SCP-IPV6-ADDRESS}</ipv6-address> -->
+                        <!--Priority of this SCP compared to the set of scp in redundancy mode;lower values indicate a higher priority-->
+                        <!--If priority is also present in the service parameters, those will have precedence over this value.-->
+                        <priority>1</priority>
+                        <!--Information about the location of the SCP.-->
+                        <locality>{{ locality }}</locality>
+                        <!--Information for scp info.-->
+                        <scp-info>
+                                <scp-port>
+                                    <!--SCP URI scheme.-->
+                                    <scheme>https</scheme>
+                                    <!--SCP port number for specific scheme.-->
+                                    <port>{{ indirectCommunication.scp.0.port }}</port>
+                                </scp-port>
+                        </scp-info>
+                    </scp-profile>
+                </scp>
+                {% else %}
+                <!-- <scp> -->
+                    <!-- Each item of the list represents the connection point to a specific SCP. -->
+                    <!-- <scp-profile> -->
+                        <!-- Unique ID represents the SCP. -->
+                        <!-- <id>{SCP-ID}</id> -->
+                        <!-- Status of SCP. The SCP could be selected only if scp-enabled is set to true. -->
+                        <!-- <scp-enabled>{SCP-ENABLED}</scp-enabled> -->
+                        <!-- FQDN of the scp. -->
+                        <!-- <fqdn>{SCP-FQDN}</fqdn> -->
+                        <!-- IPv4 address of the SCP. -->
+                        <!-- <ipv4-address>{SCP-IPV4-ADDRESS}</ipv4-address> -->
+                        <!-- IPv6 address of the SCP. -->
+                        <!-- <ipv6-address>{SCP-IPV6-ADDRESS}</ipv6-address> -->
+                        <!-- Priority of this SCP compared to the set of scp in redundancy mode;lower values indicate a higher priority -->
+                        <!-- If priority is also present in the service parameters, those will have precedence over this value. -->
+                        <!-- <priority>{SCP-PRIORITY}</priority> -->
+                        <!-- Information about the location of the SCP. -->
+                        <locality>{{ locality }}</locality>
+                        <!-- PLMNs of the SCP. -->
+                        <!-- <plmn-id> -->
+                            <!-- required items of plmn-id: mcc, mnc. -->
+                            <!-- mcc: mobile country code of the PLMN ID. -->
+                            <!-- <mcc>{SCP-PLMN-ID-MCC}</mcc> -->
+                            <!-- mnc: mobile network code of the PLMN ID. -->
+                            <!-- <mnc>{SCP-PLMN-ID-MNC}</mnc> -->
+                        <!-- </plmn-id> -->
+                        <!-- The list of SCP domains that the SCP belongs to. -->
+                        <!-- <scp-domain>{SCP-DOMAIN}</scp-domain> -->
+                        <!-- Information for scp info. -->
+                        <!-- <scp-info> -->
+                            <!-- SCP domain specific information of the SCP that differs from the common information. -->
+                            <!-- <scp-domain-info> -->
+                                <!-- SCP domain. -->
+                                <!-- <scp-domain>{SCP-DOMAIN}</scp-domain> -->
+                                <!-- FQDN of the SCP for specific SCP domain. -->
+                                <!-- <scp-fqdn>{SCP-DOMAIN-FQDN}</scp-fqdn> -->
+                                <!-- IP address(es) and port information of the SCP for specific SCP domain. -->
+                                <!-- <scp-ip-endpoint> -->
+                                    <!-- At most one occurrence of either ipv4-address or ipv6-address. -->
+                                    <!-- id: Unique ID of SCP endpoint. -->
+                                    <!-- <id>{SCP-DOMAIN-IP-ENDPOINT-ID}</id> -->
+                                    <!-- ipv4-address: IPv4 address of SCP endpoint which is listening for incoming service requests. -->
+                                    <!-- <ipv4-address>{SCP-DOMAIN-IPV4-ADDRESS}</ipv4-address> -->
+                                    <!-- ipv6-address: IPv6 address of SCP endpoint which is listening for incoming service requests. -->
+                                    <!-- <ipv6-address>{SCP-DOMAIN-IPV6-ADDRESS}</ipv6-address> -->
+                                    <!-- transport: Transport protocol. -->
+                                    <!-- <transport>tcp</transport> -->
+                                    <!-- port: Port number that the SCP endpoint is listening on. -->
+                                    <!-- <port>{SCP-DOMAIN-PORT}</port> -->
+                                <!-- </scp-ip-endpoint> -->
+                                <!-- SCP URI scheme and port number for specific SCP domain. -->
+                                <!-- <scp-port> -->
+                                    <!-- SCP URI scheme. -->
+                                    <!-- <scheme>{SCP-DOMAIN-SCP-SCHEME}</scheme> -->
+                                    <!-- SCP port number for specific scheme. -->
+                                    <!-- <port>{SCP-DOMAIN-SCP-PORT}</port> -->
+                                <!-- </scp-port> -->
+                                <!-- Optional deployment specific string used to construct the apiRoot of the next hop SCP for specific SCP domain. -->
+                                <!-- <scp-prefix>{SCP-DOMAIN-SCP-PREFIX}</scp-prefix> -->
+                            <!-- </scp-domain-info> -->
+                            <!-- Optional deployment specific string used to construct the apiRoot of the next hop SCP. -->
+                            <!-- <scp-prefix>{SCP-PREFIX}</scp-prefix> -->
+                            <!-- SCP URI scheme and port number. -->
+                            <!-- <scp-port> -->
+                                <!-- SCP URI scheme. -->
+                                <!-- <scheme>{SCP-SCHEME}</scheme> -->
+                                <!-- SCP port number. -->
+                                <!-- <port>{SCP-PORT}</port> -->
+                            <!-- </scp-port> -->
+                            <!-- Pattern in reguar expression which represents the address domains reachable through -->
+                            <!-- the SCP. If not provided, the SCP can reach any address domain. -->
+                            <!-- <served-address-domain>{SCP-SERVED-ADDRESS-DOMAIN}</served-address-domain> -->
+                            <!-- List of IPv4 addresses reachable through the SCP. If neither served-ipv4-address nor -->
+                            <!-- served-ipv4-addr-range provided, the SCP can reach any IPv4 address. -->
+                            <!-- <served-ipv4-address>{SCP-SERVED-IPV4-ADDRESS}</served-ipv4-address> -->
+                            <!-- List of IPv6 prefixes reachable through the SCP. If neither served-ipv6-prefix nor -->
+                            <!-- served-ipv6-prefix-range provided, the SCP can reach any IPv6 address. -->
+                            <!-- <served-ipv6-prefix>{SCP-SERVED-IPV6-PREFIX}</served-ipv6-prefix> -->
+                            <!-- List of IPv4 addresses ranges reachable through the SCP. If neither served-ipv4-address -->
+                            <!-- nor served-ipv4-addr-range provided, the SCP can reach any IPv4 address. -->
+                            <!-- <served-ipv4-addr-range> -->
+                                <!-- id: Unique ID of IPv4 address range. -->
+                                <!-- <id>{SCP-SERVED-IPV4-ADDR-RANGE-ID}</id> -->
+                                <!-- Value of IPv4 address range start. -->
+                                <!-- <ipv4addr-start>{SCP-SERVED-IPV4-ADDR-RANGE-START}</ipv4addr-start> -->
+                                <!-- Value of IPv4 address range end. -->
+                                <!-- <ipv4addr-end>{SCP-SERVED-IPV4-ADDR-RANGE-END}</ipv4addr-end> -->
+                            <!-- </served-ipv4-addr-range> -->
+                            <!-- List of IPv6 prefixes reachable through the SCP. If neither served-ipv6-prefix nor -->
+                            <!-- served-ipv6-prefix-range provided, the SCP can reach any IPv6 address. -->
+                            <!-- <served-ipv6-prefix-range> -->
+                                <!-- id: Unique ID of IPv6 address range. -->
+                                <!-- <id>{SCP-SERVED-IPV6-ADDR-RANGE-ID}</id> -->
+                                <!-- Value of IPv6 address range start. -->
+                                <!-- <ipv6-prefix-start>{SCP-SERVED-IPV6-PREFIX-RANGE-START}</ipv6-prefix-start> -->
+                                <!-- Value of IPv6 address range end. -->
+                                <!-- <ipv6-prefix-end>{SCP-SERVED-IPV6-PREFIX-RANGE-END}</ipv6-prefix-end> -->
+                            <!-- </served-ipv6-prefix-range> -->
+                            <!-- List of NF set ID of NFs served by the SCP. If not provided, SCP can serve any NF Set. -->
+                            <!-- <served-nfset-id>{SCP-SERVED-NFSET-ID}</served-nfset-id> -->
+                            <!-- List of remote PLMNs reachable through the SCP. If not provided, SCP can not reach any remote PLMN. -->
+                            <!-- <served-remote-plmn-id> -->
+                                <!-- required items of plmn-id: mcc, mnc. -->
+                                <!-- mcc: mobile country code of the PLMN ID. -->
+                                <!-- <mcc>{SCP-SERVED-REMOTE-PLMN-MCC}</mcc> -->
+                                <!-- mnc: mobile network code of the PLMN ID. -->
+                                <!-- <mnc>{SCP-SERVED-REMOTE-PLMN-MNC}</mnc> -->
+                            <!-- </served-remote-plmn-id> -->
+                            <!-- List of NF services reachable through the SCP. If not provided, SCP can serve any NF Service. -->
+                            <!-- <served-service-name>{SCP-SERVED-SERVICE-NAME}</served-service-name> -->
+                            <!-- List of NF InstanceId or pattern representing the NF Instances reachable through the SCP. -->
+                            <!-- It may be a pattern in reguar expression. If not provided, the SCP can serve any NFInstance. -->
+                            <!-- <served-nf-instance-id>{SCP-SERVED-NF-INSTANCE-ID}</served-nf-instance-id> -->
+                            <!-- List of NF types reachable through the SCP. If not provided, SCP can serve any NF type. -->
+                            <!-- <served-nf-type>{SCP-SERVED-NF-TYPE}</served-nf-type> -->
+                        <!-- </scp-info> -->
+                    <!-- </scp-profile> -->
+                <!-- </scp> -->
+                {% endif %}
+                <!--Local configuration of SCP selection rules.-->
+                <scp-selection-rules>
+                    <!--Each item of the list represents the The rule indicates what attributes (of NF producer) are used-->
+                    <!--to do serving SCP selection. The rules are prioritized in ascending order of their rule ID.-->
+                    <rule>
+                        <!--Unique ID represents the rule. The rule with lower id number has the higher priority.-->
+                        <id>4000</id>
+                        <!--To specify which NF the rule is applicable. It is useful when collocated NFs are using-->
+                        <!--servicerouting agent. When it is not specified, the rule is applicable to all NFs using-->
+                        <!--this servicerouting agent-->
+                        <!-- <nf>{SCP-SELECTION-RULE-NF}</nf> -->
+                        <!--Each item represents one rule attribute and value, all of them shall be fulfilled when match the rule.-->
+                        <!--String or regular expression for match. When it is not specified, any value is match.-->
+                        <select-rule>
+                            <!--Attribute of the rule.-->
+                            <rule-attribute>address-domain-rule</rule-attribute>
+                            <!--String value for matching.-->
+                            <!-- <value>{SCP-SELECTION-RULE-VALUE}}</value> -->
+                            <!--Regular expression for matching.-->
+                            <pattern>{{ ccpc.smfSbiNotifyHost }}.{{ DOMAIN_3GPP_5GC }}</pattern>
+                            <!--Configuration whether direction or indirection communication to be used when hit the rule.-->
+                        </select-rule>
+                        <rule-action>indirect-preferred</rule-action>
+                    </rule>
+                </scp-selection-rules>
+                <!--Common configuration of servicerouting agent.-->
+                <common>
+                    <!--Time period for caching SCP selection results.-->
+                    <response-cache-time>3600</response-cache-time>
+                </common>
+            </servicerouting-agent>
+        </config>
+    </edit-config>
+</rpc>

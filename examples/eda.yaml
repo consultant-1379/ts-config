@@ -1,0 +1,33 @@
+nodeName: n99-eda1
+nodeType: EDA
+
+vnflcm:
+  clusterName: n99-eccd1
+  namespace: eda
+  InstantiateVnfRequest:
+    applicationTimeOut: 1800
+    skipVerification: "false"
+
+license:
+  customerId: '946060'
+  swltId: STA-EDA-1
+
+replicaCount:
+  eric-act-aaa: 2
+pvcSize:
+  eric-data-wide-column-database-cd: 103G
+  eric-data-message-bus-kf: 2G
+# # Old
+# oamDomain: sero.gic.ericsson.se
+# hssValidatorTag: 1.29.102
+# persistentVolumeClaim:
+#   eric-data-wide-column-database-cd: 103G
+#   eric-data-message-bus-kf: 2G
+# # only EDA need domainName and clusterName to generate the ICCR ingress service FQDN
+# # current implementation use oamDomain to set the domainName, and use vnflcm.clusterName and namespace to generate the the clusterName
+# # this is very confusing, and may not work for all tracks, and may not work in new IP plan and naming convention
+# # The new proposal is just explicitly set the domainName and clusterName for EDA
+eda:
+  domainName: sero.gic.ericsson.se
+  clusterName: eda1-oam.n99-eccd1
+  hssValidatorTag: 1.29.102

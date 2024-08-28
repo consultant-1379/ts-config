@@ -1,0 +1,516 @@
+autowizard false
+config
+
+{% if 'ipRule' in pcc %}
+  {% set fwdIpFrom = pcc.ipRule.fwdIpFrom %}
+  {% set bfdPeers = pcc.ipRule.bfdPeers %}
+  {% set defaultGws = pcc.ipRule.defaultGws %}
+{% else %}
+  {% set fwdIpFrom = 10 %}
+  {% set bfdPeers = [2,3] %}
+  {% set defaultGws = [1] %}
+{% endif %}
+
+
+{% if caas == 'NFVI-CCD' %}
+  {% set defaultGws = pcc.ipRule.bfdPeers %}
+{% endif %}
+
+
+{% for n in range(1,replicaCount['eric-pc-mm-forwarder']+1) %}
+mm piu 1.{{n}}
+ eth-port 1
+  {% for ipNetwork in pcc.pcmm.ipNetwork %}
+  eth-vlan {{ ipNetwork.ipInt.vlan }}
+  !
+  {% endfor %}
+ !
+!
+{% endfor %}
+
+{% for ipNetwork in pcc.pcmm.ipNetwork %}
+  {% set cidr = ipNetwork.ipInt.ipv4 | ip_network %}
+  {% for n in range(1,replicaCount['eric-pc-mm-forwarder']+1) %}
+    {% set intName = "ETH_1_" + n|string + "_1_" + ipNetwork.ipInt.vlan|string + "_" + ipNetwork.name %}
+
+mm ip-interface {{ intName }}
+ interface-ip-address  {{ cidr[n+fwdIpFrom-1] }}
+ interface-ip-mask    {{ cidr.netmask }}
+ ip-network ip-network-name {{ ipNetwork.name }}
+ eth-vlan equipment-position 1.{{n}}
+ eth-vlan ethernet-port 1
+ eth-vlan ethernet-vlan-id {{ ipNetwork.ipInt.vlan }}
+ !
+mm router-instance 1.{{n}} {{ ipNetwork.name }}
+ router-identifier {{ cidr[n+fwdIpFrom-1] }}
+!
+
+     {% for gw in defaultGws %}
+mm static-route 1.{{n}} {{ ipNetwork.name }}  0.0.0.0 0.0.0.0  {{ cidr[gw] }}
+!
+     {% endfor %}
+
+  {% endfor %}
+
+
+{% if DCEdgeType is defined and DCEdgeType == 'Ericsson-R6000' %}
+  {% for bfdPeer in bfdPeers %}
+mm bfd {{ ipNetwork.name }}
+ desired-tx-interval 100
+ min-rx-interval     100
+ multiplier          9
+ bfd-neighbor {{ cidr[bfdPeer] }}
+ !
+!
+  {% endfor %}
+{% elif  caas == 'CNIS' and systemProfile == 'standard' %}
+ {% for bfdPeer in bfdPeers %}
+mm bfd {{ ipNetwork.name }}
+ desired-tx-interval 500
+ min-rx-interval     500
+ multiplier          3
+ bfd-neighbor {{ cidr[bfdPeer] }}
+ !
+!
+  {% endfor %}
+
+{% else %}
+ {% for bfdPeer in bfdPeers %}
+mm bfd {{ ipNetwork.name }}
+ desired-tx-interval 300
+ min-rx-interval     300
+ multiplier          3
+ bfd-neighbor {{ cidr[bfdPeer] }}
+ !
+!
+  {% endfor %}
+{% endif %}
+
+mm ip-network {{ ipNetwork.name }}
+!
+  {% for svc in ipNetwork.ipSvc %}
+mm ip-service {{ svc.name }}
+ ip-network ip-network-name {{ ipNetwork.name }}
+ ip-service-address {{ svc.ipv4 | ip_address }}
+ !
+!
+  {% endfor %}
+
+{% endfor %}
+mm ne node-id                               {{ pcc.pcmm.nodeId }}
+mm ne mme-group-id                          {{ pcc.pcmm.mmeGroupId }}
+mm ne mme-code                              {{ pcc.pcmm.mmeCode }}
+mm ne dual-address-bearer-flag              1
+mm ne amf-region-id                         {{ pcc.pcmm.amfRegionId }}
+mm ne amf-set-id                            {{ pcc.pcmm.amfSetId }}
+mm ne amf-pointer                           {{ pcc.pcmm.amfPointer }}
+mm ne amf-instance-id                       {{ pcc.pcmm.amfInstanceId }}
+mm ne locality                              {{ locality }}
+mm plmn {{ mcc|mcc }} {{ mnc|mnc }}
+ plmn-name                        {{ mcc|mcc }}{{ mnc|mnc }}
+ supports-lte                     true
+ supports-nr                      true
+{% if voice.enabled %}
+ voip-services                    voip_without_emergency
+{% endif %}
+!
+mm eea-algorithm eea0
+ algorithm-priority 3
+!
+mm eea-algorithm eea1
+ algorithm-priority 2
+!
+mm eea-algorithm eea2
+ algorithm-priority 1
+!
+mm eea-algorithm eea3
+ algorithm-priority 0
+!
+mm eia-algorithm eia1
+ algorithm-priority 2
+!
+mm eia-algorithm eia2
+ algorithm-priority 1
+!
+mm eia-algorithm eia3
+ algorithm-priority 0
+!
+
+mm nea-algorithm nea0
+ n1-security-algorithm-priority 1
+!
+mm nea-algorithm nea1
+ n1-security-algorithm-priority 2
+!
+mm nea-algorithm nea2
+ n1-security-algorithm-priority 3
+!
+mm nea-algorithm nea3
+ n1-security-algorithm-priority 0
+!
+mm nia-algorithm nia1
+ n1-security-algorithm-priority 2
+!
+mm nia-algorithm nia2
+ n1-security-algorithm-priority 1
+!
+mm nia-algorithm nia3
+ n1-security-algorithm-priority 0
+!
+mm nrf-option nf-type-list           [ 5G-EIR AMF AUSF SMF UDM ]
+mm nrf-option cache                  on
+mm nrf-option nrf-sup-interval       50
+mm nrf-option amf-nf-profile-addressing-preference fqdn
+mm sbi uri-host-format          fqdn
+mm sbi-client-profile default_sbi_client_profile_list 1
+ request-time-out           2000
+ max-retry-number           1
+!
+mm sbi-client-profile default_sbi_client_profile_list 100
+ service-name               namf_communication
+ request-time-out           2000
+ max-retry-number           1
+!
+mm sbi-client-profile default_sbi_client_profile_list 101
+ service-name               nausf_authentication
+ request-time-out           2000
+ max-retry-number           1
+!
+mm sbi-client-profile default_sbi_client_profile_list 102
+ service-name               nudm_subscriberdatamanagement
+ request-time-out           2000
+ max-retry-number           1
+!
+mm sbi-client-profile default_sbi_client_profile_list 103
+ service-name               nudm_uecontextmanagement
+ request-time-out           2000
+ max-retry-number           1
+!
+mm sbi-client-profile default_sbi_client_profile_list 2
+ service-name               nnrf_nfdiscovery
+ request-time-out           2000
+ max-retry-number           1
+!
+mm sbi-client-profile default_sbi_client_profile_list 3
+ service-name               nnrf_nfmanagement
+ request-time-out           2000
+ max-retry-number           1
+!
+mm sbi-client-profile default_sbi_client_profile_list 4
+ service-name               nnrf_accesstoken
+ request-time-out           2000
+ max-retry-number           1
+!
+mm sbi-client-profile default_sbi_client_profile_list 5
+ service-name               nnssf_nssaiavailability
+ request-time-out           2000
+ max-retry-number           1
+!
+mm sbi-client-profile default_sbi_client_profile_list 6
+ service-name               nnssf_nsselection
+ request-time-out           2000
+ max-retry-number           1
+!
+mm sbi-client-profile default_sbi_client_profile_list 7
+ service-name               nsmf_pdusession
+ request-time-out           4000
+ max-retry-number           1
+!
+mm sbi-client-profile default_sbi_client_profile_list 8
+ service-name               nsmsf_smservice
+ request-time-out           2000
+ max-retry-number           1
+!
+mm sbi-client-profile default_sbi_client_profile_list 9
+ service-name               n5g-eir_equipmentidentitycheck
+ request-time-out           2000
+ max-retry-number           1
+!
+
+mm nf-discovery-profile 2 default_nf_disc_profile_list
+ service-name-list    [ namf_communication ]
+ discovery-parameters [ preferred-locality ]
+!
+mm nf-discovery-profile 3 default_nf_disc_profile_list
+ service-name-list    [ nausf_authentication ]
+ discovery-parameters [ preferred-locality ]
+!
+mm nf-discovery-profile 4 default_nf_disc_profile_list
+ service-name-list    [ nudm_subscriberdatamanagement ]
+ discovery-parameters [ preferred-locality ]
+!
+mm nf-discovery-profile 5 default_nf_disc_profile_list
+ service-name-list    [ nudm_uecontextmanagement ]
+ discovery-parameters [ preferred-locality ]
+!
+mm nf-discovery-profile 6 default_nf_disc_profile_list
+ service-name-list    [ n5g-eir_equipmentidentitycheck ]
+ discovery-parameters [ preferred-locality ]
+!
+mm nf-discovery-profile 7 default_nf_disc_profile_list
+ service-name-list    [ nsmf_pdusession ]
+ discovery-parameters [ preferred-locality ]
+!
+mm diameter local-diameter-host {{ nodeName }}-mme ericsson.se
+ sctp-end-point sctp-end-point-no 2
+!
+mm diameter diameter-application s6a
+ diameter-default-load-sharing true
+ local-diameter-host diameter-host-name {{ nodeName }}-mme
+ local-diameter-host diameter-realm-name ericsson.se
+ diameter-realm ericsson.se
+  diameter-peer-list              [ 1 ]
+ !
+!
+mm diameter diameter-application s13
+ diameter-default-load-sharing true
+ local-diameter-host diameter-host-name {{ nodeName }}-mme
+ local-diameter-host diameter-realm-name ericsson.se
+ diameter-realm ericsson.se
+  diameter-peer-list              [ 1 ]
+ !
+!
+{% if geored.hss.enabled %}
+mm diameter diameter-peer {{ pcc.pcmm.hss.0.ip }}
+ diameter-peer-number        1
+ diameter-peer-port-number   3868
+ secondary-ipv4v6-address    {{ pcc.pcmm.hss.1.ip }}
+ is-geographically-redundant true
+ sctp-profile-s sctp-profile-name sctp_s6a
+ local-diameter-host diameter-host-name {{ nodeName }}-mme
+ local-diameter-host diameter-realm-name ericsson.se
+{% else %}
+mm diameter diameter-peer {{ pcc.pcmm.hss.0.ip }}
+ diameter-peer-number        1
+ diameter-peer-port-number   3868
+ is-geographically-redundant false
+ sctp-profile-s sctp-profile-name sctp_s6a
+ local-diameter-host diameter-host-name {{ nodeName }}-mme
+ local-diameter-host diameter-realm-name ericsson.se
+!
+{% endif %}
+mm eir EIR
+ eir-realm-name ericsson.se
+ eir-host-name  {{ pcc.pcmm.hss.0.host }}
+!
+mm dns epc.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org.
+ query-type             recursive
+!
+mm supported-slice 2
+ sst 1
+ sd  2
+!
+mm feature-state amf_multiple_network_slices_support
+ feature-state ACTIVATED
+!
+mm feature-state imei_check
+ feature-state ACTIVATED
+!
+{% if voice.enabled %}
+mm feature-state advanced_4g_5g_interworking
+ feature-state ACTIVATED
+!
+mm feature-state 5gc_voice_support
+ feature-state ACTIVATED
+!
+mm feature-state mmtel
+ feature-state ACTIVATED
+!
+mm feature-state dedicated_bearers
+ feature-state ACTIVATED
+!
+{% endif %}
+
+mm ga MSTZ
+ ga-ta-range TaLteZone1
+  mobile-country-code      {{ mcc|mcc }}
+  mobile-network-code      {{ mnc|mnc }}
+  first-tracking-area-code 1
+  last-tracking-area-code  2304
+ !
+!
+mm ga-time-zone MSTZ
+ time-zone-ga {{ timezone }}
+!
+mm ga-time-zone MSTZ
+ time-zone-ga {{ timezone }}
+!
+mm supi-range {{ mcc|mcc }}{{ mnc|mnc }}
+ supi-range-ims-voice-ps   3gpp
+ supi-range-roaming-status home
+ default-dnn-operator-id   mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.gprs
+ dnn-operator-id-enabled   false
+!
+mm imsins {{ mcc|mcc }}{{ mnc|mnc }}
+ roaming-status                            home
+ default-apn-operator-id                   mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.gprs
+ numbering-plan                            e214
+ allow-camel-phase3                        true
+ nature-of-address                         international
+ no-of-digits-to-remove                    5
+ digits-to-add                             86582
+ hss-realm-name                            ericsson.se
+ hss-host-name                             {{ pcc.pcmm.hss.0.host }}
+ earp-level-roamers                        0
+!
+mm n2 n2
+ n2-t3513-paging-timer             3
+ sctp-end-point sctp-end-point-no 3
+!
+mm s11 S11
+ s11-u-support-in-gw             off
+!
+mm s1-mme S1
+ sctp-end-point sctp-end-point-no 1
+!
+mm lm nels-configuration 1
+ host {{ nels.host }}
+ port {{ nels.port }}
+!
+mm nrf-service-instance nnrf_nfd_1
+ nrf-service-name nnrf_nfdiscovery
+ service-role     primary
+ fqdn             {{ nrf.0.host }}.{{ DOMAIN_3GPP_5GC }}
+ scheme           https
+ fqdn-port-number {{ nrf.0.port }}
+!
+mm nrf-service-instance nnrf_nfm_1
+ nrf-service-name nnrf_nfmanagement
+ service-role     primary
+ fqdn             {{ nrf.0.host }}.{{ DOMAIN_3GPP_5GC }} 
+ scheme           https
+ fqdn-port-number {{ nrf.0.port }}
+!
+mm nssf-service-instance nnssf_ava_1
+ nssf-service-name nnssf_nssaiavailability
+ fqdn              {{ nssf.0.host }}.{{ DOMAIN_3GPP_5GC }}
+ scheme            https
+ fqdn-port-number  {{ nssf.0.port }}
+ priority          1
+!
+mm nssf-service-instance nnssf_sel_1
+ nssf-service-name nnssf_nsselection
+ fqdn              {{ nssf.0.host }}.{{ DOMAIN_3GPP_5GC }}
+ scheme            https
+ fqdn-port-number  {{ nssf.0.port }}
+ priority          1
+!
+{% if geored.nrf.enabled %}
+mm nrf-service-instance nnrf_nfd_2
+ nrf-service-name nnrf_nfdiscovery
+ service-role     standby
+ fqdn             {{ nrf.1.host }}.{{ DOMAIN_3GPP_5GC }}
+ scheme           https
+ fqdn-port-number {{ nrf.1.port }}
+!
+
+mm nrf-service-instance nnrf_nfm_2
+ nrf-service-name nnrf_nfmanagement
+ service-role     standby
+ fqdn             {{ nrf.1.host }}.{{ DOMAIN_3GPP_5GC }} 
+ scheme           https
+ fqdn-port-number {{ nrf.1.port }}
+!
+{% endif %}
+{% if geored.nssf.enabled %}
+mm nssf-service-instance nnssf_ava_2
+ nssf-service-name nnssf_nssaiavailability
+ fqdn              {{ nssf.1.host }}.{{ DOMAIN_3GPP_5GC }}
+ scheme            https
+ fqdn-port-number  {{ nssf.1.port }}
+ priority          2
+!
+mm nssf-service-instance nnssf_sel_2
+ nssf-service-name nnssf_nsselection
+ fqdn              {{ nssf.1.host }}.{{ DOMAIN_3GPP_5GC }}
+ scheme            https
+ fqdn-port-number  {{ nssf.1.port }}
+ priority          2
+!
+{% endif %}
+mm sctp-sys sctp-end-point 1
+ port-number 36412
+ ip-service-prim ip-service-name S1-MME-1
+ ip-service-sec ip-service-name S1-MME-2
+ sctp-profile sctp-profile-name 4gsctpS1
+!
+mm sctp-sys sctp-end-point 2
+ port-number 3868
+ ip-service-prim ip-service-name S6a-1
+ sctp-profile sctp-profile-name sctp_s6a
+!
+mm sctp-sys sctp-end-point 3
+ port-number 38412
+ ip-service-prim ip-service-name N2-1
+ ip-service-sec ip-service-name N2-2
+ sctp-profile sctp-profile-name 5gsctpN2
+!
+mm sctp-sys sctp-profile 4gsctpS1
+ min-rto                                    100
+ max-rto                                    400
+ init-rto                                   200
+ assoc-max-rtx                              20
+ path-max-rtx                               10
+ max-init-rt                                16
+ pmtu                                       1500
+ bundling-timer                             0
+!
+mm sctp-sys sctp-profile 5gsctpN2
+ min-rto                                    100
+ max-rto                                    400
+ init-rto                                   200
+ assoc-max-rtx                              20
+ path-max-rtx                               10
+ max-init-rt                                16
+ max-shutdown-rt                            5
+ timer-heartbeat                            30000
+ pmtu                                       1500
+ bundling-timer                             0
+!
+mm sctp-sys sctp-profile default
+ pmtu                                       1500
+!
+mm sctp-sys sctp-profile sctp_s6a
+ pmtu                                       1300
+!
+mm ue-trace-log report-period 5
+mm pei-check Pei_Check
+ accept-unknown-pei                   false
+!
+mm imei-check Imei_Check
+ accept-unknown-imei              false
+ check-imei-lte-intra-isc         false
+!
+
+
+
+{% if geored.amf.enabled %}
+mm ne relative-amf-capacity                 50
+mm feature-state 5gc_amf_geo_redundancy
+ feature-state ACTIVATED
+!
+mm node-function amf_set_status_awareness
+ function-state on
+!
+mm amf-ue-reg-rate-based-throttle amf-urrb-throttle-enabled true
+mm amf-ue-reg-rate-based-throttle amf-urrb-throttle-rate-limit 600
+mm amf nf-set-support ownNFSet
+mm amf binding-support true
+{% endif %}
+
+mm ip-service SBI-Server
+ node-credential node-credential-id SERVER
+ trust-category trust-category-id CA
+!
+
+mm ip-service SBI-Client
+ node-credential node-credential-id CLIENT
+ trust-category trust-category-id CA
+!
+
+commit no-confirm
+
+mm checkpoint name postconfiguration
+
+end
+

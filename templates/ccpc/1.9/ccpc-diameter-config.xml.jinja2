@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <capabilities>
+        <capability>
+            urn:ietf:params:netconf:base:1.0
+        </capability>
+    </capabilities>
+</hello>
+]]>]]>
+<?xml version="1.0" encoding="UTF-8"?>
+<rpc message-id="101" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <edit-config>
+        <target>
+            <running/>
+        </target>
+        <config>
+            <diameter xmlns="urn:rdns:com:ericsson:oammodel:ericsson-diameter-adp">
+                <transport>
+                  <node>
+                    <id>GxHostServer</id>
+                    {% if systemProfile == 'small' %}
+                    <origin-realm>ericsson.se</origin-realm>
+                    <origin-host>{{ pcrf.host }}.ericsson.se</origin-host>
+                    {% else %}
+                    <origin-realm>epc.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org</origin-realm>
+                    <origin-host>{{ pcrf.host }}.5gc.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org</origin-host>
+                    {% endif %}
+                    <product-name>CCPC</product-name>
+                  </node>
+                </transport>
+            </diameter>
+        </config>
+    </edit-config>
+</rpc>

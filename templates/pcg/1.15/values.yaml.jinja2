@@ -1,0 +1,225 @@
+global:
+  timezone: {{ timezone }}
+  applicationId: {{ nodeName }}
+  ericsson:
+    licensing:
+      licenseDomains:
+        - productType: PACKET_CORE_GATEWAY
+          customerId: {{ license.customerId }}
+          swltId: {{ license.swltId }}
+
+
+eric-pc-kvdb-rd-server:
+  numberOfMaster: {{ replicaCount['eric-pc-kvdb-rd-server'] | default(6) }}
+
+eric-pc-routing-engine:
+  interfaces:
+    {% if pcg.routingEngine.predefine %}
+    type: prefedine
+    predefineNetworks:
+      - name: eric-pc-routing-engine-net0
+    {% elif interfaceType == 'ovs' %}
+    type: ovs
+    ovs:
+    - bridge: br_data
+      vlan_mode: trunk
+      trunk:
+      {% for ni in pcg.networkInstances %}
+        - minID: {{ ni.ipForward.vlan }}
+          maxID: {{ ni.ipForward.vlan }}
+      {% endfor %}
+      mtu: 9000
+    {% else %}
+    type: macvlan
+    macvlan:
+      - master: {{ macvlanInterface | default('eth4') }}
+    {% endif %}
+
+eric-pc-up-data-plane:
+  replicaCount: {{ replicaCount['eric-pc-up-data-plane'] }}
+  acceleratedIo:
+    enabled: true
+{% if pcg.nicVendor == 'mellanox' %}
+    driver: bifurcated
+{% endif %}
+  applications:
+  - name: app100
+{% if pcg.nicVendor == 'intel' %}
+  deployment:
+    pinThreads: true
+{% endif %}
+  nodeSelector:
+    type: high-throughput
+  resources:
+    dataPlane:
+      limits:
+        cpu: {{ pcg.dpCpu }}
+        hugepages-1Gi: 1Gi
+        memory: 18Gi
+        {% if pcg.nicResrName is defined%}
+        {{ pcg.nicResrName.0 }}: "1"
+        {{ pcg.nicResrName.1 }}: "1"
+        {% endif %}
+      requests:
+        cpu: {{ pcg.dpCpu }}
+        hugepages-1Gi: 1Gi
+        memory: 18Gi
+        {% if pcg.nicResrName is defined%}
+        {{ pcg.nicResrName.0 }}: "1"
+        {{ pcg.nicResrName.1 }}: "1"
+        {% endif %}
+{% if pcg.nicVendor == 'mellanox' %}
+  interfaces:
+    - name: net1
+      {% if caas == 'CNIS' %}
+      type: sriov
+      {% else %}
+      type: host-device
+      {% endif %}
+      {% if pcg.routingEngine.predefine %}
+      networkAttachmentDefinition: false
+      {% else %}
+      resourceName: {{ pcg.nicResrName.0 }}
+      {% endif %}
+    - name: net2
+      {% if caas == 'CNIS' %}
+      type: sriov
+      {% else %}
+      type: host-device
+      {% endif %}
+      {% if pcg.routingEngine.predefine %}
+      networkAttachmentDefinition: false
+      {% else %}
+      resourceName: {{ pcg.nicResrName.1 }}
+      {% endif %}
+{% endif %}
+  tolerations:
+  - effect: NoSchedule
+    key: high-throughput
+
+eric-pc-up-pfcp-endpoint:
+  resources:
+    pfcpEndpoint:
+      requests:
+        cpu: 400m
+        memory: 8Gi
+      limits:
+        cpu: '1'
+        memory: 8Gi
+  replicaCount: {{ replicaCount['eric-pc-up-pfcp-endpoint'] | default(18) }}
+  podDisruptionBudget:
+    minAvailable: 75%
+
+
+eric-pc-up-partitioner:
+  resources:
+    partitioner:
+      requests:
+        cpu: 1
+        memory: 8Gi
+      limits:
+        cpu: 1
+        memory: 8Gi
+
+snmp-alarm-provider-secret-creation:
+  enabled: false
+
+eric-si-application-sys-info-handler:
+  asih:
+    applicationId: {{ nodeName }}
+
+eric-fh-snmp-alarm-provider:
+  service:
+    annotations:
+      addressPoolName: pcg-oam
+      sharedVIPLabel: pcg-oam
+      secretName: eric-pc-gateway-snmp-alarm-provider-config
+    oamVIP:
+      enabled: false
+
+eric-log-transformer:
+  replicaCount: 3
+
+eric-data-search-engine:
+  autoSetRequiredWorkerNodeSysctl: false
+  replicaCount:
+    data: 3
+  persistence:
+    data:
+      persistentVolumeClaim:
+        size: 50Gi
+  resources:
+    data:
+      limits:
+        memory: 3Gi
+
+eric-odca-diagnostic-data-collector:
+  resources:
+    diagnostic-data-collector:
+      limits:
+        memory: 32Gi
+        cpu: 3000m
+        ephemeral-storage: 40Gi
+      requests:
+        memory: 800Mi
+        cpu: 1600m
+        ephemeral-storage: 24Gi
+
+eric-pm-server:
+  rbac:
+    appMonitoring:
+      configFileCreate: false
+      enabled: true
+  server:
+    persistentVolume:
+      enabled: true
+      size: 64Gi
+  resources:
+    eric-pm-server:
+      limits:
+        memory: 32Gi
+      requests:
+        cpu: 1
+        memory: 8Gi
+
+eric-lm-combined-server:
+  licenseServerClient:
+    licenseServer:
+      thrift:
+        host: {{ nels.host }}
+        port: {{ nels.port }}
+
+eric-cm-yang-provider:
+  service:
+    annotations:
+      addressPoolName: pcg-oam
+      sharedVIPLabel: pcg-oam
+
+eric-data-sftp-server:
+  service:
+    annotations:
+      sharedVIPLabel: "pcg-oam"
+      addressPoolName: "pcg-oam"
+
+eric-sec-ldap-server:
+  adminCredentials:
+    adminuser: {{ users.day0.username }}
+    adminpasswd: "{{ users.day0.password | encrypt }}"
+
+
+{% if caas == 'OpenShift' %}
+eric-cm-mediator:
+  # ADPPRG-107321
+  cmm:
+    restWorkerQueueLimit: 0
+
+eric-log-shipper:
+  tolerations:
+    - key: "high-throughput"
+      value: "true"
+      operator: Equal
+      effect: NoSchedule
+  logshipper:
+    privileged: true
+{% endif %}
+

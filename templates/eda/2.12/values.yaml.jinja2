@@ -1,0 +1,182 @@
+global:
+  timezone: {{ timezone }}
+{% if systemProfile == 'small' %}
+  domainName: {{ eda["domainName"] }}
+  clusterName: {{ eda["clusterName"] }}
+{% else %}
+  domainName: {{ oamDomain }}
+  clusterName: {{ vnflcm.namespace }}.{{ vnflcm.clusterName }}
+{% endif %}
+  ericsson:
+    licensing:
+      licenseDomains:
+        - productType: EDA
+          customerId: {{ license.customerId }}
+          swltId: {{ license.swltId }}
+  activation:
+    service:
+      prov:
+        annotations:
+          metallb.universe.tf/allow-shared-ip: eda{{ instance | default("") }}-oam
+          metallb.universe.tf/address-pool: eda{{ instance | default("") }}-oam
+      oam:
+        annotations:
+          metallb.universe.tf/allow-shared-ip: eda{{ instance | default("") }}-oam
+          metallb.universe.tf/address-pool: eda{{ instance | default("") }}-oam
+  {% if caas == 'OpenShift' %}
+  security:
+    policyBinding:
+      create: true
+    policyReferenceMap:
+      default-restricted-security-policy: default-restricted-security-policy
+      plc-59d0cf1dcc793a78b6ce30bfbe6553: plc-59d0cf1dcc793a78b6ce30bfbe6553
+  fsGroup:
+    namespace: true
+  {% endif %}
+  kubeApi:
+    port: 6443
+
+{% if systemProfile == 'small' %}
+profile:
+  small-telco-system: true
+  standard-telco-system: false
+{% endif %}
+
+eric-tm-ingress-controller-cr:
+  service:
+    annotations:
+      {% if systemProfile == 'small' %}
+      sharedVIPLabel: eda{{ instance }}-oam
+      {% else %}
+      sharedVIPLabel: eda-oam
+      {% endif %}
+      addressPoolName: eda{{ instance | default("") }}-oam
+  {% if caas == 'OpenShift' or caas == 'CNIS' %}
+  # According ADP Service User Guide
+  resources:
+    contour:
+      limits:
+        cpu: 4100m
+        memory: 1G
+    envoy:
+      limits:
+        cpu: 4200m
+        memory: 600M
+  {% endif %}
+
+eric-data-wide-column-database-cd:
+  persistence:
+    dataVolume:
+      persistentVolumeClaim:
+        size: {{  persistentVolumeClaim["eric-data-wide-column-database-cd"]|default("20Gi")  }}
+        storageClassName: {{ storageClassName|default("network-block") }}
+  replicaCount: 3
+
+eric-cnom-document-database-mg:
+  persistence:
+    storageClass: {{ storageClassName|default("network-block") }}
+
+eric-act-activation-engine:
+  statefulset:
+    storageClass: {{ storageClassName|default("network-block") }}
+  deployment:
+    replicas: 2
+  initContainers:
+    eric-act-hss-validator:
+      imageName: hss-validator-image
+      tag: {{ hssValidatorTag }}
+
+eric-cloud-native-base:
+  eric-data-document-database-pg:
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName|default("network-block") }}
+
+  eric-data-search-engine:
+    persistence:
+      data:
+        persistentVolumeClaim:
+          storageClassName: {{ storageClassName|default("network-block") }}
+      master:
+        persistentVolumeClaim:
+          storageClassName: {{ storageClassName|default("network-block") }}
+
+  eric-data-message-bus-kf:
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: {{ storageClassName|default("network-block") }}
+        size: {{  persistentVolumeClaim["eric-data-message-bus-kf"]|default("2Gi")  }}
+    replicaCount: 3
+
+  eric-data-coordinator-zk:
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: {{ storageClassName|default("network-block") }}
+
+  eric-data-distributed-coordinator-ed:
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: {{ storageClassName|default("network-block") }}
+
+  eric-ctrl-bro:
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: {{ storageClassName|default("network-block") }}
+
+  eric-pm-server:
+    server:
+      persistentVolume:
+        storageClass: {{ storageClassName|default("network-block") }}
+
+  eric-lm-combined-server:
+    licenseServerClient:
+      licenseServer:
+        thrift:
+          host: {{ nels.host }}
+
+  eric-fh-snmp-alarm-provider:
+    service:
+      annotations:
+        {% if systemProfile == 'small' %}
+        sharedVIPLabel: eda{{ instance }}-oam
+        {% else %}
+        sharedVIPLabel: eda-oam
+        {% endif %}
+        addressPoolName: eda{{ instance | default("") }}-oam
+
+  eric-si-application-sys-info-handler:
+    asih:
+      applicationId: {{ nodeName }}
+
+eric-act-aaa:
+  misc:
+    replicaCount: {{ replicaCount['eric-act-aaa'] | default(1) }}
+
+eric-act-activation-orchestrator:
+  aoe:
+    misc:
+      replicaCount: 2
+
+eric-act-inbound-async:
+  misc:
+    replicaCount: {{ replicaCount['eric-act-inbound-async'] | default(1) }}
+
+eric-act-inbound-interfaces:
+  misc:
+    replicaCount: {{ replicaCount['eric-act-inbound-interfaces'] | default(1) }}
+
+eric-act-inbound-mml:
+  misc:
+    replicaCount: {{ replicaCount['eric-act-inbound-mml'] | default(1) }}
+
+eric-act-proclog-cassandra-stasher:
+  misc:
+    proclog_stasher:
+      replicaCount: 1
+
+eric-act-rest-provisioning:
+  misc:
+    replicaCount: {{ replicaCount['eric-act-rest-provisioning'] | default(1) }}
+
+eric-act-tomcat:
+  misc:
+    replicaCount: {{ replicaCount['eric-act-tomcat'] | default(1) }}

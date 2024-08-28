@@ -1,0 +1,86 @@
+nodeName: n99-cces1
+nodeType: CCES
+
+vnflcm:
+  clusterName: n99-eccd1
+  namespace: cces
+  InstantiateVnfRequest:
+    applicationTimeOut: 3600
+    skipVerification: "true"
+
+users:
+  day1:
+  - username: ccesoam
+    password: Changeme@1st
+    groups:
+    - nef-admin
+    - apigm-admin
+    - sragent-admin
+    - nrfagent-admin
+    - system-admin
+  - username: ccessec
+    password: Changeme@1st
+    groups:
+    - nef-security-admin
+    - apigm-security-admin
+    - sragent-security-admin
+    - nrfagent-security-admin
+    - system-security-admin
+
+license:
+  customerId: "946060"
+  swltId: STA-CCES-16
+
+cnom:
+  fqdn: cnom.cces1-oam.node63-cluster1.sero.gic.ericsson.se
+snmp:
+  agentEngineId: 8000137001C0A899ECCD10CEA6
+ddc:
+  remotePath: /home/tsuser/ddc/eccd1/n99-cces1
+
+replicaCount:
+  eric-data-wide-column-database-cd: 3
+minReplica:
+  eric-cces-common-entity: 2
+
+# # Old
+# nefInstanceId: ddd9b5b3-fa57-4cb1-ace7-99eccd10cea6
+# diameter:
+#   remoteIp: 25.51.1.251
+#   remotePort: 3868
+
+# nef:
+#   host: nef1.n99
+#   port: 443
+# nefNbiTrust:
+#   host: nef1-nbi-trust.n99
+cces:
+  iamFqdn: iam.cces.n99-eccd1.sero.gic.ericsson.se
+  iamDomain: cces.n99-eccd1.sero.gic.ericsson.se
+  nef:
+    instanceId: f8b5865c-49e8-463e-8f16-99eccd1d3f41
+    host: udr1.n99
+    port: 443
+    nbi:
+      trust:
+        host: nef1-nbi-trust.n99
+    diameter:
+      host: n99-eccd1-cces1-nef
+      peer:
+        host: pcrf1.ericsson.se
+        ip: 25.51.1.251
+        port: 3868
+
+certs:
+  iccr-external-tls-certificate:
+    p12: ../../../certs/n99/cces1/cces1-iccr-server.p12
+  eric-cces-sbi-server-certs-certificate:
+    p12: ../../../certs/n99/cces1/cces1-sbi-server.p12
+  eric-cces-sbi-client-certs-certificate:
+    p12: ../../../certs/n99/cces1/cces1-sbi-client.p12
+  eric-cces-nbi-trust-server-certs-certificate:
+    p12: ../../../certs/n99/cces1/cces1-nbi-trust-server.p12
+  eric-cces-nbi-client-certs-certificate:
+    p12: ../../../certs/n99/cces1/cces1-nbi-trust-client.p12
+  eric-cces-prov-server-certs-certificate:
+    p12: ../../../certs/n99/cces1/cces1-prov-server.p12

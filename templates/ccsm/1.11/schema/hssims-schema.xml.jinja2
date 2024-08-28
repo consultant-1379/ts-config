@@ -1,0 +1,682 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <capabilities>
+        <capability>
+            urn:ietf:params:netconf:base:1.0
+        </capability>
+    </capabilities>
+</hello>
+]]>]]>
+<rpc message-id="4" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <edit-config>
+        <target>
+            <running/>
+        </target>
+        <config xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+            <udr xmlns="urn:rdns:com:ericsson:oammodel:ericsson-udr">
+                <ldap-access>
+                    <ldap-schema>
+                        <name>hssims.schema</name>
+                        <content><![CDATA[
+attributetype ( 1.3.6.1.4.1.193.188.1.1.1.1 NAME 'ImsImpiId'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+      SINGLE-VALUE )
+
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.1.2 NAME 'ImsPassw'
+      EQUALITY octetStringMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.40{770}
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.1.3 NAME 'ImsPrimaryHA1Passw'
+      EQUALITY octetStringMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.40{386}
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.1.4 NAME 'ImsSecondaryHA1Passw'
+      EQUALITY octetStringMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.40{386}
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.1.5 NAME 'ImsAuthSchMask'
+      EQUALITY integerMatch
+      ORDERING integerOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.1.6 NAME 'ImsBarrInd'
+      EQUALITY booleanMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.1.7 NAME 'ImsRoamAllow'
+      EQUALITY booleanMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.1.8 NAME 'ImsRefAccLoc'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.1.9 NAME 'ImsMsisdn'
+      EQUALITY numericStringMatch
+      SUBSTR numericStringSubstringsMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.36{15} )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.1.10 NAME 'ImsNai'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.1.11 NAME 'ImsLooseRouteId'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.1.12 NAME 'ImsLastActivityDate'
+      EQUALITY integerMatch
+      ORDERING integerOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+      SINGLE-VALUE )
+
+objectclass ( 1.3.6.1.4.1.193.188.1.1.1 NAME 'ImsImpi'
+      STRUCTURAL
+      MUST (ImsImpiId $ assocId $ ImsAuthSchMask $ ImsBarrInd $
+            ImsRoamAllow)
+      MAY  (ImsPassw $ ImsPrimaryHA1Passw $ ImsSecondaryHA1Passw $
+            ImsRefAccLoc $ ImsMsisdn $ ImsNai $ ImsLooseRouteId $
+            ImsLastActivityDate $ CDC)
+      )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.2.1 NAME 'ImsLineId'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{15}
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.2.2 NAME 'ImsLineValue'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.2.3 NAME 'ImsAuthMech'
+      EQUALITY integerMatch
+      ORDERING integerOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+      SINGLE-VALUE )
+
+objectclass ( 1.3.6.1.4.1.193.188.1.1.2 NAME 'ImsAccLineId'
+      STRUCTURAL
+      MUST (ImsLineId $ ImsLineValue)
+      MAY (ImsAuthMech $ CDC)
+      )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.3.1 NAME 'ImsSubsId'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.3.2 NAME 'ImsAssocImpi'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.3.3 NAME 'ImsPrivacyInd'
+      EQUALITY booleanMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.3.4 NAME 'ImsChargingId'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{15}
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.3.5 NAME 'ImsCharProfId'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.3.6 NAME 'ImsIsPsi'
+      EQUALITY booleanMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.3.7 NAME 'ImsDefImpi'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.3.8 NAME 'ImsDefRal'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.3.9 NAME 'ImsASHostingPSI'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.3.10 NAME 'ImsESRNumber'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.3.11 NAME 'ImsTenantId'
+      EQUALITY integerMatch
+      ORDERING integerOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+      SINGLE-VALUE )
+
+objectclass ( 1.3.6.1.4.1.193.188.1.1.3 NAME 'ImsSubs'
+      STRUCTURAL
+      MUST (ImsSubsId $ ImsPrivacyInd $ ImsCharProfId $ ImsIsPsi)
+      MAY (ImsChargingId $ ImsAssocImpi $ ImsDefImpi $ ImsDefRal $ CDC $
+           ImsASHostingPSI $ ImsESRNumber $ ImsTenantId $ ImsLooseRouteId)
+      )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.4.1 NAME 'ImsCxDynInfId'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{11}
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.4.2 NAME 'ImsOrigScscf'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.4.3 NAME 'ImsTermScscf'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.4.4 NAME 'ImsDiaServId'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.4.5 NAME 'ImsDiaServRealm'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.4.6 NAME 'ImsImpiImpuState'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{512} )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.4.7 NAME 'ImsSubsData'
+      EQUALITY octetStringMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.40{64000}
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.4.8 NAME 'ImsNumSipFailDigAut'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.4.9 NAME 'ImsRegCaps'
+      EQUALITY octetStringMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.40{500}
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.4.10 NAME 'ImsLastCapsCheck'
+      EQUALITY octetStringMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.40{18}
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.4.11 NAME 'ImsSubsDynFlags'
+      EQUALITY octetStringMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.40{20}
+      SINGLE-VALUE )
+
+objectclass ( 1.3.6.1.4.1.193.188.1.1.4 NAME 'ImsCxDynInf'
+      STRUCTURAL
+      MUST (ImsCxDynInfId $ CDC)
+      MAY (ImsOrigScscf $ ImsTermScscf $ ImsDiaServId $ ImsDiaServRealm $ ImsImpiImpuState $
+           ImsSubsData $ ImsNumSipFailDigAut $ ImsRegCaps $ ImsLastCapsCheck $
+           ImsSubsDynFlags)
+      )
+
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.5.1 NAME 'ImsServProfId'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.5.2 NAME 'ImsIrs'
+      EQUALITY integerMatch
+      ORDERING integerOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.5.3 NAME 'ImsSessBarrInd'
+      EQUALITY booleanMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.5.4 NAME 'ImsIsDefault'
+      EQUALITY booleanMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.5.5 NAME 'ImsXcapAllow'
+      EQUALITY booleanMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.5.6 NAME 'ImsXcapPassw'
+      EQUALITY octetStringMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.40{770}
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.5.7 NAME 'ImsWirelineAccAllow'
+      EQUALITY integerMatch
+      ORDERING integerOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.5.8 NAME 'ImsMaxNumberOfContacts'
+      EQUALITY integerMatch
+      ORDERING integerOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.5.9 NAME 'ImsAuthVisitAccLine'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.5.10 NAME 'ImsPriorityLevel'
+      EQUALITY integerMatch
+      ORDERING integerOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.5.11 NAME 'ImsIsWildcardExt'
+      EQUALITY booleanMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.5.12 NAME 'ImsAliasGroupId'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+   SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.5.13 NAME 'ImsImpuMark'
+      EQUALITY integerMatch
+      ORDERING integerOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.5.14 NAME 'ImsDisplayName'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+      SINGLE-VALUE )
+
+objectclass ( 1.3.6.1.4.1.193.188.1.1.5 NAME 'ImsImpu'
+      STRUCTURAL
+      MUST (IMPU $ ImsIrs $ ImsSessBarrInd $ ImsIsDefault $ ImsMaxNumberOfContacts)
+      MAY (ImsAssocImpi $ ImsServProfId $ ImsXcapAllow $ ImsXcapPassw $
+           ImsWirelineAccAllow $ ImsAuthVisitAccLine $ ImsPriorityLevel $
+           ImsIsWildcardExt $ ImsAliasGroupId $ ImsImpuMark $ ImsDisplayName $ CDC)
+      )
+
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.6.1 NAME 'ImsServIndId'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.6.2 NAME 'ImsServIndSN'
+      EQUALITY octetStringMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.40{5}
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.6.3 NAME 'ImsServIndTD'
+      EQUALITY octetStringMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.40{262144}
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.6.4 NAME 'ImsServIndTDS'
+      EQUALITY octetStringMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.40{6}
+      SINGLE-VALUE )
+
+objectclass ( 1.3.6.1.4.1.193.188.1.1.6 NAME 'ImsServInd'
+      STRUCTURAL
+      MUST (ImsServIndId $ ImsServIndSN $ ImsServIndTDS $ CDC)
+      MAY (ImsServIndTD)
+      )
+
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.7.1 NAME 'ImsZxDynInfId'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{11}
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.7.2 NAME 'ImsNumXcapFailDigAut'
+      EQUALITY integerMatch
+      ORDERING integerOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.7.3 NAME 'ImsNumXcapFailSsoAut'
+      EQUALITY octetStringMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.40{1}
+      SINGLE-VALUE )
+
+objectclass ( 1.3.6.1.4.1.193.188.1.1.7 NAME 'ImsZxDynInf'
+      STRUCTURAL
+      MUST (ImsZxDynInfId)
+      MAY (ImsNumXcapFailDigAut $ ImsNumXcapFailSsoAut)
+      )
+
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.8.1 NAME 'ImsShDynInfId'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{11}
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.8.2 NAME 'ImsShData'
+      EQUALITY octetStringMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.40{4000}
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.8.3 NAME 'ImsShDsai'
+      EQUALITY octetStringMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.40{300})
+
+objectclass ( 1.3.6.1.4.1.193.188.1.1.8 NAME 'ImsShDynInf'
+      STRUCTURAL
+      MUST (ImsShDynInfId $ CDC)
+      MAY (ImsShData $ ImsShDsai)
+      )
+
+
+# 'ImsServProfId' previously defined in object class 'ImsImpu' of this schema
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.9.1 NAME 'ImsConfServProf'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.9.2 NAME 'ImsSubsMediaProf'
+      EQUALITY integerMatch
+      ORDERING integerOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.9.3 NAME 'ImsMaxSimultSess'
+      EQUALITY integerMatch
+      ORDERING integerOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.9.4 NAME 'ImsPhoneCont'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+      SINGLE-VALUE )
+
+objectclass ( 1.3.6.1.4.1.193.188.1.1.9 NAME 'ImsServProf'
+      STRUCTURAL
+      MUST (ImsServProfId $ ImsMaxSimultSess)
+      MAY (ImsConfServProf $ ImsSubsMediaProf $ ImsPhoneCont $ CDC)
+      )
+
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.10.1 NAME 'ImsIndServProfId'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.10.2 NAME 'ImsIndCaps'
+      EQUALITY integerMatch
+      ORDERING integerOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.27{8} )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.10.3 NAME 'ImsIndOptCaps'
+      EQUALITY integerMatch
+      ORDERING integerOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.27{8} )
+
+
+objectclass ( 1.3.6.1.4.1.193.188.1.1.10 NAME 'ImsIndServProf'
+      STRUCTURAL
+      MUST (ImsIndServProfId)
+      MAY (ImsIndCaps $ ImsIndOptCaps $ CDC)
+      )
+
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.11.1 NAME 'ImsTriggId'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.11.2 NAME 'ImsTriggPrior'
+      EQUALITY integerMatch
+      ORDERING integerOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.11.3 NAME 'ImsIsActive'
+      EQUALITY booleanMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.11.4 NAME 'ImsTriggType'
+      EQUALITY integerMatch
+      ORDERING integerOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.11.5 NAME 'ImsDetecPoint'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.11.6 NAME 'ImsNegDetecPoint'
+      EQUALITY booleanMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.11.7 NAME 'ImsCondType'
+      EQUALITY integerMatch
+      ORDERING integerOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.11.8 NAME 'ImsRequestURI'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.11.9 NAME 'ImsNegRequestURI'
+      EQUALITY booleanMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.11.10 NAME 'ImsSipHeader'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.11.11 NAME 'ImsAppServ'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.11.12 NAME 'ImsRegTypes'
+      EQUALITY integerMatch
+      ORDERING integerOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.27)
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.11.13 NAME 'ImsDefHand'
+      EQUALITY integerMatch
+      ORDERING integerOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.11.14 NAME 'ImsInclRegReq'
+      EQUALITY booleanMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.11.15 NAME 'ImsInclRegResp'
+      EQUALITY booleanMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
+      SINGLE-VALUE )
+
+objectclass ( 1.3.6.1.4.1.193.188.1.1.11 NAME 'ImsIndTrigg'
+      STRUCTURAL
+      MUST (ImsTriggId $ ImsTriggPrior $ ImsIsActive $ ImsAppServ)
+      MAY (ImsTriggType $ ImsDetecPoint $ ImsNegDetecPoint $ ImsCondType $
+           ImsRequestURI $ ImsNegRequestURI $ ImsSipHeader $ ImsRegTypes $
+           ImsDefHand $ CDC $ ImsInclRegReq $ ImsInclRegResp)
+      )
+attributetype ( 1.3.6.1.4.1.193.188.1.1.12.1 NAME 'ImsSptGroupId'
+      EQUALITY integerMatch
+      ORDERING integerOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+      SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.12.2 NAME 'ImsSessionDescr'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.12.3 NAME 'ImsSessionCase'
+      EQUALITY integerMatch
+      ORDERING integerOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.27)
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.12.4 NAME 'ImsSipMethod'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.12.5 NAME 'ImsGrRequestUri'
+      EQUALITY caseExactMatch
+      SUBSTR caseExactSubstringsMatch
+      ORDERING caseExactOrderingMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )
+
+objectclass ( 1.3.6.1.4.1.193.188.1.1.12 NAME 'ImsSptGroup'
+      STRUCTURAL
+      MUST (ImsSptGroupId)
+      MAY (ImsSessionDescr $ ImsSessionCase $ ImsSipMethod $ ImsGrRequestUri
+           $ ImsSipHeader $ CDC)
+      )
+
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.13.1 NAME 'ImsRestData'
+      EQUALITY octetStringMatch
+      SYNTAX 1.3.6.1.4.1.1466.115.121.1.40{64000}
+      SINGLE-VALUE )
+
+objectclass ( 1.3.6.1.4.1.193.188.1.1.13 NAME 'ImsRestorationInf'
+      SUP top
+      AUXILIARY
+      MAY (ImsRestData)
+      )
+
+
+# 'ImsAliasGroupId' previously defined in object class 'ImsImpu' of this schema
+
+objectclass ( 1.3.6.1.4.1.193.188.1.1.14 NAME 'ImsAliasGroup'
+      STRUCTURAL
+      MUST (ImsAliasGroupId)
+      )
+
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.15.1 NAME 'ImsShDynGroupInfId'
+        EQUALITY caseExactMatch
+        SUBSTR caseExactSubstringsMatch
+        ORDERING caseExactOrderingMatch
+        SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{16}
+        SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.193.188.1.1.15.2 NAME 'ImsShGroupData'
+        EQUALITY octetStringMatch
+        SYNTAX 1.3.6.1.4.1.1466.115.121.1.40{4000}
+        SINGLE-VALUE )
+
+objectclass ( 1.3.6.1.4.1.193.188.1.1.15 NAME 'ImsShDynGroupInf'
+      STRUCTURAL
+      MUST (ImsShDynGroupInfId $ CDC)
+      MAY (ImsShGroupData)
+      )
+                     ]]></content>
+                    </ldap-schema>
+                </ldap-access>
+            </udr>
+        </config>
+    </edit-config>
+</rpc>
+

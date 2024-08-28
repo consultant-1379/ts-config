@@ -1,0 +1,11 @@
+config
+diagnostic-data-collection sftp-server Default
+ endpoints endpoint Default
+  remote-address {{ sftpServer.host }}
+  remote-port    22
+  remote-path    {{ ddc.remotePath }}
+  client-identity username {{ sftpServer.username }}
+  client-identity password {{ sftpServer.password }}
+commit
+end
+

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <capabilities>
+        <capability>
+            urn:ietf:params:netconf:base:1.0
+        </capability>
+    </capabilities>
+</hello>
+]]>]]>
+<?xml version="1.0" encoding="UTF-8"?>
+<rpc message-id="101" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <edit-config>
+        <target>
+            <running/>
+        </target>
+        <config>
+            <!--xmlns="urn:rdns:com:ericsson:oammodel:ericsson-pcf" refers to PCF namespace.-->
+            <pcf xmlns="urn:rdns:com:ericsson:oammodel:ericsson-pcf">
+                <!--geo-redundancy: Container for Geographical Redundancy configuration.-->
+                <geo-redundancy>
+                    <!--sites: Container for the configuration of the local and remote sites needed in a Geographical Redundancy deployment.-->
+                    <sites>
+                        <!--remote-site: List of remote PCF sites.-->
+                        <remote-site>
+                            <!--Distributed System Id of the remote PCF site.-->
+                            <id>{{ '2' if siteId == 1 else '1' }}</id>
+                            <!--You have a choice of the ipv4-address and ipv6-address at this level. Please remove the other one when choose one ip address.-->
+                            <!--At least one of the ipv4-address or ipv6-address must be included.-->
+                            <!--By default port is set to 10334 value.-->
+                            <!--IP endpoint (host and ports) where the remote PCF is externally reachable. The host corresponds to the replication VIP address.-->
+                            <endpoint>
+                                <!--ipv4-address: IPv4 addresses where the database locator service is externally reachable.-->
+                                <ipv4-address>{{ ccpc.pcf.geored.remote.ip }}</ipv4-address>
+                                <!--ipv6-address: IPv6 addresses where the database locator service is externally reachable.-->
+                                <!-- <ipv6-address>{REMOTE-SITE-IPV6-ADDRESS}</ipv6-address> -->
+                                <!--port: port where the database locator server of remote PCF is providing the data replication service.-->
+                                <port>10334</port>
+                                <!--port: port where remote PCF site is providing the Data Recovery and Conflict Resolution REST services.-->
+                                <rest-port>443</rest-port>
+                            </endpoint>
+                        </remote-site>
+                    </sites>
+                </geo-redundancy>
+            </pcf>
+        </config>
+    </edit-config>
+</rpc>

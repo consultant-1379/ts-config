@@ -1,0 +1,16 @@
+{
+    "pkcs12": [
+        {
+            "name": "ccdm-nbi-immediate-server-certificate",
+            "certificate-name": "<certificate>",
+            "pkcs12": "{{ certs['iccr-external-tls-certificate'].p12 | file_b64encode }}",
+            "password": "{{ certs['iccr-external-tls-certificate'].password }}"
+        }
+    ],
+    "ca-certs": [
+        {
+            "name": "ccdm-nbi-immediate-server-certs-cacert",
+            "pem": "{{ trustCAs.0 | file_b64encode }}"
+        }
+    ]
+}

@@ -1,0 +1,7 @@
+[
+  {"host": "{{ sftpServer.host }}",
+   "sftpPort": 22,
+   "username": "{{ sftpServer.username }}",
+   "password": "{{ sftpServer.password | b64decode }}",
+   "uploadDir": "{{ vtap.remotePath }}"  }
+]

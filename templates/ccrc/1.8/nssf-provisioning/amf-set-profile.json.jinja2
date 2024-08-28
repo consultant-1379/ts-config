@@ -1,0 +1,40 @@
+{
+   "amfSetName":"AmfSetId-002",
+   "amfSetAdminState":"UNLOCKED",
+   "amfSetId":"240-81-ff-002",
+   "servedPlmnIds":[
+      {
+         "mcc":"{{ mcc }}",
+         "mnc":"{{ mnc }}"
+      }
+   ],
+   {% if amfGeo and kvdb.0.siteId == 1 %}
+   "amfNfInstances":[
+      {
+         "amfNfInstanceId":"{{ amf.0.amfInstanceId }}",
+         "amfNfInstanceState":"UNLOCKED"
+      },
+      {
+         "amfNfInstanceId":"{{ amf.1.amfInstanceId }}",
+         "amfNfInstanceState":"UNLOCKED"
+      }
+   {% elif amfGeo and kvdb.0.siteId == 2 %}
+   "amfNfInstances":[
+      {
+         "amfNfInstanceId":"{{ amf.1.amfInstanceId }}",
+         "amfNfInstanceState":"UNLOCKED"
+      },
+      {
+         "amfNfInstanceId":"{{ amf.0.amfInstanceId }}",
+         "amfNfInstanceState":"UNLOCKED"
+      }
+   {% else %}
+   "amfNfInstances":[
+      {
+         "amfNfInstanceId":"{{ amf.0.amfInstanceId }}",
+         "amfNfInstanceState":"UNLOCKED"
+      }
+   {% endif %}
+   ],
+   "nrfProfileName":"nrf-slice-common-region-001"
+}

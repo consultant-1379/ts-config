@@ -1,0 +1,12 @@
+config
+{% if sc.bsf.geored.enabled == false %}
+truststore certificates sc-trusted-default-cas
+commit
+{% endif %}
+install-certificate-pem name CA_cert pem {{ trustCAs.0 | file_b64encode }}
+exit
+keystore asymmetric-keys install-asymmetric-key-pkcs12 name sc-nbi-default-key certificate-name sc-nbi-default-cert p12 {{ certs['iccr-external-tls-certificate'].p12 | file_b64encode }} p12-password {{ certs['iccr-external-tls-certificate'].password }}
+{% if sc.bsf.enabled == true %}
+keystore asymmetric-keys install-asymmetric-key-pkcs12 name bsf-sbi-client-key certificate-name bsf-sbi-client-cert p12 {{ certs['eric-bsf-sbi-client-certs'].p12 | file_b64encode }} p12-password {{ certs['eric-bsf-sbi-client-certs'].password }}
+keystore asymmetric-keys install-asymmetric-key-pkcs12 name bsf-sbi-server-key certificate-name bsf-sbi-server-cert p12 {{ certs['eric-bsf-sbi-server-certs'].p12 | file_b64encode }} p12-password {{ certs['eric-bsf-sbi-server-certs'].password }}
+{% endif %}

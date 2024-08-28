@@ -1,0 +1,687 @@
+global:
+  timezone: {{ timezone }}
+  ericsson:
+    licensing:
+      licenseDomains:
+        - productType: PACKET_CORE_GATEWAY
+          customerId: {{ license.customerId }}
+          swltId: {{ license.swltId }}
+{% if caas == "Tanzu" %}
+  registry:
+    url: {{registry.url}}
+  nodeSelector:
+    aafgroup: {{nodeSelector.aafgroup}}
+{% endif %}
+eric-pc-kvdb-rd-server:
+  numberOfMaster: {{ replicaCount['eric-pc-kvdb-rd-server'] | default(6) }}
+{% if caas == "Tanzu" %}
+  server:
+   maxMemory: 5120mb
+  nodeSelector:
+    type: {{nodeSelector.type}}
+    aafgroup: {{nodeSelector.aafgroup}}
+{% endif %}
+eric-pc-routing-engine:
+  interfaces:
+    {% if caas == 'OpenShift' %}
+    type: predefine
+    predefineNetworks:
+      - name: eric-pc-routing-engine-net0
+    {% elif caas == 'CNIS' %}
+    type: ovs
+    ovs:
+    - bridge: br_data
+      vlan_mode: trunk
+      trunk:
+      {% for ni in pcg.networkInstances %}
+        - minID: {{ ni.ipForward.vlan }}
+          maxID: {{ ni.ipForward.vlan }}
+      {% endfor %}
+      mtu: 9000
+    {% elif caas == 'Tanzu' %}
+    type: macvlan
+    macvlan:
+      - master: {{ pcg.macvlanInterface }}
+  nodeSelector:
+    type: {{nodeSelector.type}}
+    aafgroup: {{nodeSelector.aafgroup}} 
+    {% else %}
+    type: macvlan
+    macvlan:
+      - master: {{ macvlanInterface | default('eth4') }}
+    {% endif %}
+
+eric-pc-up-data-plane:
+  replicaCount: {{ replicaCount['eric-pc-up-data-plane'] }}
+  acceleratedIo:
+    enabled: true
+{% if caas != 'Tanzu' %}
+{% if pcg.nicVendor == 'intel' %}
+    driver: uio
+{% elif pcg.nicVendor == 'mellanox' %}
+    driver: bifurcated
+    # Remedy for PCG with Nvidia/Mellanox ConnectX NICs
+    # This remedy should be removed once the fix is ready on Nvidia/Mellanox ConnectX NIC.
+    # Reference TR: HZ77688, HZ99010, IA40935
+    pciDeviceArguments:
+      - 'rxq_cqe_comp_en=0'
+{% endif %}
+{% endif %}
+{% if caas == 'Tanzu' %}
+    driver: uio
+  reporting:
+    ebm:
+      enabled: true
+  securityContext:
+    privileged:
+   # If set to true it will force the Data Plane to run in a privileged
+   # security context regardless of the setting of `acceleratedIo.driver`.
+      forced: true
+{% endif %}
+  applications:
+  - name: app100
+{% if pcg.nicVendor == 'intel' %}
+  deployment:
+    pinThreads: true
+{% endif %}
+
+  nodeSelector:
+    type: high-throughput
+
+  resources:
+    dataPlane:
+      limits:
+        cpu: {{ pcg.dpCpu }}
+        hugepages-1Gi: 1Gi
+        memory: 18Gi
+        {% if caas == 'Tanzu' %}
+        intel.com/vmw_vmxnet3_dpdk: "1"
+        {% endif %}
+        {% if pcg.nicResrName is defined%}
+        {{ pcg.nicResrName.0 }}: "1"
+        {{ pcg.nicResrName.1 }}: "1"
+        {% endif %}
+      requests:
+        cpu: {{ pcg.dpCpu }}
+        hugepages-1Gi: 1Gi
+        memory: 18Gi
+        {% if caas == 'Tanzu' %}
+        intel.com/vmw_vmxnet3_dpdk: "1"
+        {% endif %}
+        {% if pcg.nicResrName is defined%}
+        {{ pcg.nicResrName.0 }}: "1"
+        {{ pcg.nicResrName.1 }}: "1"
+        {% endif %}
+{% if caas != 'Tanzu' %}
+{% if pcg.nicVendor == 'mellanox' %}
+  interfaces:
+    - name: net1
+      {% if caas == 'CNIS' %}
+      type: sriov
+      {% else %}
+      type: host-device
+      {% endif %}
+      {% if caas == 'OpenShift' %}
+      networkAttachmentDefinition: false
+      {% else %}
+      resourceName: {{ pcg.nicResrName.0 }}
+      {% endif %}
+    - name: net2
+      {% if caas == 'CNIS' %}
+      type: sriov
+      {% else %}
+      type: host-device
+      {% endif %}
+      {% if (caas == 'OpenShift' or caas == 'Tanzu') %}
+      networkAttachmentDefinition: false
+      {% else %}
+      resourceName: {{ pcg.nicResrName.1 }}
+      {% endif %}
+
+{% endif %}
+  tolerations:
+  - effect: NoSchedule
+    key: high-throughput
+    operator: Equal
+    value: "true"
+{% endif %}
+eric-pc-up-pfcp-endpoint:
+{% if caas == "Tanzu" %}
+  resources:
+    pfcpEndpoint:
+      requests:
+        cpu: 400m
+        memory: 8Gi
+      limits:
+        cpu: '1'
+        memory: 8Gi
+  cm_source_env: false
+  podDisruptionBudget:
+    minAvailable: 75%
+  global:
+    serviceNames:
+      cm:
+        mediator: ""
+  nodeSelector:
+    type: {{nodeSelector.type}}
+    aafgroup: {{nodeSelector.aafgroup}}
+{% endif %}
+  replicaCount: {{ replicaCount['eric-pc-up-pfcp-endpoint'] | default(18) }}
+{% if caas == "Tanzu" %}
+eric-pc-up-partitioner:
+  resources:
+    partitioner:
+      requests:
+        cpu: 1
+        memory: 8Gi
+        ephemeral-storage:
+      limits:
+        cpu: '1'
+        memory: 8Gi
+        ephemeral-storage:
+  nodeSelector:
+    type: {{nodeSelector.type}}
+    aafgroup: {{nodeSelector.aafgroup}}
+
+eric-pc-up-timer-wheel:
+  nodeSelector:
+    type: {{nodeSelector.type}}
+    aafgroup: {{nodeSelector.aafgroup}}
+
+eric-pc-up-user-plane-cm-agent:
+  nodeSelector:
+    type: {{nodeSelector.type}}
+    aafgroup: {{nodeSelector.aafgroup}}
+
+eric-pc-kvdb-rd-operator:
+  nodeSelector:
+    type: {{nodeSelector.type}}
+    aafgroup: {{nodeSelector.aafgroup}}
+
+eric-pc-up-service-chaining-cm-agent:
+  nodeSelector:
+    type: {{nodeSelector.type}}
+    aafgroup: {{nodeSelector.aafgroup}}
+
+eric-pc-networking-cm-agent:
+  nodeSelector:
+    type: {{nodeSelector.type}}
+    aafgroup: {{nodeSelector.aafgroup}}
+
+eric-pc-routing-engine-api:
+  nodeSelector:
+    type: {{nodeSelector.type}}
+    aafgroup: {{nodeSelector.aafgroup}}
+
+eric-pc-routing-aggregator:
+  nodeSelector:
+    type: {{nodeSelector.type}}
+    aafgroup: {{nodeSelector.aafgroup}}
+
+eric-pc-up-br-agent:
+  resources:
+    brAgent:
+      limits:
+        memory: 512Mi
+  nodeSelector:
+    type: {{nodeSelector.type}}
+    aafgroup: {{nodeSelector.aafgroup}}
+eric-pm-resource-monitor:
+  nodeSelector:
+    type: {{nodeSelector.type}}
+    aafgroup: {{nodeSelector.aafgroup}}
+
+eric-probe-event-report-broker:
+  nodeSelector:
+    type: {{nodeSelector.type}}
+    aafgroup: {{nodeSelector.aafgroup}}
+
+eric-pc-firewall-coordinator-at:
+  nodeSelector:
+    type: {{nodeSelector.type}}
+    aafgroup: {{nodeSelector.aafgroup}}
+
+eric-pc-pm-init:
+  nodeSelector:
+    type: {{nodeSelector.type}}
+    aafgroup: {{nodeSelector.aafgroup}}
+
+eric-odca-health-check-monitor:
+  nodeSelector:
+    type: {{nodeSelector.type}}
+    aafgroup: {{nodeSelector.aafgroup}}
+
+eric-odca-isp-event-monitor:
+  nodeSelector:
+    type: {{nodeSelector.type}}
+    aafgroup: {{nodeSelector.aafgroup}}
+eric-pc-service-instance-monitor:
+  nodeSelector:
+    type: {{nodeSelector.type}}
+    aafgroup: {{nodeSelector.aafgroup}}
+
+eric-pm-kube-state-metrics:
+  nodeSelector:
+    type: {{nodeSelector.type}}
+    aafgroup: {{nodeSelector.aafgroup}}
+{% endif %}
+
+snmp-alarm-provider-secret-creation:
+  enabled: false
+
+eric-cloud-native-base:
+  eric-si-application-sys-info-handler:
+    asih:
+      applicationId: {{ nodeName }}
+{% if caas == "Tanzu" %}
+    nodeSelector:
+      type: standard
+      aafgroup: aaf1
+{% endif %}
+  eric-fh-snmp-alarm-provider:
+    service:
+{% if caas == "Tanzu" %}
+      annotations:
+        cloudProviderLB:
+          ako.vmware.com/load-balancer-ip: {{pcg.oamIp}}
+          aviinfrasetting.ako.vmware.com/name: "oam-pool"
+          ako.vmware.com/enable-shared-vip: "oam-pcg-shared"
+    nodeSelector:
+      type: {{nodeSelector.type}}
+      aafgroup: {{nodeSelector.aafgroup}}
+{% else %}
+      annotations:
+        addressPoolName: pcg{{ instance | default("") }}-oam
+        sharedVIPLabel: pcg{{ instance | default("") }}-oam
+        secretName: eric-pc-gateway-snmp-alarm-provider-config
+      oamVIP:
+        enabled: false
+    sourceIdentifierType: 1
+    sourceIdentifier: "{{ snmp.sourceIdentifier }}"
+{% endif %}
+
+  eric-log-transformer:
+    replicaCount: 3
+{% if caas == "Tanzu" %}
+    jvmHeap: 4000m
+    resources:
+      logtransformer:
+        limits:
+          cpu: 2000m
+          memory: 6Gi
+      requests:
+        cpu: 2000m
+        memory: 6Gi
+    nodeSelector:
+      type: {{nodeSelector.type}}
+      aafgroup: {{nodeSelector.aafgroup}}
+{% endif %}
+
+  eric-data-search-engine:
+    autoSetRequiredWorkerNodeSysctl: false
+{% if caas == "Tanzu" %}
+    replicaCount:
+      data: 3
+    persistence:
+      data:
+        persistentVolumeClaim:
+          size: 50Gi
+    nodeSelector:
+      ingest:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+      bragent:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+      data:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+      master:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+    resources:
+      data:
+        limits:
+          memory: "10Gi"
+{% endif %}
+
+  eric-odca-diagnostic-data-collector:
+    resources:
+      # According to CPI for any number of DP pods
+      diagnostic-data-collector:
+        limits:
+{% if caas == "Tanzu" %}
+          cpu: 3
+          memory: 5Gi
+          ephemeral-storage: 40Gi
+        requests:
+          memory: 800Mi
+          cpu: 1600m
+          ephemeral-storage: 24Gi
+{% else %}
+          memory: 1Gi
+          cpu: 1500m
+          ephemeral-storage: 25Gi
+{% endif %}
+{% if caas == "Tanzu" %}
+    env:
+      sftpFileLocation: {{ddc.remotePath}}
+      sftphost: {{sftpServer.host}}:22
+      fileCollectorLocations:
+        - coredump/core
+      sftpCredentials:
+        username: {{sftpServer.username}}
+        password: {{sftpServer.password}}
+    nodeSelector:
+      type: {{nodeSelector.type}}
+      aafgroup: {{nodeSelector.aafgroup}}
+      interval:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+      manual:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+      hooklauncher:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+{% endif %}
+
+  eric-pm-server:
+    rbac:
+      appMonitoring:
+        configFileCreate: false
+        enabled: true
+    server:
+      persistentVolume:
+        enabled: true
+{% if caas == "Tanzu" %}
+        size: 64Gi
+{% else %}
+        size: 36Gi
+{% endif %}
+    resources:
+      # According to CPI for 18 DP pods
+      eric-pm-server:
+        limits:
+          cpu: 3
+          memory: 12Gi
+        requests:
+          cpu: 1500m
+          memory: 8Gi
+{% if caas == "Tanzu" %}
+    nodeSelector:
+      type: {{nodeSelector.type}}
+      aafgroup: {{nodeSelector.aafgroup}}
+    service:
+      endpoints:
+        reverseproxy:
+          tls:
+            enforced: optional
+{% endif %}
+
+  eric-lm-combined-server:
+{% if caas == "Tanzu" %}
+    global:
+      nodeSelector:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+    nodeSelector:
+      type: {{nodeSelector.type}}
+      aafgroup: {{nodeSelector.aafgroup}}
+{% endif %}
+    licenseServerClient:
+      licenseServer:
+        thrift:
+          host: {{ nels.host }}
+          port: {{ nels.port }}
+
+{% if caas != "Tanzu" %}
+  eric-dst-agent:
+    tolerations:
+      - key: "high-throughput"
+        value: "true"
+        operator: Equal
+        effect: NoSchedule
+{% endif %}
+{% if caas == "Tanzu" %}
+  eric-sec-sip-tls:
+    nodeSelector:
+      type: {{nodeSelector.type}}
+      aafgroup: {{nodeSelector.aafgroup}}
+
+  eric-ctrl-bro:
+    nodeSelector:
+      type: {{nodeSelector.type}}
+      aafgroup: {{nodeSelector.aafgroup}}
+  eric-data-distributed-coordinator-ed:
+    nodeSelector:
+      dced: 
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+      brAgent:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+  eric-cm-mediator:
+    resources:
+      eric-cm-mediator:
+        limits:
+        memory: "1024Mi"
+    nodeSelector:
+      eric-cm-mediator:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+      eric-cm-mediator-notifier:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+      eric-cm-key-init:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+      hooklauncher:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+  eric-cm-mediator-db-pg:
+    nodeSelector:
+      postgres:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+      brAgent:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+      cleanuphook:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+  eric-fh-alarm-handler-db-pg:
+    nodeSelector:
+      postgres:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+      brAgent:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+      cleanuphook:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+  eric-data-coordinator-zk:
+    nodeSelector:
+      datacoordinatorzk:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+      brAgent:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+  eric-data-message-bus-kf:
+    nodeSelector:
+      type: {{nodeSelector.type}}
+      aafgroup: {{nodeSelector.aafgroup}}
+  eric-sec-certm:
+    nodeSelector:
+      type: {{nodeSelector.type}}
+      aafgroup: {{nodeSelector.aafgroup}}
+  eric-fh-alarm-handler:
+    nodeSelector:
+      type: {{nodeSelector.type}}
+      aafgroup: {{nodeSelector.aafgroup}}
+  eric-data-search-engine-curator:
+    nodeSelector:
+      type: {{nodeSelector.type}}
+      aafgroup: {{nodeSelector.aafgroup}}
+  eric-data-object-storage-mn:
+    server:
+      requests:
+      memory: 2048Mi
+    limits:
+      memory: 2048Mi
+    nodeSelector:
+      type: {{nodeSelector.type}}
+      aafgroup: {{nodeSelector.aafgroup}}
+  eric-sec-key-management:
+    nodeSelector:
+      type: {{nodeSelector.type}}
+      aafgroup: {{nodeSelector.aafgroup}}
+  eric-data-document-database-pg:
+    nodeSelector:
+      postgres:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+      brAgent:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+      cleanuphook:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+      hooklauncher:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+  eric-dst-agent:
+    nodeSelector:
+      type: {{nodeSelector.type}}
+      aafgroup: {{nodeSelector.aafgroup}}
+  eric-dst-collector:
+    nodeSelector:
+      type: {{nodeSelector.type}}
+      aafgroup: {{nodeSelector.aafgroup}}
+  eric-log-shipper:
+    nodeSelector:
+      aafgroup: {{nodeSelector.aafgroup}}
+{% endif %}
+
+  {% if caas == 'OpenShift' or caas == 'CNIS' %}
+  eric-log-shipper:
+    tolerations:
+      - key: "high-throughput"
+        value: "true"
+        operator: Equal
+        effect: NoSchedule
+  {% endif %}
+  {% if caas == 'OpenShift' %}
+    logshipper:
+      privileged: true
+  {% endif %}
+
+eric-cloud-native-nf-additions:
+  eric-cm-yang-provider:
+    service:
+{% if caas == "Tanzu" %}
+      annotations:
+        cloudProviderLB:
+          ako.vmware.com/load-balancer-ip: {{pcg.oamIp}}
+          aviinfrasetting.ako.vmware.com/name: "oam-pool"
+          ako.vmware.com/enable-shared-vip: "oam-pcg-shared"
+    nodeSelector:
+      type: {{nodeSelector.type}}
+      aafgroup: {{nodeSelector.aafgroup}}
+{% else %}
+      annotations:
+        addressPoolName: pcg{{ instance | default("") }}-oam
+        sharedVIPLabel: pcg{{ instance | default("") }}-oam
+{% endif %}
+{% if caas == "Tanzu" %}
+  eric-sec-admin-user-management:
+    nodeSelector:
+      type: {{nodeSelector.type}}
+      aafgroup: {{nodeSelector.aafgroup}}
+  eric-cnom-server:
+    service:
+      type: LoadBalancer
+      endpoints:
+        api:
+          tls:
+            verifyClientCertificate: optional
+            disableSipTls: true
+      annotations:
+        cloudProviderLB:
+          aviinfrasetting.ako.vmware.com/name: "oam-pool"
+          ako.vmware.com/enable-shared-vip: "oam-pcg-shared"
+          ako.vmware.com/load-balancer-ip: {{ pcg.oamIp }}
+    nodeSelector:
+      type: {{nodeSelector.type}}
+      aafgroup: {{nodeSelector.aafgroup}}
+  eric-cnom-server-db-pg:
+    nodeSelector:
+      postgres:
+       type: {{nodeSelector.type}}
+       aafgroup: {{nodeSelector.aafgroup}}
+      brAgent:
+       type: {{nodeSelector.type}}
+       aafgroup: {{nodeSelector.aafgroup}}
+      cleanuphook:
+       type: {{nodeSelector.type}}
+       aafgroup: {{nodeSelector.aafgroup}}
+{% endif %}
+
+  eric-data-sftp-server:
+    service:
+{% if caas == "Tanzu" %}
+      annotations:
+        cloudProviderLB:
+          ako.vmware.com/load-balancer-ip: {{pcg.oamIp}}
+          aviinfrasetting.ako.vmware.com/name: "oam-pool"
+          ako.vmware.com/enable-shared-vip: "oam-pcg-shared"
+    nodeSelector:
+      type: {{nodeSelector.type}}
+      aafgroup: {{nodeSelector.aafgroup}}
+{% else %}
+      annotations:
+        sharedVIPLabel: "pcg{{ instance | default("") }}-oam"
+        addressPoolName: "pcg{{ instance | default("") }}-oam"
+      {# ticket BZ 2075548. Target release: OS 4.13 #}
+      {% if caas == 'OpenShift' %}
+      allocateLoadBalancerNodePorts: true
+      {% endif %}
+{% endif %}
+  eric-sec-ldap-server:
+{% if caas == "Tanzu" %}
+    adminCredentials:
+      adminuser: admin
+      adminpasswd: "$6$Js6jh/9n7zvDWfot$wm1gO6OYkTUwdQVm.WVebRlNZL5z9glEK2pvJHq8n.uzsG8Udz.WWlgJO7wIhaC2Y7tCANYxQ8UTea84Db96K."
+    nodeSelector:
+      ldap:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+      ldapProxy:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+      hooklauncher:
+        type: {{nodeSelector.type}}
+        aafgroup: {{nodeSelector.aafgroup}}
+  eric-pm-bulk-reporter:
+    nodeSelector:
+      type: {{nodeSelector.type}}
+      aafgroup: {{nodeSelector.aafgroup}}
+{% else %}
+    adminCredentials: null
+{% endif %}
+cnom-loadBalancer-service:
+  enabled: true
+{% if caas == "Tanzu" %}
+  annotations:
+    aviinfrasetting.ako.vmware.com/name: "oam-pool"
+    ako.vmware.com/enable-shared-vip: "oam-pcg-shared"
+    ako.vmware.com/load-balancer-ip: {{pcg.oamIp}}
+
+{% else %}
+
+  annotations:
+    metallb.universe.tf/address-pool: "pcg{{ instance | default("") }}-oam"
+    metallb.universe.tf/allow-shared-ip: "pcg{{ instance | default("") }}-oam"
+{% endif %}

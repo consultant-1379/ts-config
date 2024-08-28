@@ -1,0 +1,968 @@
+{% raw -%}
+#External values file
+#Please set up the values regarding to deployment which you want to deploy
+#In some variable values there are small-system and standard-system suggestion you can recognize it by comment {{small-system value|standard-system value}}
+#The exact value for those variables is result of dimensioning exercise
+#Please remove curly brackets {{}} surrounding the final value to set it right
+{% endraw %}
+
+
+global:
+  #Possible deployments [small-system(ex. 10k), standard-system(ex. 1m), clear-text(ex. non-mtls), mtls]. Enable only one dimensioning profile and one security profile
+  {% if jwtPolicy is defined %}
+  jwtPolicy: {{ jwtPolicy|default("first-party-jwt") }}
+  {% endif %}
+  timezone: {{ timezone|default(UTC) }}
+  {% if caas == 'OpenShift' %}
+  fsGroup:
+    namespace: true
+  {% endif %}
+  security:
+    {% if caas == 'OpenShift' %}
+    policyBinding:
+      create: true
+    {% else %}
+    policyBinding:
+      create: false  # Default is false
+    {% endif %}
+      defaultAdpBinding: true
+    {% if caas == 'OpenShift' %}
+    policyReferenceMap:
+      default-restricted-security-policy: default-restricted-security-policy
+      plc-privileged-for-istio: plc-privileged-for-istio
+      plc-privileged-for-udr: plc-privileged-for-udr
+      plc-privileged-for-adp: plc-privileged-for-adp
+      plc-dd66cc53d8554f93ad34971900932e: plc-dd66cc53d8554f93ad34971900932e-wa
+      plc-38dc0a0ee2b2564ef10039d2c6c0e0: plc-38dc0a0ee2b2564ef10039d2c6c0e0
+      plc-59d0cf1dcc793a78b6ce30bfbe6553: plc-59d0cf1dcc793a78b6ce30bfbe6553
+      plc-29c4b823c87a16cad810082eb11106: plc-29c4b823c87a16cad810082eb11106
+    {% elif systemProfile == 'small' or caas == 'Tanzu' %}
+    policyReferenceMap:
+      default-restricted-security-policy: default-restricted-security-policy
+      plc-privileged-for-istio: plc-privileged-for-istio
+      plc-privileged-for-udr: plc-privileged-for-udr
+      plc-privileged-for-adp: plc-privileged-for-adp
+      plc-dd66cc53d8554f93ad34971900932e: plc-dd66cc53d8554f93ad34971900932e
+      plc-e393f1841dfc4cbcca713b5a97eb83: plc-e393f1841dfc4cbcca713b5a97eb83
+      plc-9c20871f9bf62c7b09fd0c684ac651: plc-9c20871f9bf62c7b09fd0c684ac651
+      plc-38dc0a0ee2b2564ef10039d2c6c0e0: plc-38dc0a0ee2b2564ef10039d2c6c0e0
+      plc-59d0cf1dcc793a78b6ce30bfbe6553: plc-59d0cf1dcc793a78b6ce30bfbe6553
+      plc-03ad10577718e69c935814b4f30054: plc-03ad10577718e69c935814b4f30054
+      plc-29c4b823c87a16cad810082eb11106: plc-29c4b823c87a16cad810082eb11106
+    {% endif %}
+  profiles:
+    small-system:
+      enabled: {{ 'true' if systemProfile == 'small' else 'false' }}
+    standard-system:
+      enabled: {{ 'true' if systemProfile == 'standard' else 'false' }}
+    cleartext:
+      enabled: false
+    mtls:
+      enabled: true
+  tapagent:
+    enabled: {{ vtap.tapagent|default(true)|string|lower }} #default shall be set to true
+    {% if caas != "Tanzu" %}
+    pvtb:
+      enabled: false #default is false
+    egress_exclude_ips: "10.96.0.0/12,192.168.0.0/16"
+    {% endif %}
+  domainName: {{ vnflcm.clusterName }}.{{ oamDomain }}
+  clusterName: {{ vnflcm.namespace }}
+  enableCrashDumps: true
+  {% if caas == 'Tanzu' and nodeSelector|length != 0 %}
+  nodeSelector:
+    {% for key, val in nodeSelector.items() %}
+    {{ key }}: {{ val }}
+    {% endfor %}
+  {% else %}
+  nodeSelector: {}
+  {% endif %}
+  ericsson:
+    licensing:
+      licenseDomains:
+        - productType: "CCDM"
+          customerId: "{{ license.customerId }}"
+          swltId: "{{ license.swltId }}"
+  ipStackMode: "ipv4"
+  #for supporting new pull secret levels
+  pullSecret: {{ 'regcred' if systemProfile == 'small' else 'null' |string|lower }}
+  # global registry
+  registry:
+    url: {{ registry.url if caas == 'Tanzu' else 'null' |string|lower }}
+    pullSecret: {{ 'regcred' if systemProfile == 'small' else 'null' |string|lower }}
+    imagePullPolicy: IfNotPresent # Default is IfNotPresent
+  imageCredentials:
+    pullPolicy: IfNotPresent # Default is IfNotPresent
+#  FOR MTLS, REMOVE COMMENT
+  istio:
+    # UDM MESH WA: select IPv4 address or IPv6 address for IPv6 deployments
+    {%- if kubernetes_service_ipaddress is defined %}
+    kubernetes_service_ipaddress: {{ kubernetes_service_ipaddress }}
+    {% else %}
+    {%- raw %}
+    #  kubernetes_service_ipaddress: {{10.96.0.1|2001:14ba:9ea:8800::ffff:1}}
+    {% endraw %}
+    {% endif %}
+    # Global configuration for INGRESS/EGRESS mTLS enabled
+    # - Global INGRESS configuration
+    ingress:
+      gateways:
+        # eric-udr-traffic gateway configuring eric-ingressgw-udr-traffic service mesh ingress gateway
+        # Ingress gateway for 5G Traffic (HTTP2) and 5G proxy multisite traffic HTTP2
+        eric-udr-traffic-gw: # Gateway resource name.
+          ports:
+            https-mtls:
+              settings:
+                minProtocolVersion: TLSV1_2 # Values allowed [ TLSV1_1, TLSV1_2, TLSV1_3 ]
+                maxProtocolVersion: TLSV1_3 # Values allowed [ TLSV1_1, TLSV1_2, TLSV1_3 ]
+                # - DHE-RSA-AES128-GCM-SHA256 not supported by istio
+                # Optional: If specified, only support the specified cipher list. Otherwise default to the default cipher list supported by Envoy
+                cipherSuites:
+                  - ECDHE-ECDSA-AES128-GCM-SHA256
+                  - ECDHE-RSA-AES128-GCM-SHA256
+                #  - ECDHE-ECDSA-AES128-SHA256
+                #  - ECDHE-RSA-AES128-SHA256
+                #  - ECDHE-ECDSA-AES128-SHA
+                #  - ECDHE-RSA-AES128-SHA
+                #  - AES128-GCM-SHA256
+                #  - AES128-SHA256
+                #  - AES128-SHA
+                  - ECDHE-ECDSA-AES256-GCM-SHA384
+                  - ECDHE-RSA-AES256-GCM-SHA384
+                #  - ECDHE-ECDSA-AES256-SHA384
+                #  - ECDHE-RSA-AES256-SHA384
+                #  - ECDHE-ECDSA-AES256-SHA
+                #  - ECDHE-RSA-AES256-SHA
+                #  - AES256-GCM-SHA384
+                #  - AES256-SHA256
+                #  - AES256-SHA
+        # Ingress gateway for 5G Provisioning (HTTP2)
+        eric-eda-provisioning-gw: # Gateway resource name.
+          ports:
+            https-mtls:
+              settings:
+                minProtocolVersion: TLSV1_2 # Values allowed [ TLSV1_1, TLSV1_2, TLSV1_3 ]
+                maxProtocolVersion: TLSV1_3 # Values allowed [ TLSV1_1, TLSV1_2, TLSV1_3 ]
+                # - DHE-RSA-AES128-GCM-SHA256 not supported by istio
+                # Optional: If specified, only support the specified cipher list. Otherwise default to the default cipher list supported by Envoy
+                cipherSuites:
+                  - ECDHE-ECDSA-AES128-GCM-SHA256
+                  - ECDHE-RSA-AES128-GCM-SHA256
+                #  - ECDHE-ECDSA-AES128-SHA256
+                #  - ECDHE-RSA-AES128-SHA256
+                #  - ECDHE-ECDSA-AES128-SHA
+                #  - ECDHE-RSA-AES128-SHA
+                #  - AES128-GCM-SHA256
+                #  - AES128-SHA256
+                #  - AES128-SHA
+                  - ECDHE-ECDSA-AES256-GCM-SHA384
+                  - ECDHE-RSA-AES256-GCM-SHA384
+                #  - ECDHE-ECDSA-AES256-SHA384
+                #  - ECDHE-RSA-AES256-SHA384
+                #  - ECDHE-ECDSA-AES256-SHA
+                #  - ECDHE-RSA-AES256-SHA
+                #  - AES256-GCM-SHA384
+                #  - AES256-SHA256
+                #  - AES256-SHA
+        # eric-ingress-udr-intersite
+        # Ingress gateway for Zookeeper multisite coordination, KV Apache Geode replication, 5G Provisioning Proxy, Data Consistency Check and 4G/5G traffic for site to site communication
+        eric-udr-intersite-gw:
+          ports:
+            https-papi-provisioning:
+              settings:
+                minProtocolVersion: TLSV1_2 # Values allowed [ TLSV1_1, TLSV1_2, TLSV1_3 ]
+                maxProtocolVersion: TLSV1_3 # Values allowed [ TLSV1_1, TLSV1_2, TLSV1_3 ]
+                # - DHE-RSA-AES128-GCM-SHA256 not supported by istio
+                # Optional: If specified, only support the specified cipher list. Otherwise default to the default cipher list supported by Envoy
+                cipherSuites:
+                  - ECDHE-ECDSA-AES128-GCM-SHA256
+                  - ECDHE-RSA-AES128-GCM-SHA256
+                #  - ECDHE-ECDSA-AES128-SHA256
+                #  - ECDHE-RSA-AES128-SHA256
+                #  - ECDHE-ECDSA-AES128-SHA
+                #  - ECDHE-RSA-AES128-SHA
+                #  - AES128-GCM-SHA256
+                #  - AES128-SHA256
+                #  - AES128-SHA
+                  - ECDHE-ECDSA-AES256-GCM-SHA384
+                  - ECDHE-RSA-AES256-GCM-SHA384
+                #  - ECDHE-ECDSA-AES256-SHA384
+                #  - ECDHE-RSA-AES256-SHA384
+                #  - ECDHE-ECDSA-AES256-SHA
+                #  - ECDHE-RSA-AES256-SHA
+                #  - AES256-GCM-SHA384
+                #  - AES256-SHA256
+                #  - AES256-SHA
+            tls-eric-udr-kvdb-ag-locators:
+              settings:
+                minProtocolVersion: TLSV1_2 # Values allowed [ TLSV1_1, TLSV1_2, TLSV1_3 ]
+                maxProtocolVersion: TLSV1_3 # Values allowed [ TLSV1_1, TLSV1_2, TLSV1_3 ]
+                # - DHE-RSA-AES128-GCM-SHA256 not supported by istio
+                # Optional: If specified, only support the specified cipher list. Otherwise default to the default cipher list supported by Envoy
+                cipherSuites:
+                  - ECDHE-ECDSA-AES128-GCM-SHA256
+                  - ECDHE-RSA-AES128-GCM-SHA256
+                #  - ECDHE-ECDSA-AES128-SHA256
+                #  - ECDHE-RSA-AES128-SHA256
+                #  - ECDHE-ECDSA-AES128-SHA
+                #  - ECDHE-RSA-AES128-SHA
+                #  - AES128-GCM-SHA256
+                #  - AES128-SHA256
+                #  - AES128-SHA
+                  - ECDHE-ECDSA-AES256-GCM-SHA384
+                  - ECDHE-RSA-AES256-GCM-SHA384
+                #  - ECDHE-ECDSA-AES256-SHA384
+                #  - ECDHE-RSA-AES256-SHA384
+                #  - ECDHE-ECDSA-AES256-SHA
+                #  - ECDHE-RSA-AES256-SHA
+                #  - AES256-GCM-SHA384
+                #  - AES256-SHA256
+                #  - AES256-SHA
+            tls-eric-udr-kvdb-ag-gateway-receivers:
+              settings:
+                minProtocolVersion: TLSV1_2 # Values allowed [ TLSV1_1, TLSV1_2, TLSV1_3 ]
+                maxProtocolVersion: TLSV1_3 # Values allowed [ TLSV1_1, TLSV1_2, TLSV1_3 ]
+                # - DHE-RSA-AES128-GCM-SHA256 not supported by istio
+                # Optional: If specified, only support the specified cipher list. Otherwise default to the default cipher list supported by Envoy
+                cipherSuites:
+                  - ECDHE-ECDSA-AES128-GCM-SHA256
+                  - ECDHE-RSA-AES128-GCM-SHA256
+                #  - ECDHE-ECDSA-AES128-SHA256
+                #  - ECDHE-RSA-AES128-SHA256
+                #  - ECDHE-ECDSA-AES128-SHA
+                #  - ECDHE-RSA-AES128-SHA
+                #  - AES128-GCM-SHA256
+                #  - AES128-SHA256
+                #  - AES128-SHA
+                  - ECDHE-ECDSA-AES256-GCM-SHA384
+                  - ECDHE-RSA-AES256-GCM-SHA384
+                #  - ECDHE-ECDSA-AES256-SHA384
+                #  - ECDHE-RSA-AES256-SHA384
+                #  - ECDHE-ECDSA-AES256-SHA
+                #  - ECDHE-RSA-AES256-SHA
+                #  - AES256-GCM-SHA384
+                #  - AES256-SHA256
+                #  - AES256-SHA
+            tls-eric-udr-zookeeper:
+              settings:
+                minProtocolVersion: TLSV1_2 # Values allowed [ TLSV1_1, TLSV1_2, TLSV1_3 ]
+                maxProtocolVersion: TLSV1_3 # Values allowed [ TLSV1_1, TLSV1_2, TLSV1_3 ]
+                # - DHE-RSA-AES128-GCM-SHA256 not supported by istio
+                # Optional: If specified, only support the specified cipher list. Otherwise default to the default cipher list supported by Envoy
+                cipherSuites:
+                  - ECDHE-ECDSA-AES128-GCM-SHA256
+                  - ECDHE-RSA-AES128-GCM-SHA256
+                #  - ECDHE-ECDSA-AES128-SHA256
+                #  - ECDHE-RSA-AES128-SHA256
+                #  - ECDHE-ECDSA-AES128-SHA
+                #  - ECDHE-RSA-AES128-SHA
+                #  - AES128-GCM-SHA256
+                #  - AES128-SHA256
+                #  - AES128-SHA
+                  - ECDHE-ECDSA-AES256-GCM-SHA384
+                  - ECDHE-RSA-AES256-GCM-SHA384
+                #  - ECDHE-ECDSA-AES256-SHA384
+                #  - ECDHE-RSA-AES256-SHA384
+                #  - ECDHE-ECDSA-AES256-SHA
+                #  - ECDHE-RSA-AES256-SHA
+                #  - AES256-GCM-SHA384
+                #  - AES256-SHA256
+                #  - AES256-SHA
+
+    egress:
+      # - CCDM egress endpoints
+      endpoints:
+        # EGRESS CCDM ENDPOINTS TO BE DEFINED
+        # - Egress individual rules, one per CCDM peer.
+        # -- CCSM, Nudm interface notifications
+        eric-ccsm-sbi-traffic-mtls:
+          enabled: false
+           {%- raw %}
+#          host: {{EGRESS-CCSM-HOST}}
+#          addresses:
+#            - {{EGRESS-CCSM-VIP}}
+#          ports:
+#            http2-port-for-mTLS-origination:
+#              maxProtocolVersion: {{EGRESS-CCSM-MAXTLS}} # Values allowed [ TLSv1_2, TLSv1_3 ]
+           {% endraw %}
+        # -- CCPC, Npcf interface notifications
+        eric-ccpc-sbi-traffic-mtls:
+          enabled: false
+           {%- raw %}
+#          host: {{EGRESS-CCPC-HOST}}
+#          addresses:
+#            - {{EGRESS-CCPC-VIP}}
+#          ports:
+#            http2-port-for-mTLS-origination:
+#              maxProtocolVersion: {{EGRESS-CCPC-MAXTLS}} # Values allowed [ TLSv1_2, TLSv1_3 ]
+           {% endraw %}
+        # -- CCRC, Nnr interface NRF registration/notifications
+        eric-ccrc-sbi-traffic-mtls:
+          enabled: false
+           {%- raw %}
+#          host: {{EGRESS-CCRC-HOST}}
+#          addresses:
+#            - {{EGRESS-CCRC-VIP}}
+#          ports:
+#            http2-port-for-mTLS-origination:
+#              maxProtocolVersion: {{EGRESS-CCRC-MAXTLS}} # Values allowed [ TLSv1_2, TLSv1_3 ]
+           {% endraw %}
+        # -- CCxx wildcard, if EGRESS-WILDCARD enabled EGRESS-CCSM-ENABLED, EGRESS-CCRC-ENABLED and EGRESS-CCPC must be disabled.
+        eric-wildcard-sbi-traffic-mtls:
+          enabled: true
+          host: "*.5gc.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org"
+          ports:
+            http2-port-for-mTLS-origination:
+              maxProtocolVersion: TLSv1_3 # Values allowed [ TLSv1_2, TLSv1_3 ]
+{%- raw %}
+#
+#        # -- List of new remote endpoints where (m)TLS is enabled and it's not covered in the current list. Remove '# ' for enabling the element in the list. Repeat element format for more remote endpoints.
+#        # Examples: New CCSM/CCPC/CCRC destinations where wildcard can not be used for identifying multiple destinations .
+#        # <endpoint name>: # Free name but be careful that there has not been set previously.
+#        #   enabled: true # Enable/Disable the service entry, values allowed [true, false].
+#        #   host: "new.5gc.mnc310.mcc014.3gppnetwork.org" # FQDN or wildcard for new endpoint (it should not be defined before).
+#        #   addresses: # Addresses is an optional field and it's only required for intersite, meaning communication among CCDM sites. Other destination should not define the address field.
+#        #     - 127.0.0.1 # VIP resolution from host defined in the "host" parameter.
+#        #   ports: # list of ports for the destination where mtls is required.
+#        #   - port: 443 # Port number.
+#        #     name: <protocol>-<port name> # For instance, https-newendpoint
+#        #     protocol: TCP
+#        #     mode: mTLS
+#        #   resolution: NONE
+{% endraw %}
+
+  # Prov Funct global parameters
+  activation:
+    # ip protocol stack mode ipv6: true or false
+    ipv6: false
+    nodeSelector: {}
+
+  # nodeSelector spec value
+  # nodeSelector: {}
+
+networkPolicy:
+  # default value should be set to "true"
+  enabled: true
+
+eric-nrfagent:
+  global:
+    # ip protocol stack mode ipv6: ipv4 or ipv6
+    ipStackMode: "ipv4"
+
+eric-probe-virtual-tap-broker:
+  timeorder:
+    enabled: false #default is false
+  replicaCount: 4
+
+# Provisioning Function
+eric-act-ccdm:
+  eric-act-proclog-cassandra-stasher:
+    misc:
+      proclog_stasher:
+        replicaCount: 1
+    nodeSelector: {}
+  eric-act-mapi-provisioning:
+    misc:
+      replicaCount: 3
+    nodeSelector: {}
+  eric-act-user-data-activator:
+    uda:
+      misc:
+        replicaCount: 3
+        synchronizerCount: 2
+    nodeSelector:
+      userDataActivator: {}
+      userDataActivatorSynchronizer: {}
+  eric-act-oauth-token-validator:
+    misc:
+      replicaCount: 2
+    nodeSelector: {}
+  eric-data-wide-column-database-cd:
+    persistence:
+      dataVolume:
+        persistentVolumeClaim:
+          storageClassName: {{ storageClassName|default("network-block") }}
+          size: 32G #Value of this parameter is result of dimensioning exercise
+
+    # ip protocol stack mode ipv6: true or false
+    resources:
+      cassandra:
+        network:
+          useIPv6: false
+    nodeSelector:
+      bra: {}
+      authJob: {}
+      cassandra: {}
+      tlsRestarter: {}
+    replicaCount: 3
+  eric-act-mb-kf:
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: {{ storageClassName|default("network-block") }}
+        size: 20Gi # same value for both deployments
+    replicaCount: 4
+    ## https://eteamproject.internal.ericsson.com/browse/ADPPRG-122626
+    {% if caas == 'Tanzu' and nodeSelector|length != 0 %}
+    nodeSelector:
+      {% for key, val in nodeSelector.items() %}
+      {{ key }}: {{ val }}
+      {% endfor %}
+    {% else %}
+    nodeSelector: {}
+    {% endif %}
+
+  eric-act-proclog-manager:
+    nodeSelector:
+      proclogManager: {}
+      proclogManagerLogConsolidationDM: {}
+  eric-act-application-resource-monitor:
+    nodeSelector: {}
+  eric-act-secret-onboarding:
+    nodeSelector: {}
+  eric-act-cmm-config-ccdm:
+    nodeSelector: {}
+  eric-act-service-locator-registry:
+    nodeSelector: {}
+# ADP common components
+eric-adp:
+  eric-si-application-sys-info-handler:
+    asih:
+      applicationId: {{ nodeName }}
+  eric-data-document-database-pg:
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName|default("network-block") }}
+    nodeSelector: {}
+    #postgresConfig:
+    #  huge_pages: "off" # possible values ["off","on","try"]
+
+  eric-data-coordinator-zk:
+    replicas: 3
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: {{ storageClassName|default("network-block") }}
+    nodeSelector:
+      brAgent: {}
+      datacoordinatorzk: {}
+
+  eric-pm-bulk-reporter:
+    userConfig:
+      ldap:
+        useIPv6DNSFirst: false #true if using IPv6 stack mode
+    service:
+      {% if caas == 'Tanzu' %}
+      annotations:
+        aviinfrasetting.ako.vmware.com/name: oam-pool
+        ako.vmware.com/enable-shared-vip: oam-ccdm-shared
+        ako.vmware.com/load-balancer-ip: {{ ccdm.oamVip }}
+      {% else %}
+      annotations:
+        sharedVIPLabel: ccdm-oam
+        addressPoolName: ccdm{{ instance | default("") }}-oam
+      {% endif %}
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName|default("network-block") }}
+    env:
+      # nf_node_type, one of: NRF,UDM-AUSF,UDR,NSSF,5G_UDM (All the NFs within the same cluster)
+      nodeType: 5G_UDM
+      supportedGps: fifteen-min thirty-min one-hour twelve-hour one-day one-min five-min
+    nodeSelector: {}
+
+  eric-data-search-engine:
+    persistence:
+      data:
+        persistentVolumeClaim:
+          storageClassName: {{ storageClassName|default("network-block") }}
+      master:
+        persistentVolumeClaim:
+          storageClassName: {{ storageClassName|default("network-block") }}
+    # ip protocol stack mode ipv6: true or false
+    service:
+      network:
+        protocol:
+          IPv6: false
+    nodeSelector:
+      data: {}
+      ingest: {}
+      master: {}
+      bragent: {}
+
+  eric-sec-ldap-server:
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName|default("network-block") }}
+    nodeSelector:
+      ldap: {}
+      ldapAgent: {}
+
+  eric-cnom-server:
+    #  ericsson-5gc-se/vnf: ccdm
+    {# The following if/else block is to be compatible with old way to generate FQDN #}
+    {# The new way is to explicitly provide the FQDN, old way should be removed in the future #}
+    {% if cnom is defined %}
+    fqdn: {{ cnom.fqdn }}
+    {% else %}  
+    fqdn: cnom.{{ vnflcm.namespace }}.{{ vnflcm.clusterName }}.{{ oamDomain }}
+    {% endif %}    
+    nodeSelector: {}
+    legalNotice: "IF YOU ARE NOT AN AUTHORIZED USER, PLEASE EXIT IMMEDIATELY\n\nThis system processes personal information. Handle personal information with care. Misuse, including unauthorized access, is grounds for legal action. Version: 1.0, Date: October 27, 2020."
+
+  eric-data-distributed-coordinator-ed:
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: {{ storageClassName|default("network-block") }}
+      brAgent:
+        backupVolume:
+          storageClassName: {{ storageClassName|default("network-block") }}
+    nodeSelector:
+      brAgent: {}
+      dced: {}
+    {% if caas == 'OpenShift' or caas == 'Tanzu' %}
+    # IA35412
+    resources:
+      metricsexporter:
+        limits:
+          memory: "64Mi"
+    {% endif %}
+
+  eric-cm-yang-provider:
+    service:
+      {% if caas == 'Tanzu' %}
+      annotations:
+        cloudProviderLB:
+          aviinfrasetting.ako.vmware.com/name: oam-pool
+          ako.vmware.com/enable-shared-vip: oam-ccdm-shared
+          ako.vmware.com/load-balancer-ip: {{ ccdm.oamVip }}
+      {% else %}
+      annotations:
+        sharedVIPLabel: ccdm-oam
+        addressPoolName: ccdm{{ instance | default("") }}-oam
+      {% endif %}
+    ldap:
+      ipv6Enabled: false
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName|default("network-block") }}
+    nodeSelector: {}
+    {%- raw %}
+    #newLinesInBinaryBase64Enabled: {{true|false}}
+    {% endraw %}
+
+  eric-ctrl-bro:
+    persistence:
+      persistentVolumeClaim:
+        {% if caas != "Tanzu" %}
+        size: {{ storage['eric-ctrl-bro'] | default("64Gi") }} #{% raw %}{{small-system value|standard-system value}}{% endraw %}
+        {% else %}
+        size: {{ pvcSizeStr['eric-ctrl-bro'] | default("64Gi") }} #{% raw %}{{small-system value|standard-system value}}{% endraw %}
+        {% endif %}
+
+        storageClassName: {{ storageClassName|default("network-block") }}
+    nodeSelector: {}
+
+  eric-fh-snmp-alarm-provider:
+    service:
+      {% if caas == 'Tanzu' %}
+      annotations:
+        cloudProviderLB:
+          aviinfrasetting.ako.vmware.com/name: oam-pool
+          ako.vmware.com/enable-shared-vip: oam-ccdm-shared
+          ako.vmware.com/load-balancer-ip: {{ ccdm.oamVip }}
+      {% else %}
+      annotations:
+        sharedVIPLabel: ccdm-oam
+        addressPoolName: ccdm{{ instance | default("") }}-oam
+      {% endif %}
+    nodeSelector: {}
+    # Needs to be configured when integrating CCDM with ENM FM using SNMPv2c sourceIdentifier.
+    # Requires ENM 22.1 (sprint 22.02)
+    # Possible values are 0(Unknown), 1(IPV4), 2(IPV6)
+    sourceIdentifierType: 1
+    # Needs to be configured when integrating CCDM with ENM FM using SNMPv2c sourceIdentifier.
+    # Should be in IPv4 or IPv6 format, depending on SourceIdentifierType
+    {% if caas != 'OpenShift' %}
+    sourceIdentifier: {{ ccdm.oamVip }}
+    {% endif %}
+
+  eric-pm-server:
+    rbac:
+      appMonitoring:
+        enabled: {{ appMonitoring|default("true") }}
+        {% if caas == "CNIS" %}
+        federation:
+          jobOverride: true
+          jobConfiguration: |
+            - job_name: 'federate-victoria'
+              scrape_interval: 1m
+              honor_labels: true
+              metrics_path: '/select/0/prometheus/federate'
+              params:
+                'match[]':
+                  - '{job="kubernetes-nodes",namespace="{{ vnflcm.namespace }}"}'
+                  - '{job="kubernetes-nodes-cadvisor",namespace="{{ vnflcm.namespace }}"}'
+              static_configs:
+                - targets:
+                  - 'eric-victoria-metrics-cluster-vmselect.monitoring:8481'
+        {% elif caas == "Tanzu" %}
+        federation:
+          jobOverride: true
+          jobConfiguration: |
+            - job_name: 'federate-3pp-caas'
+              scrape_interval: 15s
+              honor_labels: true
+              metrics_path: '/federate'
+              params:
+                'match[]':
+                  - '{job="kubernetes-nodes",namespace="ccdm"}'
+                  - '{job="kubernetes-nodes-cadvisor",namespace="ccdm"}'
+              static_configs:
+                - targets:
+                  - 'prometheus-server.monitor:80'
+        {% else %}
+        federation:
+          jobOverride: false #default is false
+          jobConfiguration: |  #below is an example so if needed UNCOMMENT THE CONTENT IN THE TEMPLATE and modify accordingly
+#            - job_name: 'federate-3pp-caas'
+#              scrape_interval: 15s
+#              honor_labels: true
+#              metrics_path: '/federate'
+#              params:
+#                'match[]':
+#                  - '{job="kubernetes-nodes",namespace="eric-ccdm"}'
+#                  - '{job="kubernetes-nodes-cadvisor",namespace="eric-ccdm"}'
+#              static_configs:
+#                - targets:
+#                  - 'eric-pm-server.monitoring:9090'
+        {% endif %}
+    server:
+      extraArgs:
+        storage.tsdb.retention.size: {{ '13GB' if systemProfile == 'small' else '30GB' }} #These are default values for small-system and standard-system but value of this parameter should be set to 85% of eric-adp.eric-pm-server.server.persistentVolume.size
+      persistentVolume:
+        storageClass: {{ storageClassName|default("network-block") }}
+        size: {{ '16Gi' if systemProfile == 'small' else '35Gi' }}  #These are default values for small-system and standard-system but the exact value for this parameter is result of dimensioning exercise
+    nodeSelector: {}
+
+  eric-tm-ingress-controller-cr:
+    service:
+      {% if caas == 'Tanzu' %}
+      annotations:
+        cloudProviderLB:
+          aviinfrasetting.ako.vmware.com/name: oam-pool
+          ako.vmware.com/enable-shared-vip: oam-ccdm-shared
+          ako.vmware.com/load-balancer-ip: {{ ccdm.oamVip }}
+      {% else %}
+      annotations:
+        sharedVIPLabel: ccdm-oam
+        addressPoolName: ccdm{{ instance | default("") }}-oam
+      {% endif %}
+    nodeSelector:
+      contour: {}
+      envoy: {}
+    {% if caas == 'OpenShift' %}
+    # According ADP Service User Guide
+    resources:
+      contour:
+        limits:
+          cpu: 1000m
+          memory: 1000Mi
+      envoy:
+        limits:
+          cpu: 1000m
+          memory: 1000Mi
+    {% endif %}
+
+  eric-log-shipper:
+    nodeSelector: {}
+    {% if caas == 'OpenShift' %}
+    rbac:
+      automountServiceAccountToken: true
+      createClusterRole: true
+      createClusterRoleBinding: true
+    logshipper:
+      privileged: true
+      cfgData: ""
+      autodiscover:
+        enabled: true
+        namespace: ".RELEASE.NAMESPACE"
+        logplane: adp-app-logs
+        hints:
+          enabled: false
+        paths:
+          - /var/log/pods/${data.kubernetes.namespace}_${data.kubernetes.pod.name}_${data.kubernetes.pod.uid}/**/*.log
+        useContainerInput: true
+    additionalVolumes: |
+      - name: crio-containers
+        hostPath:
+          path: /var/log/containers
+      - name: kubernetes-containers
+        hostPath:
+          path: /var/log/pods
+    additionalVolumeMounts: |
+      - name: crio-containers
+        mountPath: /var/log/containers
+        readOnly: true
+      - name: kubernetes-containers
+        mountPath: /var/log/pods
+        readOnly: true
+    {% elif caas == 'Tanzu' %}
+    resources:
+      logshipper:
+        limits:
+          memory: 3Gi
+    {% endif %}
+
+  eric-log-transformer:
+    nodeSelector: {}
+    egress:
+      syslog:
+        #FOR MTLS, REMOVE COMMENT
+        #tls:
+        #  enabled: true
+        #certificates:
+        #  asymmetricKeyCertificateName: eric-log-transformer-client-certificate
+        #  trustedCertificateListName: eric-log-transformer-cacerts
+        enabled: false
+        remoteHosts:
+          - host:
+            port:
+        # Remove # characters to enable inclusion rule.
+        # If this inclusion rule is enabled, only the log events with facility field set to "security/authorization messages" will be sent to syslog receiver.
+        #inclusions:
+        #  - field: "[facility]"
+        #    value: "security/authorization messages"
+
+  eric-data-search-engine-curator:
+    nodeSelector: {}
+
+  eric-odca-diagnostic-data-collector:
+    nodeSelector: {}
+
+  eric-fh-alarm-handler:
+    nodeSelector: {}
+
+  eric-cm-mediator:
+    nodeSelector: {}
+
+  eric-sec-access-mgmt:
+    ingress:
+      #  ericsson-5gc-se/vnf: ccdm
+      {# The following if/else block is to be compatible with old way to generate FQDN #}
+      {# The new way is to explicitly provide the FQDN, old way should be removed in the future #}
+      {% if caas == "Tanzu" and ccdm.iamFqdn is defined %}
+      hostname: {{ ccdm.iamFqdn }}
+      {% elif cnom is defined %}
+      hostname: {{ iam.fqdn }}
+      {% else %}
+      hostname: iam.{{ vnflcm.namespace }}.{{ vnflcm.clusterName }}.{{ oamDomain }}
+      {% endif %}
+      enabled: true
+      tls:
+        existingSecret: iccr-external-tls-secret
+      ingressClass: ccdm
+    service:
+      ipv6:
+        enabled: false
+    statefulset:
+      nodeSelector: {}
+
+  eric-sec-sip-tls:
+    nodeSelector: {}
+
+  eric-sec-key-management:
+    nodeSelector: {}
+
+  eric-sw-inventory-manager:
+    nodeSelector: {}
+
+  eric-lm-combined-server:
+    enabled: true
+    licenseServerClient:
+      licenseServer:
+        thrift:
+          host: "{{ nels.host }}"
+      nodeSelector: {}
+    licenseConsumerHandler:
+      nodeSelector: {}
+    #licenseServerIpAddresses:
+    #  ip1:
+    #  ip2:
+
+  eric-data-object-storage-mn:
+    affinity:
+      podAntiAffinity: "hard"
+    persistentVolumeClaim:
+      storageClassName: {{ storageClassName|default("network-block") }}
+
+# eric-udr-release
+eric-udr:
+
+  # eric-udr-message-bus-kf:
+  eric-data-message-bus-kf:
+    ## https://eteamproject.internal.ericsson.com/browse/ADPPRG-122626
+    {% if caas == 'Tanzu' and nodeSelector|length != 0 %}
+    nodeSelector:
+      {% for key, val in nodeSelector.items() %}
+      {{ key }}: {{ val }}
+      {% endfor %}
+    {% else %}
+    nodeSelector: {}
+    {% endif %}
+    persistence:
+      persistentVolumeClaim:
+        storageClassName: {{ storageClassName|default("network-block") }}
+
+  eric-udr-backuprestore:
+    persistence:
+      storageClass: {{ storageClassName|default("network-block") }}
+
+  eric-udr-ldap-balancer:
+    deploy:
+      minReplica: {{ minReplica['eric-udr-ldap-balancer'] | default(6) }}
+      maxReplica: {{ maxReplica['eric-udr-ldap-balancer'] | default(6) }}
+
+  eric-udr-ldapfe:
+    service:
+      monitorPassword: normal #Value of this parameter must coincide with LDAP password configured in DAY1 configuration
+      configPassword: normal  #Value of this parameter must coincide with LDAP password configured in DAY1 configuration
+      minReplica: {{ minReplica['eric-udr-ldapfe'] | default(2) }}
+      maxReplica: {{ maxReplica['eric-udr-ldapfe'] | default(100) }}
+
+  eric-udr-nudrsvc:
+    minReplica: {{ minReplica['eric-udr-nudrsvc'] | default(2) }}
+    maxReplica: {{ maxReplica['eric-udr-nudrsvc'] | default(100) }}
+
+  eric-udr-provisioningfe:
+    minReplica: {{ minReplica['eric-udr-provisioningfe'] | default(2) }}
+    maxReplica: {{ maxReplica['eric-udr-provisioningfe'] | default(100) }}
+
+  eric-udr-rest-notifchecker:
+    minReplica: {{ minReplica['eric-udr-rest-notifchecker'] | default(2) }}
+    maxReplica: {{ maxReplica['eric-udr-rest-notifchecker'] | default(100) }}
+
+  eric-udr-rest-notifsender:
+    minReplica: {{ minReplica['eric-udr-rest-notifsender'] | default(2) }}
+    maxReplica: {{ maxReplica['eric-udr-rest-notifsender'] | default(100) }}
+
+  eric-udr-soap-notifchecker:
+    minReplica: {{ minReplica['eric-udr-soap-notifchecker'] | default(2) }}
+    maxReplica: {{ maxReplica['eric-udr-soap-notifchecker'] | default(100) }}
+
+  eric-udr-soap-notifsender:
+    minReplica: {{ minReplica['eric-udr-soap-notifsender'] | default(2) }}
+    maxReplica: {{ maxReplica['eric-udr-soap-notifsender'] | default(100) }}
+
+  eric-udr-notificationsubscription:
+    minReplica: {{ minReplica['eric-udr-notificationsubscription'] | default(2) }}
+    maxReplica: {{ maxReplica['eric-udr-notificationsubscription'] | default(100) }}
+
+  eric-udr-gudrestfe:
+    minReplica: {{ minReplica['eric-udr-gudrestfe'] | default(2) }}
+    maxReplica: {{ maxReplica['eric-udr-gudrestfe'] | default(100) }}
+
+eric-data-kvdb-ag:
+  persistence:
+    data:
+      persistentVolumeClaim:
+        storageClassName: {{ storageClassName|default("network-block") }}
+    gwsender:
+      persistentVolumeClaim:
+        storageClassName: {{ storageClassName|default("network-block") }}
+    backup:
+      persistentVolumeClaim:
+        storageClassName: {{ storageClassName|default("network-block") }}
+  multiSite:
+    locator:
+      {% if caas == "Tanzu" %}
+      localHost: {{ ccdm.udr.geored.local.host }}.5gc.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org
+      {% else %}
+      localHost: {{ multiSite.0.host }}.5gc.mnc{{ mnc|mnc|mnc3 }}.mcc{{ mcc|mcc }}.3gppnetwork.org
+      {% endif %}
+  replicaCount:
+    server: {{ replicaCount['eric-udr-kvdb-ag-server'] | default(4) }}
+################################################################################
+# eric-ccdm-service-mesh
+################################################################################
+eric-udm-mesh-integration:
+  eric-ingressgw-udr-traffic:
+    replicaCount: {{ replicaCount['eric-ingressgw-udr-traffic'] | default(12) }}
+    {% if caas == 'Tanzu' %}
+    service:
+      annotations:
+        cloudProviderLB:
+          aviinfrasetting.ako.vmware.com/name: sig-pool
+          ako.vmware.com/load-balancer-ip: {{ ccdm.udrTrafficVip }}
+    {% else %}
+    externalTrafficPolicy: {{ externalTrafficPolicy|default("Cluster") }}
+    service:
+      annotations:
+        addressPoolName: ccdm{{ instance | default("") }}-5g-traffic
+        # If defined due to addressPoolName is shared by more than one eric-ingressgw deployment,
+        # set externalTrafficPolicy to Cluster
+        sharedVIPLabel: ccdm-5g-traffic
+    {% endif %}
+  eric-ingressgw-eda-provisioning:
+    replicaCount: {{ replicaCount['eric-ingressgw-eda-provisioning'] | default(6) }}
+    {% if caas == 'Tanzu' %}
+    service:
+      annotations:
+        cloudProviderLB:
+          aviinfrasetting.ako.vmware.com/name: oam-pool
+          ako.vmware.com/load-balancer-ip: {{ ccdm.edaProvVip }}
+    {% else %}
+    externalTrafficPolicy: {{ externalTrafficPolicy|default("Cluster") }}
+    service:
+      annotations:
+        addressPoolName: ccdm{{ instance | default("") }}-5g-prov
+        # If defined due to addressPoolName is shared by more than one eric-ingressgw deployment,
+        # set externalTrafficPolicy to Cluster
+        sharedVIPLabel: ccdm-5g-prov
+    {% endif %}
+  eric-ingressgw-udr-ldap-provisioning:
+    replicaCount: {{ replicaCount['eric-ingressgw-udr-ldap-provisioning'] | default(8) }}
+    {% if caas == 'Tanzu' %}
+    service:
+      annotations:
+        cloudProviderLB:
+          aviinfrasetting.ako.vmware.com/name: oam-pool
+          ako.vmware.com/load-balancer-ip: {{ ccdm.ldapProvVip }}
+    {% else %}
+    externalTrafficPolicy: {{ externalTrafficPolicy|default("Cluster") }}
+    service:
+      annotations:
+        addressPoolName: ccdm{{ instance | default("") }}-4g-prov
+        # If defined due to addressPoolName is shared by more than one eric-ingressgw deployment,
+        # set externalTrafficPolicy to Cluster
+        sharedVIPLabel: ccdm-4g-prov
+    {% endif %}
+  eric-ingressgw-udr-ldap-traffic:
+    replicaCount: {{ replicaCount['eric-ingressgw-udr-ldap-traffic'] | default(12) }}
+    {% if caas == 'Tanzu' %}
+    service:
+      annotations:
+        cloudProviderLB:
+          aviinfrasetting.ako.vmware.com/name: ccdm-intersite
+          ako.vmware.com/load-balancer-ip: {{ ccdm.ldapTrafficVip }}
+    {% else %}
+    externalTrafficPolicy: {{ externalTrafficPolicy|default("Cluster") }}
+    service:
+      annotations:
+        addressPoolName: ccdm{{ instance | default("") }}-4g-traffic
+        # If defined due to addressPoolName is shared by more than one eric-ingressgw deployment,
+        # set externalTrafficPolicy to Cluster
+        sharedVIPLabel: ccdm-4g-traffic
+    {% endif %}
+  eric-ingressgw-udr-intersite:
+    replicaCount: {{ replicaCount['eric-ingressgw-udr-intersite'] | default(10) }} #{% raw %}{{small-system value|standard-system value}}{% endraw %}
+
+    {% if caas == 'Tanzu' %}
+    service:
+      annotations:
+        cloudProviderLB:
+          aviinfrasetting.ako.vmware.com/name: ccdm-intersite
+          ako.vmware.com/load-balancer-ip: {{ ccdm.intersiteVip }}
+    {% else %}
+    externalTrafficPolicy: {{ externalTrafficPolicy|default("Cluster") }}
+    service:
+      annotations:
+        addressPoolName: ccdm{{ instance | default("") }}-intersite
+        # If defined due to addressPoolName is shared by more than one eric-ingressgw deployment,
+        # set externalTrafficPolicy to Cluster
+        sharedVIPLabel: ccdm-intersite
+    {% endif %}

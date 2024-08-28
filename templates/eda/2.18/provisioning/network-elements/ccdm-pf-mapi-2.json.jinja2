@@ -1,0 +1,21 @@
+{
+	"active": true,
+	"name": "CCDM_PF_MAPI_2",
+	"protocolAttributes": {
+		"MaxPoolSize": "100",
+		"IdleTimeout": "1",
+		"BlockingTimeout": "10000",
+		"host": "{{ eda.networkElements.mapi.1.host }}.{{ oamDomain }}",
+		"port": "443",
+		"oauthTokenHost": "{{ eda.networkElements.mapi.1.host }}.{{ oamDomain }}",
+		"oauthTokenPort": "443",
+		"oauthTokenBaseUri": "auth/realms/oam/protocol/openid-connect/token",
+		"oauthClientId": "mapi-client",
+		"oauthClientSecret": "mapi-secret",
+		"secure": "true",
+		"truststorePassword": "{{ eda.networkElements.mapi.1.truststorePassword }}",
+		"truststoreFile": "/app/client-certificate/{{ eda.networkElements.mapi.1.truststoreFile }}"
+	},
+	"protocolType": "M-API",
+	"version": ""
+}

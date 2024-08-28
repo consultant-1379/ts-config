@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+  <capabilities>
+    <capability>urn:ietf:params:netconf:base:1.0</capability>
+  </capabilities>
+</hello>]]>]]>
+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<rpc message-id="1" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+  <edit-config>
+{% if candidateConfig | default(false) %}
+    <target><candidate/></target>
+{% else %}
+    <target><running/></target>
+{% endif %}
+    <config xmlns:xc="urn:ietf:params:xml:ns:netconf:base:1.0">
+      <system xmlns="urn:ietf:params:xml:ns:yang:ietf-system">
+        <authentication>
+  {% for user in users.day1 %}
+          <user>
+            <name>{{ user.username }}</name>
+            <password>{{ user.password }}</password>
+    {% for group in user.groups %}
+            <groups xmlns="urn:rdns:com:ericsson:oammodel:ericsson-system-ext">{{ group }}</groups>
+    {% endfor %}
+          </user>
+  {% endfor %}
+{% if nodeType == 'ERIC-CCDM' and users['oauth2-client'] is defined %}
+  {% for client in users['oauth2-client'] %}
+          <oauth2-client xmlns="urn:rdns:com:ericsson:oammodel:ericsson-system-ext">
+            <client-id>{{ client.id }}</client-id>
+            <client-secret>{{ client.secret }}</client-secret>
+    {% for group in client.groups %}
+            <groups>{{ group }}</groups>
+    {% endfor %}
+          </oauth2-client>
+  {% endfor %}
+{% endif %}
+{% if nodeType == 'ERIC-CCDM' and clients is defined %}
+  {% for client in clients %}
+          <oauth2-client xmlns="urn:rdns:com:ericsson:oammodel:ericsson-system-ext">
+            <client-id>{{ client.client }}</client-id>
+            <client-secret>{{ client.secret }}</client-secret>
+    {% for group in client.groups %}
+            <groups>{{ group }}</groups>
+    {% endfor %}
+          </oauth2-client>
+  {% endfor %}
+{% endif %}
+       </authentication>
+      </system>
+    </config>
+  </edit-config>
+</rpc>
+{% if candidateConfig | default(false) %}
+]]>]]>
+<rpc message-id="101" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+  <commit/>
+</rpc>
+]]>]]>
+{% endif %}
+<close-session/>
+
